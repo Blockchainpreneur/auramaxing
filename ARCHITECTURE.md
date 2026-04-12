@@ -197,6 +197,204 @@
 | Bun | 1.3.4 | `bun` |
 | Node | 20.19.0 | `node` |
 
+## Components (20 Helpers)
+
+| # | Helper | Purpose |
+|---|--------|---------|
+| 1 | `rational-router-apex.mjs` | Aura autopilot engine — scores complexity, routes tasks, emits directives |
+| 2 | `rational-router.mjs` | Legacy router (deprecated, superseded by apex) |
+| 3 | `prompt-engine.mjs` | Enriches every prompt with memory, anti-laziness gates, and quality requirements |
+| 4 | `session-start.mjs` | SessionStart hook — welcome panel, update check, memory load, NLM briefing |
+| 5 | `session-start-daemon.mjs` | Pings the state daemon on session start, writes project context |
+| 6 | `session-stop.mjs` | SessionStop hook — saves session memory, prunes entries, spawns NLM compress |
+| 7 | `task-complete.mjs` | Stop hook — renders completion diagram from accumulated tool events |
+| 8 | `pii-redactor.mjs` | PreToolUse gate — blocks secrets, API keys, and credentials before Write/Edit/Bash |
+| 9 | `code-quality-gate.mjs` | PreToolUse gate — scans generated code for anti-patterns and hardcoded secrets |
+| 10 | `post-tool-use-apex.mjs` | PostToolUse hook — logs events, detects failures, triggers self-healing |
+| 11 | `self-heal.mjs` | Self-healing engine — records strategies, retries on failure, logs successes |
+| 12 | `memory-enrich.mjs` | Surfaces relevant past decisions and context on UserPromptSubmit and SessionStart |
+| 13 | `memory-learn.mjs` | PostToolUse learner — stores tool outcomes and patterns with rich context |
+| 14 | `notebooklm-bridge.mjs` | CLI bridge to NotebookLM for offloading reasoning and memory compression |
+| 15 | `nlm-session-setup.mjs` | Background process spawned by session-start to prepare NLM notebook |
+| 16 | `nlm-auth-refresh.mjs` | Auto-refreshes NotebookLM authentication via Chrome CDP |
+| 17 | `lightrag-bridge.mjs` | Node.js wrapper around LightRAG Python CLI with caching and timeouts |
+| 18 | `intent-predictor.mjs` | Analyzes recent sessions and predicts next likely task for precomputation |
+| 19 | `precompute-pipeline.mjs` | 10-step background pipeline that runs after SessionStop (non-blocking) |
+| 20 | `claudemd-segments.mjs` | Task-specific CLAUDE.md segment generator — serves ~500 tokens per task type |
+
+## Hook Pipeline Detail
+
+### SessionStart Pipeline
+
+```
+Claude Code opens
+  │
+  ├─ session-start.mjs
+  │   ├─ Reads ~/auramaxing/VERSION → compares with remote
+  │   │   └─ Outdated? → emits [AURAMAXING UPDATE] block (blocks everything)
+  │   ├─ Loads ~/.auramaxing/memory/_compressed-summary.json (NLM briefing)
+  │   ├─ Loads ~/.auramaxing/learnings/*-success.json (winning strategies)
+  │   ├─ Renders welcome panel → stderr (visible to user, not Claude)
+  │   └─ Emits [AURAMAXING MEMORY] → stdout (Claude reads silently)
+  │
+  ├─ session-start-daemon.mjs
+  │   └─ HTTP POST to daemon (port 57821) with project context
+  │
+  └─ nlm-session-setup.mjs (background, detached)
+      ├─ Creates/verifies per-project NLM notebook
+      ├─ Uploads master progress file if changed
+      └─ Caches notebook ID → ~/.auramaxing/nlm-notebook-id
+```
+
+### UserPromptSubmit Pipeline (Aura)
+
+```
+User types a prompt
+  │
+  rational-router-apex.mjs (Aura)
+  │
+  ├─ 1. UPDATE CHECK
+  │   └─ Reads ~/.auramaxing/last-update-check (60min/12hr cache)
+  │       └─ Stale? → fetch remote VERSION → emit [AURAMAXING UPDATE] if newer
+  │
+  ├─ 2. PROMPT ENGINE (prompt-engine.mjs)
+  │   ├─ memory-enrich.mjs → searches memory for matching past decisions
+  │   ├─ lightrag-bridge.mjs → semantic vector search (all-MiniLM-L6-v2, 384-dim)
+  │   │   └─ Weak results? → notebooklm-bridge.mjs deep recall fallback
+  │   ├─ Anti-laziness injection (5-step planning gate, NLM-generated directives)
+  │   ├─ Quality gate enforcement (production requirements per task type)
+  │   ├─ claudemd-segments.mjs → serves only relevant CLAUDE.md sections (~500 tokens)
+  │   └─ intent-predictor.mjs → predicts next task for prefetch
+  │
+  ├─ 3. ROUTE + ENRICH
+  │   ├─ Scores complexity: <3% trivial, 3-49% medium, 50%+ complex
+  │   ├─ Maps to one of 15 task types → selects gstack skill or direct action
+  │   └─ Appends ENRICH block (production defaults the user didn't ask for)
+  │
+  └─ OUTPUT → stdout (Claude reads all blocks):
+      ├─ [AURAMAXING UPDATE]        (if version outdated)
+      ├─ [AURAMAXING PROMPT-ENGINE] (enriched prompt + memory + anti-laziness)
+      ├─ [AURAMAXING DISPLAY]       (loading bar — rendered verbatim)
+      └─ [AURAMAXING DIRECTIVE]     (EXECUTE/ENRICH/TOOLS/SPAWN — hidden from user)
+```
+
+### PreToolUse Pipeline
+
+```
+Claude calls a tool (Write, Edit, Bash)
+  │
+  ├─ pii-redactor.mjs
+  │   ├─ Scans tool_input for API keys, tokens, passwords, PII
+  │   ├─ Match? → BLOCK (tool does not execute, Claude sees error)
+  │   └─ Clean? → APPROVE (pass through)
+  │
+  └─ code-quality-gate.mjs
+      ├─ Scans for hardcoded secrets → HIGH (block)
+      ├─ Scans for debug statements, `any` types, empty catch → WARN
+      └─ Clean? → APPROVE
+```
+
+### PostToolUse Pipeline
+
+```
+Tool finishes executing
+  │
+  post-tool-use-apex.mjs
+  ├─ 1. Appends event to ~/.auramaxing/turn-events.jsonl
+  │     (tool name, duration, input hash, exit code)
+  ├─ 2. Failure detection (tool-specific, not blind regex)
+  │     └─ Failure? → self-heal.mjs
+  │         ├─ Checks ~/.auramaxing/learnings/ for known recovery
+  │         ├─ Suggests up to 3 alternative strategies
+  │         └─ Logs outcome (success.json or failure.json)
+  └─ 3. memory-learn.mjs → stores tool outcome + context for future recall
+```
+
+### Stop Pipeline
+
+```
+Claude finishes responding
+  │
+  ├─ task-complete.mjs
+  │   ├─ Reads turn-events.jsonl → renders completion diagram (stderr)
+  │   ├─ Clears turn-events.jsonl for next turn
+  │   └─ Sends summary to daemon
+  │
+  └─ session-stop.mjs (on session end)
+      ├─ Builds session summary from events + current-task.json
+      ├─ Saves to ~/.auramaxing/memory/YYYY-MM-DD-*.json
+      ├─ Saves decisions (if any) separately
+      ├─ Prunes memory (keep 50 sessions, 30 prompts, 10 decisions)
+      ├─ Spawns NLM compress (background, detached)
+      │   └─ notebooklm-bridge.mjs → compresses all memory → _compressed-summary.json
+      └─ Sends session summary to daemon
+```
+
+### Self-Healing Flow
+
+```
+Tool call fails (non-zero exit, error pattern, timeout)
+  │
+  post-tool-use-apex.mjs detects failure
+  │
+  └─ self-heal.mjs
+      │
+      ├─ 1. LOOKUP: search ~/.auramaxing/learnings/*-success.json
+      │     └─ Known pattern? → return winning strategy immediately
+      │
+      ├─ 2. RETRY: suggest up to 3 alternative approaches
+      │     ├─ Strategy A: different tool or flag
+      │     ├─ Strategy B: different approach entirely
+      │     └─ Strategy C: fallback (manual or deferred)
+      │
+      ├─ 3. RECORD outcome:
+      │     ├─ Success → write *-success.json (strategy + context + timestamp)
+      │     └─ Failure → write *-failure.json (all attempts + error details)
+      │
+      └─ Next time same pattern appears → winning strategy tried first
+```
+
+### Memory Lifecycle
+
+```
+SESSION START
+  │
+  ├─ LOAD: session-start.mjs reads:
+  │   ├─ ~/.auramaxing/memory/_compressed-summary.json  (NLM briefing, ~100 tokens)
+  │   ├─ ~/.auramaxing/learnings/*-success.json         (winning strategies)
+  │   └─ Emits [AURAMAXING MEMORY] block → Claude context
+  │
+  ▼
+PROMPT (every turn)
+  │
+  ├─ SEARCH: prompt-engine.mjs / memory-enrich.mjs
+  │   ├─ LightRAG vector search (semantic, 384-dim embeddings)
+  │   ├─ NLM deep recall (fallback when LightRAG is weak)
+  │   └─ Matching decisions injected into [AURAMAXING PROMPT-ENGINE]
+  │
+  ├─ LEARN: memory-learn.mjs (PostToolUse)
+  │   └─ Stores tool outcomes + patterns in real time
+  │
+  ▼
+SESSION STOP
+  │
+  ├─ SAVE: session-stop.mjs
+  │   ├─ Writes session summary → ~/.auramaxing/memory/YYYY-MM-DD-*.json
+  │   ├─ Writes decisions (if any) → separate entries
+  │   └─ Prunes: 50 sessions, 30 prompts, 10 decisions (oldest first)
+  │
+  ├─ COMPRESS: NLM background job (detached)
+  │   ├─ notebooklm-bridge.mjs reads all memory entries
+  │   ├─ Synthesizes into single briefing (~100 tokens, 87% reduction)
+  │   └─ Writes → _compressed-summary.json
+  │
+  └─ PRECOMPUTE: precompute-pipeline.mjs (background, 10 steps)
+      ├─ Content-based vector dedup (eliminates ~48% duplicates)
+      ├─ Cross-project knowledge graph update
+      ├─ Intent prediction for next session
+      └─ LightRAG index rebuild (500-doc cap, oldest-first pruning)
+```
+
 ## MCP Servers (9)
 
 context7, playwright, github, supabase, sequential-thinking,

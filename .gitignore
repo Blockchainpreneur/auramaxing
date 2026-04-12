@@ -1,25 +1,46 @@
-tui/sessions/
-.env
-.env.*
-.swarm/
+# Dependencies
 node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Python
 __pycache__/
 *.pyc
-.DS_Store
-*.log
-.claude-flow/
+*.pyo
+*.egg-info/
+.venv/
+
+# Environment / Secrets
+.env
+.env.*
 *.key
 *.pem
 secrets.json
+
+# Playwright
+playwright-report/
+blob-report/
+test-results/
+playwright/.cache/
+playwright/.auth/
+
+# Logs
+*.log
+
+# Claude Flow data
+.claude-flow/data/
+
+# TUI sessions
+tui/sessions/
+
+# Swarm state (runtime only)
+.swarm/
+
+# Generated configs (installed per-machine)
 tui/.claude/
 tui/.mcp.json
 tui/CLAUDE.md
 .mcp.json
 CLAUDE.md
-
-# Playwright
-/test-results/
-/playwright-report/
-/blob-report/
-/playwright/.cache/
-/playwright/.auth/
