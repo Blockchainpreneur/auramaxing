@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * AURAMXING Sequential Application Filler — Batch of 10
+ * AURAMAXING Sequential Application Filler — Batch of 10
  *
  * Opens 10 applications at a time.
  * Fills 100% of ALL fields (required + optional).

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Aura — AURAMXING Autopilot Engine
+ * Aura — AURAMAXING Autopilot Engine
  * For visionaries, entrepreneurs, and builders shipping real products.
  *
  * Extends the dev-focused router with:
@@ -54,7 +54,7 @@ const RULES = [
       /\b(brain.?dump|i've been thinking|let me think out loud|rambling|messy thoughts|wall of text|too many thoughts|a lot on my mind|stream of consciousness)\b/,
       /^(ok so,?|so i|here'?s what i'?m thinking|i have a lot|i don'?t know where to start)/,
     ],
-    skill: 'extract-decisions → prioritize → structure → SAVE key decisions + action items to ~/.auramxing/decisions.md',
+    skill: 'extract-decisions → prioritize → structure → SAVE key decisions + action items to ~/.auramaxing/decisions.md',
     label: 'Processing your thoughts',
   },
 
@@ -536,7 +536,7 @@ async function main() {
   // Gap 3: context-aware complexity boost ─────────────────────────────────
   try {
     const slug    = process.cwd().replace(/[^a-z0-9]/gi, '-').replace(/-+/g, '-').toLowerCase().slice(-50);
-    const ctxFile = join(homedir(), '.auramxing', 'contexts', `${slug}.md`);
+    const ctxFile = join(homedir(), '.auramaxing', 'contexts', `${slug}.md`);
     if (existsSync(ctxFile)) {
       const { size } = statSync(ctxFile);
       if (size < 512 * 1024) { // skip files > 512 KB to avoid memory/perf issues
@@ -554,7 +554,7 @@ async function main() {
 
   // Gap 1: write current-task.json for completion diagram ──────────────────
   try {
-    const taskDir = join(homedir(), '.auramxing');
+    const taskDir = join(homedir(), '.auramaxing');
     if (!existsSync(taskDir)) mkdirSync(taskDir, { recursive: true });
     writeFileSync(join(taskDir, 'current-task.json'),
       JSON.stringify({ id: primary.id, label: primary.label, ts: new Date().toISOString() }));
@@ -563,24 +563,24 @@ async function main() {
   // Version check — synchronous, BLOCKS before routing (same pattern as gstack preamble)
   // Cache-backed: 60min TTL for UP_TO_DATE, so this is instant after first check
   try {
-    const checkScript = join(homedir(), 'auramxing', 'scripts', 'update-check.sh');
+    const checkScript = join(homedir(), 'auramaxing', 'scripts', 'update-check.sh');
     if (existsSync(checkScript)) {
       const result = execSync(`bash "${checkScript}" 2>/dev/null`, { encoding: 'utf8', timeout: 5000 }).trim();
       if (result.startsWith('UPGRADE_AVAILABLE')) {
         const [, local, remote] = result.split(' ');
         // Inject blocking update directive — Claude MUST use AskUserQuestion before proceeding
         process.stdout.write([
-          `[AURAMXING UPDATE]`,
-          `AURAMXING v${remote} is available (you are on v${local}).`,
+          `[AURAMAXING UPDATE]`,
+          `AURAMAXING v${remote} is available (you are on v${local}).`,
           `BEFORE doing anything else — before routing, before answering — use the AskUserQuestion tool:`,
-          `  question: "AURAMXING v${remote} is available (you're on v${local}). Update now?"`,
+          `  question: "AURAMAXING v${remote} is available (you're on v${local}). Update now?"`,
           `  options: ["Yes, upgrade now (recommended)", "Not now"]`,
-          `If "Yes": run this via Bash tool: cd ~/auramxing && git pull && bash install.sh`,
-          `  Then say "AURAMXING updated to v${remote}" and continue with the user's original request.`,
-          `If "Not now": write snooze: echo "${remote} 1 $(date +%s)" > ~/.auramxing/update-snoozed`,
+          `If "Yes": run this via Bash tool: cd ~/auramaxing && git pull && bash install.sh`,
+          `  Then say "AURAMAXING updated to v${remote}" and continue with the user's original request.`,
+          `If "Not now": write snooze: echo "${remote} 1 $(date +%s)" > ~/.auramaxing/update-snoozed`,
           `  Then continue with the user's request normally.`,
           `DO NOT skip this. DO NOT proceed without asking. This is a blocking update check.`,
-          `[/AURAMXING UPDATE]`,
+          `[/AURAMAXING UPDATE]`,
         ].join('\n') + '\n');
       }
     }
@@ -611,7 +611,7 @@ async function main() {
 
   // ── Prompt Engine: enrich via NotebookLM-style structuring + LightRAG memory
   try {
-    const engineScript = join(homedir(), 'auramxing', 'helpers', 'prompt-engine.mjs');
+    const engineScript = join(homedir(), 'auramaxing', 'helpers', 'prompt-engine.mjs');
     if (existsSync(engineScript)) {
       const enriched = execSync(`node "${engineScript}" 2>/dev/null`, {
         input: JSON.stringify({ prompt: promptText, cwd: process.cwd() }),
@@ -634,14 +634,14 @@ async function main() {
   const loadBar = [
     `▸ Aura · ${primary.label} · ${tier}`,
   ].join('\n');
-  process.stdout.write(`[AURAMXING DISPLAY]\n${loadBar}\n[/AURAMXING DISPLAY]\n`);
+  process.stdout.write(`[AURAMAXING DISPLAY]\n${loadBar}\n[/AURAMAXING DISPLAY]\n`);
 
   // ── Directives → Claude reads but does NOT render ─────────────────────────
   // Try compressed enrichments first (pre-computed by pipeline), fall back to static
   const enrichItems = ENRICHMENTS[primary.id] || [];
   let enrichLine = '';
   try {
-    const compressedPath = join(homedir(), '.auramxing', 'prompt-cache', 'enrichments-compressed.json');
+    const compressedPath = join(homedir(), '.auramaxing', 'prompt-cache', 'enrichments-compressed.json');
     if (existsSync(compressedPath)) {
       const age = Date.now() - statSync(compressedPath).mtimeMs;
       if (age < 86400000) { // 24hr TTL
@@ -685,7 +685,7 @@ async function main() {
   // Inject task-specific CLAUDE.md segment if available
   let claudemdSegment = '';
   try {
-    const segPath = join(homedir(), '.auramxing', 'prompt-cache', `claudemd-${primary.id}.txt`);
+    const segPath = join(homedir(), '.auramaxing', 'prompt-cache', `claudemd-${primary.id}.txt`);
     if (existsSync(segPath)) {
       const age = Date.now() - statSync(segPath).mtimeMs;
       if (age < 86400000) {
@@ -697,7 +697,7 @@ async function main() {
     directives.push(`CONTEXT: ${claudemdSegment.slice(0, 500)}`);
   }
 
-  process.stdout.write(`[AURAMXING DIRECTIVE]\n${directives.join('\n')}\n[/AURAMXING DIRECTIVE]\n`);
+  process.stdout.write(`[AURAMAXING DIRECTIVE]\n${directives.join('\n')}\n[/AURAMAXING DIRECTIVE]\n`);
 
   process.exit(0);
 }

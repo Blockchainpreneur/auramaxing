@@ -1,16 +1,16 @@
 #!/usr/bin/env node
 /**
- * AURAMXING — Task-specific CLAUDE.md segment generator
+ * AURAMAXING — Task-specific CLAUDE.md segment generator
  *
  * Reads ~/.claude/CLAUDE.md, splits by ## headers, maps sections to task types,
- * and writes compressed subsets to ~/.auramxing/prompt-cache/claudemd-{taskType}.txt
+ * and writes compressed subsets to ~/.auramaxing/prompt-cache/claudemd-{taskType}.txt
  *
  * Each segment is ~500-1500 tokens (vs ~6000 full), containing ONLY the sections
  * relevant to the current task type. The router injects the matching segment
  * as a lightweight CONTEXT directive.
  *
  * Called by: precompute-pipeline.mjs (Step 6)
- * Output: ~/.auramxing/prompt-cache/claudemd-{taskType}.txt
+ * Output: ~/.auramaxing/prompt-cache/claudemd-{taskType}.txt
  */
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 import { join } from 'path';
@@ -18,7 +18,7 @@ import { homedir } from 'os';
 
 const HOME = homedir();
 const CLAUDE_MD = join(HOME, '.claude', 'CLAUDE.md');
-const CACHE_DIR = join(HOME, '.auramxing', 'prompt-cache');
+const CACHE_DIR = join(HOME, '.auramaxing', 'prompt-cache');
 
 mkdirSync(CACHE_DIR, { recursive: true });
 
@@ -86,7 +86,7 @@ for (const s of sections) {
 //   security-rules
 //   aura-autopilot-engine-always-on
 //   agent-teams-swarm
-//   browser-automation-native-auramxing-skill-cdp
+//   browser-automation-native-auramaxing-skill-cdp
 //   ui-design-activate-only-when-building-ui
 //   gstack-ai-software-factory-global
 
@@ -118,7 +118,7 @@ const TASK_SECTIONS = {
   ],
   'e2e-testing': [
     ...ALWAYS_INCLUDE,
-    'browser-automation-native-auramxing-skill-cdp',
+    'browser-automation-native-auramaxing-skill-cdp',
   ],
   security: [
     ...ALWAYS_INCLUDE,

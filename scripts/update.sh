@@ -1,9 +1,9 @@
 #!/bin/bash
-# AURAMXING — Update script
+# AURAMAXING — Update script
 set -e
 
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-echo "🔄 Updating AURAMXING..."
+echo "🔄 Updating AURAMAXING..."
 
 cd "$REPO_DIR"
 git pull origin main
@@ -17,4 +17,4 @@ export PATH="/usr/local/bin:$PATH"
 # Re-run installer to sync hooks, helpers, CLAUDE.md
 bash "$REPO_DIR/install.sh"
 
-echo "✅ AURAMXING updated successfully."
+echo "✅ AURAMAXING updated successfully."

@@ -5,12 +5,12 @@
  * higher complexity scoring, and the full autopilot state machine.
  * The active hook in settings.json points to rational-router-apex.mjs.
  *
- * Rational Router v3 — AURAMXING Autopilot (legacy)
+ * Rational Router v3 — AURAMAXING Autopilot (legacy)
  * Fires on UserPromptSubmit. Outputs IMPERATIVE instructions Claude executes.
  *
  * Output tiers:
  *  - Trivial  (<15%): silent — no tokens wasted
- *  - Medium (15-49%): 1 line → [AURAMXING] task model → gstack-skill
+ *  - Medium (15-49%): 1 line → [AURAMAXING] task model → gstack-skill
  *  - Complex  (50%+): 3 lines → EXECUTE + SPAWN directives (auto-swarm)
  *
  * Non-blocking: always exits 0.
@@ -211,11 +211,11 @@ async function main() {
   // ── Machine directive → STDOUT (Claude reads this, acts on it) ────────────
   if (complexity >= 50 && primary.agents?.length) {
     const agentList = (primary.agents || []).join(', ');
-    process.stdout.write(`[AURAMXING AUTOPILOT] task:${primary.id} model:${tier} complexity:${complexity}%\n`);
+    process.stdout.write(`[AURAMAXING AUTOPILOT] task:${primary.id} model:${tier} complexity:${complexity}%\n`);
     process.stdout.write(`EXECUTE: ${primary.skill} — run NOW, do not wait for user confirmation\n`);
     process.stdout.write(`SPAWN: ${agentList} — parallel via Task tool, run_in_background:true, ALL in ONE message\n`);
   } else {
-    process.stdout.write(`[AURAMXING] task:${primary.id} model:${tier} → ${primary.skill}\n`);
+    process.stdout.write(`[AURAMAXING] task:${primary.id} model:${tier} → ${primary.skill}\n`);
   }
 
   process.exit(0);

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# auramxing-update-check — periodic version check, modeled after gstack.
+# auramaxing-update-check — periodic version check, modeled after gstack.
 #
 # Output (one line, or nothing):
 #   UPGRADE_AVAILABLE <old> <new>   — remote VERSION differs from local
@@ -8,12 +8,12 @@
 # Called by SessionStart hook and rational-router. Non-blocking.
 set -euo pipefail
 
-CM_DIR="${CM_DIR:-$HOME/auramxing}"
-STATE_DIR="$HOME/.auramxing"
+CM_DIR="${CM_DIR:-$HOME/auramaxing}"
+STATE_DIR="$HOME/.auramaxing"
 CACHE_FILE="$STATE_DIR/last-update-check"
 SNOOZE_FILE="$STATE_DIR/update-snoozed"
 VERSION_FILE="$CM_DIR/VERSION"
-REMOTE_URL="https://raw.githubusercontent.com/Blockchainpreneur/AURAMXING/main/VERSION"
+REMOTE_URL="https://raw.githubusercontent.com/Blockchainpreneur/AURAMAXING/main/VERSION"
 
 mkdir -p "$STATE_DIR"
 

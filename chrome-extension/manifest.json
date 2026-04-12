@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "AURAMXING Theme",
+  "name": "AURAMAXING Theme",
   "version": "1.0",
   "description": "Black + Pastel theme for claude.ai",
   "content_scripts": [

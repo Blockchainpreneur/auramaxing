@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Task Complete — AURAMXING 2.0
+ * Task Complete — AURAMAXING 2.0
  * Stop hook. Reads the turn's accumulated tool events and renders
  * a completion state machine diagram showing what was done.
  *
@@ -18,7 +18,7 @@ import { join } from 'path';
 import { request } from 'http';
 
 const HOME         = homedir();
-const DIR          = join(HOME, '.auramxing');
+const DIR          = join(HOME, '.auramaxing');
 const SESSION_PID  = process.ppid || process.pid;
 const EVENTS_FILE  = join(DIR, `turn-events-${SESSION_PID}.jsonl`);
 const TASK_FILE    = join(DIR, `current-task-${SESSION_PID}.json`);

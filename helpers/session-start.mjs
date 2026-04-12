@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
- * SessionStart — AURAMXING welcome + update check + memory load
+ * SessionStart — AURAMAXING welcome + update check + memory load
  *
  * 1. Shows welcome panel
  * 2. Checks for updates (blocking, like gstack)
- * 3. Loads session memory from ~/.auramxing/memory/
+ * 3. Loads session memory from ~/.auramaxing/memory/
  * 4. Outputs memory context to stdout so Claude reads it
  *
  * Always exits 0. Non-blocking on failure.
@@ -15,8 +15,8 @@ import { homedir } from 'os';
 import { existsSync, readdirSync, readFileSync, mkdirSync, writeFileSync, statSync } from 'fs';
 
 const HOME = homedir();
-const MEMORY_DIR = join(HOME, '.auramxing', 'memory');
-const LEARNINGS_DIR = join(HOME, '.auramxing', 'learnings');
+const MEMORY_DIR = join(HOME, '.auramaxing', 'memory');
+const LEARNINGS_DIR = join(HOME, '.auramaxing', 'learnings');
 
 try {
   const C = '\x1b[36m', Y = '\x1b[33m', B = '\x1b[1m', R = '\x1b[0m', D = '\x1b[2m';
@@ -25,7 +25,7 @@ try {
   let upgradeAvail = false;
   let localVer = '', remoteVer = '';
   try {
-    const checkScript = join(HOME, 'auramxing', 'scripts', 'update-check.sh');
+    const checkScript = join(HOME, 'auramaxing', 'scripts', 'update-check.sh');
     const result = execSync(`bash "${checkScript}" 2>/dev/null`, { encoding: 'utf8', timeout: 5000 }).trim();
     if (result.startsWith('UPGRADE_AVAILABLE')) {
       const parts = result.split(' ');
@@ -35,10 +35,10 @@ try {
     }
   } catch (_) {}
 
-  // ── Auto-sync helpers from ~/auramxing to ~/.claude ───────────
+  // ── Auto-sync helpers from ~/auramaxing to ~/.claude ───────────
   // Prevents the dual-file divergence problem forever
   try {
-    const srcDir = join(HOME, 'auramxing', 'helpers');
+    const srcDir = join(HOME, 'auramaxing', 'helpers');
     const dstDir = join(HOME, '.claude', 'helpers');
     if (existsSync(srcDir) && existsSync(dstDir)) {
       const helpers = readdirSync(srcDir).filter(f => f.endsWith('.mjs'));
@@ -58,12 +58,12 @@ try {
 
   // ── Cleanup orphan event files from crashed sessions ──────────
   try {
-    const eventFiles = readdirSync(join(HOME, '.auramxing')).filter(f => f.startsWith('turn-events-') && f.endsWith('.jsonl'));
+    const eventFiles = readdirSync(join(HOME, '.auramaxing')).filter(f => f.startsWith('turn-events-') && f.endsWith('.jsonl'));
     for (const f of eventFiles) {
       const pid = parseInt(f.replace('turn-events-', '').replace('.jsonl', ''));
       if (pid && !isNaN(pid)) {
         try { process.kill(pid, 0); } catch { // process dead — orphan file
-          try { require('fs').unlinkSync(join(HOME, '.auramxing', f)); } catch {}
+          try { require('fs').unlinkSync(join(HOME, '.auramaxing', f)); } catch {}
         }
       }
     }
@@ -72,14 +72,14 @@ try {
   // ── NLM setup (BACKGROUND — never blocks session start) ────────
   // Auth refresh + notebook creation run in a detached script.
   // Session starts instantly. NLM is ready by the time the user types.
-  // Logs to ~/.auramxing/nlm-setup.log for debugging.
+  // Logs to ~/.auramaxing/nlm-setup.log for debugging.
   try {
-    const nlmSetup = join(HOME, 'auramxing', 'helpers', 'nlm-session-setup.mjs');
+    const nlmSetup = join(HOME, 'auramaxing', 'helpers', 'nlm-session-setup.mjs');
     const projectName = process.cwd().split('/').pop();
     if (existsSync(nlmSetup)) {
       // Use execSync with shell backgrounding — the only pattern that reliably
       // survives process.exit(0) in Node.js
-      const logFile = join(HOME, '.auramxing', 'nlm-setup-stderr.log');
+      const logFile = join(HOME, '.auramaxing', 'nlm-setup-stderr.log');
       try {
         execSync(
           '/bin/bash -c \'export PATH="/Library/Frameworks/Python.framework/Versions/3.12/bin:$PATH" && node "' + nlmSetup + '" "' + projectName + '" >> "' + logFile + '" 2>&1 &\'',
@@ -92,10 +92,10 @@ try {
   // ── Pre-warm LightRAG model (background, non-blocking) ─────
   try {
     const { spawn: spawnBg2 } = require('child_process');
-    const lrCli = join(HOME, 'auramxing', 'scripts', 'lightrag-cli.py');
+    const lrCli = join(HOME, 'auramaxing', 'scripts', 'lightrag-cli.py');
     const pyBin = '/Library/Frameworks/Python.framework/Versions/3.12/bin/python3';
     if (existsSync(lrCli)) {
-      const child = spawnBg2(pyBin, [lrCli, 'status', '--workspace', join(HOME, '.auramxing', 'lightrag-workspace')], {
+      const child = spawnBg2(pyBin, [lrCli, 'status', '--workspace', join(HOME, '.auramaxing', 'lightrag-workspace')], {
         detached: true, stdio: 'ignore',
         env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1' },
       });
@@ -111,7 +111,7 @@ try {
   let learningItems = [];
 
   // ── Fast-path: pre-computed briefing from pipeline (most token-efficient)
-  const PROMPT_CACHE = join(HOME, '.auramxing', 'prompt-cache');
+  const PROMPT_CACHE = join(HOME, '.auramaxing', 'prompt-cache');
   const briefingFile = join(PROMPT_CACHE, 'session-briefing.txt');
   const summaryFile = join(MEMORY_DIR, '_compressed-summary.json');
   let compressedBrief = '';
@@ -176,7 +176,7 @@ try {
   const memCount = memoryItems.length;
   const learnCount = learningItems.length;
   const lines = [
-    `${C}╭─ ⚡ AURAMXING ──────────────────────────────────────────╮${R}`,
+    `${C}╭─ ⚡ AURAMAXING ──────────────────────────────────────────╮${R}`,
     `${C}│${R}  Aura autopilot is active. Just say what you want.    ${C}│${R}`,
     `${C}│${R}                                                         ${C}│${R}`,
     `${C}│  🧭 Aura${R}        routes + enriches every request        ${C}│${R}`,
@@ -191,10 +191,10 @@ try {
   if (upgradeAvail) {
     const pad = (s, w) => s + ' '.repeat(Math.max(0, w - s.length));
     process.stderr.write([
-      '', `${Y}${B}  ┌─ AURAMXING UPDATE AVAILABLE ${'─'.repeat(22)}┐${R}`,
+      '', `${Y}${B}  ┌─ AURAMAXING UPDATE AVAILABLE ${'─'.repeat(22)}┐${R}`,
       `${Y}  │${R}  You: ${C}${pad(localVer, 40)}${Y}│${R}`,
       `${Y}  │${R}  New: ${C}${B}${pad(remoteVer, 40)}${Y}│${R}`,
-      `${Y}  │${R}  ${B}cd ~/auramxing && git pull && bash install.sh${R}  ${Y}│${R}`,
+      `${Y}  │${R}  ${B}cd ~/auramaxing && git pull && bash install.sh${R}  ${Y}│${R}`,
       `${Y}${B}  └${'─'.repeat(50)}┘${R}`, '',
     ].join('\n') + '\n');
   }
@@ -202,7 +202,7 @@ try {
   // ── Output memory to stdout (Claude reads this) ───────────────
   if (compressedBrief || synthesizedLearnings || memoryItems.length > 0 || learningItems.length > 0) {
     const memoryBlock = [];
-    memoryBlock.push('[AURAMXING MEMORY]');
+    memoryBlock.push('[AURAMAXING MEMORY]');
 
     // Prefer pre-computed briefing (saves ~70% tokens vs raw entries)
     if (compressedBrief) {
@@ -244,7 +244,7 @@ try {
       memoryBlock.push(prediction.slice(0, 200));
     }
 
-    memoryBlock.push('[/AURAMXING MEMORY]');
+    memoryBlock.push('[/AURAMAXING MEMORY]');
     process.stdout.write(memoryBlock.join('\n') + '\n');
   }
 

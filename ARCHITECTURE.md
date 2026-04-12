@@ -1,4 +1,4 @@
-# Auramxing v1.0.0 — Complete Architecture
+# Auramaxing v1.0.0 — Complete Architecture
 
 ## State Machine
 
@@ -20,7 +20,7 @@
                     │        (~100 tokens)      │
                     │  3. Load learnings        │
                     │  4. Welcome panel (stderr)│
-                    │  5. [AURAMXING MEMORY]    │
+                    │  5. [AURAMAXING MEMORY]    │
                     │     → stdout for Claude   │
                     └────────────┬─────────────┘
                                  │
@@ -56,10 +56,10 @@
               │  └────────┘ └──────────┘ └────────┘ │
               │                                      │
               │  Output to Claude (stdout):           │
-              │  [AURAMXING UPDATE]     (if outdated) │
-              │  [AURAMXING PROMPT-ENGINE] (enriched) │
-              │  [AURAMXING DISPLAY]    (loading bar) │
-              │  [AURAMXING DIRECTIVE]  (hidden)      │
+              │  [AURAMAXING UPDATE]     (if outdated) │
+              │  [AURAMAXING PROMPT-ENGINE] (enriched) │
+              │  [AURAMAXING DISPLAY]    (loading bar) │
+              │  [AURAMAXING DIRECTIVE]  (hidden)      │
               └──────────────────┬───────────────────┘
                                  │
                                  ▼
@@ -135,7 +135,7 @@
 ## Data Flow
 
 ```
-~/.auramxing/
+~/.auramaxing/
 ├── memory/                     Session memory
 │   ├── 2026-04-10-*.json       Raw entries (pruned to 50)
 │   └── _compressed-summary.json NLM-compressed briefing
@@ -155,7 +155,7 @@
 ├── helpers/                    Active hooks (synced)
 └── skills/obsidian/            Knowledge skills
 
-~/auramxing/
+~/auramaxing/
 ├── helpers/                    Source hooks
 ├── daemon/                     State daemon (port 57821)
 ├── scripts/                    Browser, update, batch tools

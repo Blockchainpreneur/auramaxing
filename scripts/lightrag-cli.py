@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-AURAMXING LightRAG CLI — Local vector search for session memory.
+AURAMAXING LightRAG CLI — Local vector search for session memory.
 
 Uses sentence-transformers (all-MiniLM-L6-v2) for dense semantic embeddings
 + cosine similarity search. No external API keys required. All local computation.
@@ -191,9 +191,9 @@ class LocalVectorizer:
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
 def main():
-    parser = argparse.ArgumentParser(description="AURAMXING LightRAG CLI")
+    parser = argparse.ArgumentParser(description="AURAMAXING LightRAG CLI")
     parser.add_argument("command", choices=["ingest", "query", "status"])
-    parser.add_argument("--workspace", default=os.path.expanduser("~/.auramxing/lightrag-workspace"))
+    parser.add_argument("--workspace", default=os.path.expanduser("~/.auramaxing/lightrag-workspace"))
     parser.add_argument("--input", help="JSON file to ingest")
     parser.add_argument("--query", "-q", help="Query text for search")
     parser.add_argument("--top-k", type=int, default=3, help="Number of results")

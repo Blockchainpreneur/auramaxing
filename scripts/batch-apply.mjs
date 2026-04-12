@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * AURAMXING Batch Application Filler
+ * AURAMAXING Batch Application Filler
  * Opens each accelerator/VC form, fills all fields with Econ Markets data,
  * leaves tabs open for review. Does NOT submit.
  */
@@ -215,7 +215,7 @@ async function fillForm(browser, program) {
 }
 
 async function main() {
-  console.log(`\n=== AURAMXING Batch Application Filler ===`);
+  console.log(`\n=== AURAMAXING Batch Application Filler ===`);
   console.log(`Programs to process: ${PROGRAMS.length}`);
   console.log(`Starting...\n`);
 

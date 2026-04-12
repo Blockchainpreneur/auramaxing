@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * AURAMXING LightRAG Bridge — Node.js ↔ Python vector search
+ * AURAMAXING LightRAG Bridge — Node.js ↔ Python vector search
  *
  * Wraps lightrag-cli.py with caching and timeout handling.
  * All operations are non-blocking with graceful fallbacks.
@@ -21,9 +21,9 @@ import { createHash } from 'crypto';
 
 const HOME = homedir();
 const PYTHON_BIN = '/Library/Frameworks/Python.framework/Versions/3.12/bin/python3';
-const CLI_SCRIPT = join(HOME, 'auramxing', 'scripts', 'lightrag-cli.py');
-const WORKSPACE = join(HOME, '.auramxing', 'lightrag-workspace');
-const CACHE_DIR = join(HOME, '.auramxing', 'lightrag-cache');
+const CLI_SCRIPT = join(HOME, 'auramaxing', 'scripts', 'lightrag-cli.py');
+const WORKSPACE = join(HOME, '.auramaxing', 'lightrag-workspace');
+const CACHE_DIR = join(HOME, '.auramaxing', 'lightrag-cache');
 const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
 const QUERY_TIMEOUT = 5000; // 5s max for queries (allows sentence-transformers cold start ~3s)
 const INGEST_TIMEOUT = 30000; // 30s for ingestion
@@ -134,11 +134,11 @@ export function ingestEntries(entries, background = true) {
 
 /**
  * Ingest all memory and learning files into the index.
- * Reads from ~/.auramxing/memory/ and ~/.auramxing/learnings/.
+ * Reads from ~/.auramaxing/memory/ and ~/.auramaxing/learnings/.
  */
 export function ingestAllMemory() {
-  const memoryDir = join(HOME, '.auramxing', 'memory');
-  const learningsDir = join(HOME, '.auramxing', 'learnings');
+  const memoryDir = join(HOME, '.auramaxing', 'memory');
+  const learningsDir = join(HOME, '.auramaxing', 'learnings');
   const entries = [];
 
   // Collect memory entries

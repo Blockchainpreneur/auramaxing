@@ -3,8 +3,8 @@
  * SessionStop — save session memory + learnings + daemon summary
  *
  * 1. Reads turn events and current task to build session summary
- * 2. Saves key decisions/context to ~/.auramxing/memory/
- * 3. Saves learned patterns to ~/.auramxing/learnings/
+ * 2. Saves key decisions/context to ~/.auramaxing/memory/
+ * 3. Saves learned patterns to ~/.auramaxing/learnings/
  * 4. Sends summary to daemon
  *
  * Always exits 0.
@@ -16,11 +16,11 @@ import { join } from 'path';
 import { homedir } from 'os';
 
 const HOME = homedir();
-const MEMORY_DIR = join(HOME, '.auramxing', 'memory');
-const LEARNINGS_DIR = join(HOME, '.auramxing', 'learnings');
-const EVENTS_FILE = join(HOME, '.auramxing', 'turn-events.jsonl');
-const TASK_FILE = join(HOME, '.auramxing', 'current-task.json');
-const DECISIONS_FILE = join(HOME, '.auramxing', 'decisions.md');
+const MEMORY_DIR = join(HOME, '.auramaxing', 'memory');
+const LEARNINGS_DIR = join(HOME, '.auramaxing', 'learnings');
+const EVENTS_FILE = join(HOME, '.auramaxing', 'turn-events.jsonl');
+const TASK_FILE = join(HOME, '.auramaxing', 'current-task.json');
+const DECISIONS_FILE = join(HOME, '.auramaxing', 'decisions.md');
 
 mkdirSync(MEMORY_DIR, { recursive: true });
 mkdirSync(LEARNINGS_DIR, { recursive: true });
@@ -115,7 +115,7 @@ try {
   // 4. NLM anti-laziness directives → anti-laziness-{type}.txt
   // 5. Compress ENRICHMENTS → enrichments-compressed.json
   try {
-    const pipelineScript = join(HOME, 'auramxing', 'helpers', 'precompute-pipeline.mjs');
+    const pipelineScript = join(HOME, 'auramaxing', 'helpers', 'precompute-pipeline.mjs');
     if (existsSync(pipelineScript)) {
       const child = spawn('node', [pipelineScript], {
         detached: true, stdio: 'ignore',

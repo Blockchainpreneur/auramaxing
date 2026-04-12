@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, renameSync } from "fs";
 import { join } from "path";
 
 const HOME = process.env.HOME || "/Users/macbook";
-const STATE_DIR = join(HOME, ".auramxing");
+const STATE_DIR = join(HOME, ".auramaxing");
 const STATE_FILE = join(STATE_DIR, "state.json");
 const CONTEXTS_DIR = join(STATE_DIR, "contexts");
 const CODE_DIR = join(HOME, "code");
@@ -119,7 +119,7 @@ async function writeContextFile(project: Project, summary: string | undefined): 
   const slug = slugify(project.name);
   const contextPath = join(CONTEXTS_DIR, `${slug}.md`);
   const lastSession = summary || "First session — no prior context.";
-  const content = `# AURAMXING Context — ${project.name}
+  const content = `# AURAMAXING Context — ${project.name}
 Last session: ${new Date().toISOString().split("T")[0]}
 ${lastSession}
 `;
@@ -220,7 +220,7 @@ const server = serve({
           const lastSession = lastSummary || "First session — no prior context.";
           await Bun.write(
             join(projectContextDir, "context.md"),
-            `# AURAMXING Context — ${project.name}\nLast session: ${new Date().toISOString().split("T")[0]}\n${lastSession}\n`
+            `# AURAMAXING Context — ${project.name}\nLast session: ${new Date().toISOString().split("T")[0]}\n${lastSession}\n`
           );
         }
 
@@ -289,7 +289,7 @@ const server = serve({
         }
         const lastSummary = getLastSessionSummary(state, cwd);
         const lastSession = lastSummary || "First session — no prior context.";
-        const context = `# AURAMXING Context — ${project.name}\nLast session: ${new Date().toISOString().split("T")[0]}\n${lastSession}\n`;
+        const context = `# AURAMAXING Context — ${project.name}\nLast session: ${new Date().toISOString().split("T")[0]}\n${lastSession}\n`;
         return Response.json({ context }, { headers });
       }
 
@@ -303,4 +303,4 @@ const server = serve({
   },
 });
 
-console.log(`AURAMXING daemon running on http://localhost:${PORT}`);
+console.log(`AURAMAXING daemon running on http://localhost:${PORT}`);

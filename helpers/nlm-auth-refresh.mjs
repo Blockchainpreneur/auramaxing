@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * AURAMXING NLM Auth Refresh
+ * AURAMAXING NLM Auth Refresh
  *
  * Auto-refreshes NotebookLM authentication using Chrome CDP.
  * Requires browser-server.mjs running on port 9222.
@@ -58,7 +58,7 @@ try {
   } catch {
     // Try to start browser-server
     try {
-      const serverScript = join(HOME, 'auramxing', 'scripts', 'browser-server.mjs');
+      const serverScript = join(HOME, 'auramaxing', 'scripts', 'browser-server.mjs');
       if (existsSync(serverScript)) {
         log('Starting browser-server for CDP...');
         const child = spawn('node', [serverScript], {

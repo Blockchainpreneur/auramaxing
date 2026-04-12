@@ -98,8 +98,8 @@ async function main() {
       const { execFileSync } = await import('child_process');
       const { homedir: getHome } = await import('os');
       const PYTHON_BIN = '/Library/Frameworks/Python.framework/Versions/3.12/bin/python3';
-      const LIGHTRAG_CLI = join(getHome(), 'auramxing', 'scripts', 'lightrag-cli.py');
-      const WORKSPACE = join(getHome(), '.auramxing', 'lightrag-workspace');
+      const LIGHTRAG_CLI = join(getHome(), 'auramaxing', 'scripts', 'lightrag-cli.py');
+      const WORKSPACE = join(getHome(), '.auramaxing', 'lightrag-workspace');
 
       const result = execFileSync(PYTHON_BIN, [
         LIGHTRAG_CLI, 'query',

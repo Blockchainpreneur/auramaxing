@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
- * AURAMXING Self-Healing Engine
+ * AURAMAXING Self-Healing Engine
  *
  * When a tool/approach fails, this module:
  * 1. Logs the failure
- * 2. Checks ~/.auramxing/learnings/ for a known working strategy
+ * 2. Checks ~/.auramaxing/learnings/ for a known working strategy
  * 3. Suggests up to 3 alternative approaches
  * 4. When a strategy succeeds, logs it as a learning for next time
  *
@@ -15,7 +15,7 @@ import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync, statSy
 import { join } from 'path';
 import { homedir } from 'os';
 
-const LEARNINGS_DIR = join(homedir(), '.auramxing', 'learnings');
+const LEARNINGS_DIR = join(homedir(), '.auramaxing', 'learnings');
 mkdirSync(LEARNINGS_DIR, { recursive: true });
 
 /**
@@ -121,7 +121,7 @@ export function getAlternatives(task) {
  * Returns a compact string with 5 rules, or null if unavailable.
  */
 export function getSynthesizedLearnings() {
-  const synthPath = join(homedir(), '.auramxing', 'prompt-cache', 'learnings-synthesis.txt');
+  const synthPath = join(homedir(), '.auramaxing', 'prompt-cache', 'learnings-synthesis.txt');
   try {
     if (existsSync(synthPath)) {
       const age = Date.now() - statSync(synthPath).mtimeMs;

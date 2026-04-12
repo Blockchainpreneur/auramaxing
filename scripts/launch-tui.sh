@@ -1,5 +1,5 @@
 #!/bin/bash
-# AURAMXING — TUI launcher
+# AURAMAXING — TUI launcher
 set -e
 
 export PATH="$HOME/.nvm/versions/node/v20.19.0/bin:/usr/local/bin:$PATH"

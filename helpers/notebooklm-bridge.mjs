@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * AURAMXING NotebookLM Bridge — CLI integration
+ * AURAMAXING NotebookLM Bridge — CLI integration
  *
  * Uses notebooklm CLI (Python 3.12) to offload reasoning from Claude.
  * Saves tokens by having NotebookLM do research, synthesis, and structuring.
@@ -22,9 +22,9 @@ import { homedir } from 'os';
 
 const HOME = homedir();
 const NLM_BIN = '/Library/Frameworks/Python.framework/Versions/3.12/bin/notebooklm';
-const CACHE_DIR = join(HOME, '.auramxing', 'nlm-cache');
-const MEMORY_DIR = join(HOME, '.auramxing', 'memory');
-const NB_ID_FILE = join(HOME, '.auramxing', 'nlm-notebook-id');
+const CACHE_DIR = join(HOME, '.auramaxing', 'nlm-cache');
+const MEMORY_DIR = join(HOME, '.auramaxing', 'memory');
+const NB_ID_FILE = join(HOME, '.auramaxing', 'nlm-notebook-id');
 
 mkdirSync(CACHE_DIR, { recursive: true });
 
@@ -115,8 +115,8 @@ switch (command) {
   }
 
   case 'setup': {
-    console.log('Creating AURAMXING Autopilot notebook...');
-    const result = nlm('create "AURAMXING Autopilot Memory"');
+    console.log('Creating AURAMAXING Autopilot notebook...');
+    const result = nlm('create "AURAMAXING Autopilot Memory"');
     const idMatch = result.match(/([a-f0-9-]{36})/);
     if (idMatch) {
       writeFileSync(NB_ID_FILE, idMatch[1]);
@@ -133,12 +133,12 @@ switch (command) {
     const synthType = input || 'briefing';
     let sourceData = '';
     if (synthType === 'learnings') {
-      const learnFiles = existsSync(join(HOME, '.auramxing', 'learnings'))
-        ? readdirSync(join(HOME, '.auramxing', 'learnings')).filter(f => f.endsWith('.json'))
+      const learnFiles = existsSync(join(HOME, '.auramaxing', 'learnings'))
+        ? readdirSync(join(HOME, '.auramaxing', 'learnings')).filter(f => f.endsWith('.json'))
         : [];
       for (const f of learnFiles) {
         try {
-          const data = JSON.parse(readFileSync(join(HOME, '.auramxing', 'learnings', f), 'utf8'));
+          const data = JSON.parse(readFileSync(join(HOME, '.auramaxing', 'learnings', f), 'utf8'));
           if (Array.isArray(data)) {
             data.filter(d => d.type === 'success').forEach(d => {
               sourceData += `${d.tool}: ${d.strategy} (confidence: ${d.confidence})\n`;
@@ -182,7 +182,7 @@ switch (command) {
 
     const date = new Date().toISOString().slice(0, 10);
     const doc = [
-      `# AURAMXING Session Knowledge - ${date}`,
+      `# AURAMAXING Session Knowledge - ${date}`,
       '',
       '## Decisions Made',
       ...(knowledge.decisions || []).map(d => `- ${d}`),
@@ -198,10 +198,10 @@ switch (command) {
     ].join('\n');
 
     // Write to temp file, then add as NLM source
-    const tmpFile = join(HOME, '.auramxing', 'nlm-cache', `knowledge-${date}.md`);
+    const tmpFile = join(HOME, '.auramaxing', 'nlm-cache', `knowledge-${date}.md`);
     writeFileSync(tmpFile, doc);
     try {
-      const result = nlm(`source add "${tmpFile}" --title "AURAMXING Session - ${date}"`);
+      const result = nlm(`source add "${tmpFile}" --title "AURAMAXING Session - ${date}"`);
       console.log(result || 'Knowledge stored');
     } catch (e) {
       console.error(`[NLM store error: ${e.message?.slice(0, 80)}]`);
@@ -218,7 +218,7 @@ switch (command) {
   }
 
   case 'help': default:
-    console.log(`NotebookLM Bridge — AURAMXING
+    console.log(`NotebookLM Bridge — AURAMAXING
 Commands:
   ask "question"         Ask NotebookLM (cached 1hr)
   structure "prompt"     Structure prompt for precision

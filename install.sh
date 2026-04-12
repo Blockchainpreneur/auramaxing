@@ -1,23 +1,23 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────────────────
-#  AURAMXING — One-command installer
-#  Usage: curl -fsSL https://raw.githubusercontent.com/Blockchainpreneur/AURAMXING/main/install.sh | bash
-#  Or:    bash ~/auramxing/install.sh
+#  AURAMAXING — One-command installer
+#  Usage: curl -fsSL https://raw.githubusercontent.com/Blockchainpreneur/AURAMAXING/main/install.sh | bash
+#  Or:    bash ~/auramaxing/install.sh
 #
 #  What this does (fully automatic, zero manual steps):
 #  1. Installs Node 20+ and Claude Code if missing
 #  2. Installs gstack (AI Software Factory skills)
 #  3. Copies hooks (pii-redactor, code-quality-gate) to ~/.claude/helpers/
-#  4. Merges AURAMXING hooks into ~/.claude/settings.json (non-destructive)
+#  4. Merges AURAMAXING hooks into ~/.claude/settings.json (non-destructive)
 #  5. Installs global CLAUDE.md with gstack + design system rules
 #  6. Installs Ruflo (60+ agents, vector memory, self-learning swarms)
 #  7. Installs MCP servers (context7, playwright, shadcn, magicui)
-#  8. Adds shell alias: `cm` → cd ~/auramxing && claude
+#  8. Adds shell alias: `cm` → cd ~/auramaxing && claude
 #  9. Verifies all hooks pass a live smoke test
 # ─────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 
-REPO_DIR="$HOME/auramxing"
+REPO_DIR="$HOME/auramaxing"
 HELPERS_DIR="$HOME/.claude/helpers"
 CLAUDE_DIR="$HOME/.claude"
 BOLD='\033[1m'; GREEN='\033[0;32m'; CYAN='\033[0;36m'
@@ -31,12 +31,12 @@ info()  { echo -e "  ${CYAN}→ $1${RESET}"; }
 
 print_header() {
   echo -e "\n${CYAN}${BOLD}"
-  echo "   █████╗ ██╗   ██╗██████╗  █████╗ ███╗   ███╗██╗  ██╗██╗███╗   ██╗ ██████╗ "
-  echo "  ██╔══██╗██║   ██║██╔══██╗██╔══██╗████╗ ████║╚██╗██╔╝██║████╗  ██║██╔════╝ "
-  echo "  ███████║██║   ██║██████╔╝███████║██╔████╔██║ ╚███╔╝ ██║██╔██╗ ██║██║  ███╗"
-  echo "  ██╔══██║██║   ██║██╔══██╗██╔══██║██║╚██╔╝██║ ██╔██╗ ██║██║╚██╗██║██║   ██║"
-  echo "  ██║  ██║╚██████╔╝██║  ██║██║  ██║██║ ╚═╝ ██║██╔╝ ██╗██║██║ ╚████║╚██████╔╝"
-  echo "  ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝ ╚═════╝ "
+  echo "   █████╗ ██╗   ██╗██████╗  █████╗ ███╗   ███╗ █████╗ ██╗  ██╗██╗███╗   ██╗ ██████╗ "
+  echo "  ██╔══██╗██║   ██║██╔══██╗██╔══██╗████╗ ████║██╔══██╗╚██╗██╔╝██║████╗  ██║██╔════╝ "
+  echo "  ███████║██║   ██║██████╔╝███████║██╔████╔██║███████║ ╚███╔╝ ██║██╔██╗ ██║██║  ███╗"
+  echo "  ██╔══██║██║   ██║██╔══██╗██╔══██║██║╚██╔╝██║██╔══██║ ██╔██╗ ██║██║╚██╗██║██║   ██║"
+  echo "  ██║  ██║╚██████╔╝██║  ██║██║  ██║██║ ╚═╝ ██║██║  ██║██╔╝ ██╗██║██║ ╚████║╚██████╔╝"
+  echo "  ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝ ╚═════╝ "
   echo -e "${RESET}"
   echo -e "  ${BOLD}The AI Development Operating System${RESET}  —  Powered by Aura Engine v1.0\n"
 }
@@ -127,11 +127,11 @@ install_settings() {
   export _CM_QG_CMD="${_PFX}node ~/.claude/helpers/code-quality-gate.mjs 2>/dev/null || true"
   export _CM_RR_CMD="${_PFX}node ~/.claude/helpers/rational-router-apex.mjs 2>/dev/null || true"
   export _CM_SS_CMD="${_PFX}node ~/.claude/helpers/session-start.mjs || true"
-  export _CM_SSD_CMD="${_PFX}node ~/auramxing/helpers/session-start-daemon.mjs 2>/dev/null || true"
+  export _CM_SSD_CMD="${_PFX}node ~/auramaxing/helpers/session-start-daemon.mjs 2>/dev/null || true"
   export _CM_RUFLO_CMD="${_PFX}cd ~/.ruflo-global && npx ruflo@latest daemon status 2>/dev/null | grep -qi running || (npx ruflo@latest daemon start 2>/dev/null &) || true"
   export _CM_PTU_CMD="${_PFX}node ~/.claude/helpers/post-tool-use-apex.mjs 2>/dev/null || true"
   export _CM_TC_CMD="${_PFX}node ~/.claude/helpers/task-complete.mjs 2>/dev/null || true"
-  export _CM_STOP_CMD="${_PFX}node ~/auramxing/helpers/session-stop.mjs 2>/dev/null || true"
+  export _CM_STOP_CMD="${_PFX}node ~/auramaxing/helpers/session-stop.mjs 2>/dev/null || true"
   export _CM_SETTINGS="$SETTINGS"
 
   # If file doesn't exist or is empty/corrupt → fresh install
@@ -430,7 +430,7 @@ install_agent_browser() {
   info "First run syncs your Chrome profile — log in once, sessions persist forever"
 }
 
-# ── Shell alias: cm → cd ~/auramxing && claude ─────────────────────────────
+# ── Shell alias: cm → cd ~/auramaxing && claude ─────────────────────────────
 install_alias() {
   local NVM_HELPER='_ensure_nvm() { [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" 2>/dev/null; }'
 
@@ -438,17 +438,17 @@ install_alias() {
     [ -f "$RC" ] || continue
     # Add NVM helper if not present
     if ! grep -q "_ensure_nvm" "$RC" 2>/dev/null; then
-      printf "\n# AURAMXING — aliases for starting sessions with full autopilot\n%s\n" "$NVM_HELPER" >> "$RC"
+      printf "\n# AURAMAXING — aliases for starting sessions with full autopilot\n%s\n" "$NVM_HELPER" >> "$RC"
       echo 'alias claude="_ensure_nvm && command claude"' >> "$RC"
-      echo 'alias auramxing="_ensure_nvm && command claude"' >> "$RC"
-      echo 'alias ax="cd ~/auramxing && _ensure_nvm && command claude"' >> "$RC"
-      ok "Added claude, auramxing, ax aliases to $(basename $RC)"
+      echo 'alias auramaxing="_ensure_nvm && command claude"' >> "$RC"
+      echo 'alias ax="cd ~/auramaxing && _ensure_nvm && command claude"' >> "$RC"
+      ok "Added claude, auramaxing, ax aliases to $(basename $RC)"
     else
-      ok "Auramxing aliases already in $(basename $RC)"
+      ok "Auramaxing aliases already in $(basename $RC)"
     fi
   done
   info "Run: source ~/.zshrc  (or open a new terminal)"
-  info "Then: claude / auramxing / ax → all start Claude Code with full autopilot"
+  info "Then: claude / auramaxing / ax → all start Claude Code with full autopilot"
 }
 
 # ── 9. Smoke test — verify all hooks pass ────────────────────────────────────
@@ -519,7 +519,7 @@ verify_hooks() {
   fi
 
   # Verify CLAUDE.md has visual protocol (critical for diagram rendering)
-  if [ -f "$CLAUDE_DIR/CLAUDE.md" ] && grep -q "AURAMXING DISPLAY" "$CLAUDE_DIR/CLAUDE.md" 2>/dev/null; then
+  if [ -f "$CLAUDE_DIR/CLAUDE.md" ] && grep -q "AURAMAXING DISPLAY" "$CLAUDE_DIR/CLAUDE.md" 2>/dev/null; then
     ok "CLAUDE.md ✓ visual protocol present"
     passed=$((passed+1))
   else
@@ -538,7 +538,7 @@ verify_hooks() {
 print_success() {
   echo ""
   echo -e "${GREEN}${BOLD}════════════════════════════════════════════════════════${RESET}"
-  echo -e "${GREEN}${BOLD}  ✅ AURAMXING installed successfully!${RESET}"
+  echo -e "${GREEN}${BOLD}  ✅ AURAMAXING installed successfully!${RESET}"
   echo -e "${GREEN}${BOLD}════════════════════════════════════════════════════════${RESET}"
   echo ""
   echo "  Stack:"
@@ -548,7 +548,7 @@ print_success() {
   echo "  • Hooks: pii-redactor + code-quality-gate (security guards)"
   echo "  • Ruflo daemon auto-starts every session"
   echo "  • MCP: context7, playwright, shadcn, magic-ui, github, supabase"
-  echo "  • Global CLAUDE.md + shell alias: ax → ~/auramxing"
+  echo "  • Global CLAUDE.md + shell alias: ax → ~/auramaxing"
   echo ""
   echo -e "  ${BOLD}Start:${RESET}  source ~/.zshrc && ax"
   echo -e "  ${BOLD}Or anywhere:${RESET}  claude  (global stack active in any directory)"
@@ -592,7 +592,7 @@ with open('$CLAUDE_DIR/settings.json', 'w') as f: json.dump(d, f, indent=2)
 
 # ── LightRAG initial index ───────────────────────────────────────────────────
 install_lightrag_index() {
-  mkdir -p "$HOME/.auramxing/lightrag-workspace" "$HOME/.auramxing/lightrag-cache" "$HOME/.auramxing/prompt-cache"
+  mkdir -p "$HOME/.auramaxing/lightrag-workspace" "$HOME/.auramaxing/lightrag-cache" "$HOME/.auramaxing/prompt-cache"
   local BRIDGE="$REPO_DIR/helpers/lightrag-bridge.mjs"
   if [ -f "$BRIDGE" ]; then
     node "$BRIDGE" ingest-all 2>/dev/null && \
@@ -617,7 +617,7 @@ main() {
   step "4/10 gstack (AI Software Factory)"
   install_gstack
 
-  step "5/10 AURAMXING hook helpers"
+  step "5/10 AURAMAXING hook helpers"
   install_helpers
 
   step "6/10 settings.json (smart merge)"
@@ -641,7 +641,7 @@ main() {
   step "12/14 Status bar"
   install_statusline
 
-  step "13/14 Shell aliases (claude, auramxing, cm)"
+  step "13/14 Shell aliases (claude, auramaxing, cm)"
   install_alias
 
   step "14/14 LightRAG initial index"

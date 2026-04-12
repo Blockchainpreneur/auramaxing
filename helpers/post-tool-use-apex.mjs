@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * PostToolUse APEX — AURAMXING
+ * PostToolUse APEX — AURAMAXING
  *
  * Runs after every tool call. Three auto-actions:
  * 1. Logs tool events for completion diagram
@@ -14,7 +14,7 @@ import { homedir } from 'os';
 import { join } from 'path';
 import { request } from 'http';
 
-const DIR = join(homedir(), '.auramxing');
+const DIR = join(homedir(), '.auramaxing');
 const SESSION_PID = process.ppid || process.pid;
 const EVENTS_FILE = join(DIR, `turn-events-${SESSION_PID}.jsonl`);
 const LEARNINGS_DIR = join(DIR, 'learnings');
@@ -85,7 +85,7 @@ try {
       try {
         const success = JSON.parse(readFileSync(successFile, 'utf8'));
         if (success.strategy) {
-          process.stdout.write(`[AURAMXING SELF-HEAL] ${toolName} failed. Previously successful strategy: ${success.strategy}\n`);
+          process.stdout.write(`[AURAMAXING SELF-HEAL] ${toolName} failed. Previously successful strategy: ${success.strategy}\n`);
         }
       } catch {}
     } else {
@@ -101,7 +101,7 @@ try {
       };
       const alt = alternatives[toolName];
       if (alt) {
-        process.stdout.write(`[AURAMXING SELF-HEAL] ${toolName} failed. Try: ${alt}\n`);
+        process.stdout.write(`[AURAMAXING SELF-HEAL] ${toolName} failed. Try: ${alt}\n`);
       }
     }
   }

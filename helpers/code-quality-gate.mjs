@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Code Quality Gate — AURAMXING
+ * Code Quality Gate — AURAMAXING
  * Fires on PostToolUse for Write and Edit operations.
  * Scans generated/modified code for quality issues and anti-patterns.
  *

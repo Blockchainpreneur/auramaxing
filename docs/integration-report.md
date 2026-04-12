@@ -1,7 +1,7 @@
-# AURAMXING: Reporte de Integración NotebookLM + LightRAG
+# AURAMAXING: Reporte de Integración NotebookLM + LightRAG
 
 **Fecha**: 2026-04-11
-**Versión**: AURAMXING v0.6.1
+**Versión**: AURAMAXING v0.6.1
 **Estado general**: Parcialmente operativo — LightRAG funcional, NotebookLM requiere re-autenticación
 
 ---
@@ -10,7 +10,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    AURAMXING AUTOPILOT (Aura)                  │
+│                    AURAMAXING AUTOPILOT (Aura)                  │
 │                                                                 │
 │  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐      │
 │  │   RUNTIME    │    │ PRE-COMPUTE  │    │   STORAGE    │      │
@@ -119,7 +119,7 @@
 │  1. prompt-cache/learnings-synthesis.txt ← NLM       │ ← NO EXISTE
 │  2. learnings/*.json (últimos 10)        ← RAW       │ ← SE USA ESTO
 │                                                      │
-│  Output: [AURAMXING MEMORY] block (~676 chars)       │
+│  Output: [AURAMAXING MEMORY] block (~676 chars)       │
 └──────────────────────────────────────────────────────┘
               │
               ▼
@@ -351,13 +351,13 @@ IDEAL (NLM + LightRAG):     ~250 tokens/prompt est    (↓ 80-91%)
 notebooklm login
 
 # 2. Correr pipeline completo
-node ~/auramxing/helpers/precompute-pipeline.mjs
+node ~/auramaxing/helpers/precompute-pipeline.mjs
 
 # 3. Verificar resultados
-ls -la ~/.auramxing/prompt-cache/
-cat ~/.auramxing/prompt-cache/session-briefing.txt
-cat ~/.auramxing/prompt-cache/learnings-synthesis.txt
+ls -la ~/.auramaxing/prompt-cache/
+cat ~/.auramaxing/prompt-cache/session-briefing.txt
+cat ~/.auramaxing/prompt-cache/learnings-synthesis.txt
 
 # 4. Re-correr benchmark
-node ~/auramxing/tests/benchmark-integration.mjs
+node ~/auramaxing/tests/benchmark-integration.mjs
 ```

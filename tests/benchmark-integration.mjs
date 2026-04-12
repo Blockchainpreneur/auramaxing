@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * AURAMXING Integration Benchmark
+ * AURAMAXING Integration Benchmark
  *
  * Measures efficiency of the NLM + LightRAG integration across 5 dimensions:
  *
@@ -19,10 +19,10 @@ import { homedir } from 'os';
 
 const HOME = homedir();
 const PYTHON_BIN = '/Library/Frameworks/Python.framework/Versions/3.12/bin/python3';
-const LIGHTRAG_CLI = join(HOME, 'auramxing', 'scripts', 'lightrag-cli.py');
-const WORKSPACE = join(HOME, '.auramxing', 'lightrag-workspace');
-const PROMPT_CACHE = join(HOME, '.auramxing', 'prompt-cache');
-const HELPERS = join(HOME, 'auramxing', 'helpers');
+const LIGHTRAG_CLI = join(HOME, 'auramaxing', 'scripts', 'lightrag-cli.py');
+const WORKSPACE = join(HOME, '.auramaxing', 'lightrag-workspace');
+const PROMPT_CACHE = join(HOME, '.auramaxing', 'prompt-cache');
+const HELPERS = join(HOME, 'auramaxing', 'helpers');
 
 const C = '\x1b[36m', G = '\x1b[32m', R = '\x1b[31m', Y = '\x1b[33m',
       B = '\x1b[1m', D = '\x1b[2m', X = '\x1b[0m';
@@ -257,7 +257,7 @@ for (const type of antiLazyTypes) {
 console.log(`  ${antiLazyHits > 0 ? G : Y}○${X} anti-laziness-*.txt            ${String(antiLazyHits).padStart(6)}/${antiLazyTypes.length} types ${D}(NLM generates these)${X}`);
 
 // LightRAG cache
-const lrCacheDir = join(HOME, '.auramxing', 'lightrag-cache');
+const lrCacheDir = join(HOME, '.auramaxing', 'lightrag-cache');
 let lrCacheCount = 0;
 try {
   lrCacheCount = existsSync(lrCacheDir) ? readdirSync(lrCacheDir).filter(f => f.endsWith('.json')).length : 0;
@@ -290,7 +290,7 @@ const { result: startOut, elapsed: startMs } = measure(() => {
   return execSync(`node "${join(HELPERS, 'session-start.mjs')}" 2>/dev/null`, { encoding: 'utf8', timeout: 5000 }).trim();
 });
 const startChars = typeof startOut === 'string' ? startOut.length : 0;
-const hasMemoryBlock = typeof startOut === 'string' && startOut.includes('[AURAMXING MEMORY]');
+const hasMemoryBlock = typeof startOut === 'string' && startOut.includes('[AURAMAXING MEMORY]');
 metric('Session start output', startChars, 'chars', startChars > 0 && startChars < 2000, hasMemoryBlock ? 'MEMORY block present' : 'no MEMORY block');
 
 // Step 2: 5 prompts
@@ -345,7 +345,7 @@ console.log(`  Full cycle errors              ${String(promptErrors).padStart(6)
 // Recommendations
 console.log(`\n  ${B}Recommendations${X}:`);
 if (cacheMisses > 1) {
-  console.log(`  ${Y}→${X} Run ${D}notebooklm login${X} to authenticate NLM, then ${D}node ~/auramxing/helpers/precompute-pipeline.mjs${X}`);
+  console.log(`  ${Y}→${X} Run ${D}notebooklm login${X} to authenticate NLM, then ${D}node ~/auramaxing/helpers/precompute-pipeline.mjs${X}`);
   console.log(`    This will generate session-briefing.txt, learnings-synthesis.txt, and anti-laziness caches`);
   console.log(`    Expected improvement: +15-20% token reduction, dynamic anti-laziness active`);
 }

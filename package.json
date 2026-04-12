@@ -1,7 +1,7 @@
 {
-  "name": "auramxing",
+  "name": "auramaxing",
   "version": "1.0.0",
-  "description": "Auramxing — The AI Development Operating System",
+  "description": "Auramaxing — The AI Development Operating System",
   "main": "index.js",
   "scripts": {},
   "keywords": ["ai", "claude-code", "autopilot", "aura", "development"],

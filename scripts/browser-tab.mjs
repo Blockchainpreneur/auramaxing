@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * AURAMXING Browser Tab — open URLs, screenshot, interact
+ * AURAMAXING Browser Tab — open URLs, screenshot, interact
  *
  * Connects to the running browser server via CDP.
  * Opens new tabs in the user's existing Chrome window.
@@ -26,7 +26,7 @@ function ensureServer() {
     execSync(`curl -sf ${CDP_URL}/json/version >/dev/null 2>&1`, { timeout: 2000 });
   } catch {
     console.log('Starting browser server...');
-    const server = join(homedir(), 'auramxing', 'scripts', 'browser-server.mjs');
+    const server = join(homedir(), 'auramaxing', 'scripts', 'browser-server.mjs');
     execSync(`node "${server}"`, { stdio: 'inherit', timeout: 20000 });
   }
 }

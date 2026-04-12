@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * AURAMXING Session Intent Predictor
+ * AURAMAXING Session Intent Predictor
  *
  * Analyzes recent sessions and predicts what the user will work on next.
  * Uses NLM for smart prediction when available, falls back to pattern analysis.
@@ -11,10 +11,10 @@ import { homedir } from 'os';
 import { execSync } from 'child_process';
 
 const HOME = homedir();
-const MEMORY_DIR = join(HOME, '.auramxing', 'memory');
-const CACHE_DIR = join(HOME, '.auramxing', 'prompt-cache');
+const MEMORY_DIR = join(HOME, '.auramaxing', 'memory');
+const CACHE_DIR = join(HOME, '.auramaxing', 'prompt-cache');
 const NLM_BIN = '/Library/Frameworks/Python.framework/Versions/3.12/bin/notebooklm';
-const NB_ID_FILE = join(HOME, '.auramxing', 'nlm-notebook-id');
+const NB_ID_FILE = join(HOME, '.auramaxing', 'nlm-notebook-id');
 
 mkdirSync(CACHE_DIR, { recursive: true });
 

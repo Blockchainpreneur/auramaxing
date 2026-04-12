@@ -1,11 +1,11 @@
 #!/bin/bash
-# AURAMXING — Fix Claude Desktop after updates
-# Usage: bash ~/auramxing/scripts/fix-claude.sh
+# AURAMAXING — Fix Claude Desktop after updates
+# Usage: bash ~/auramaxing/scripts/fix-claude.sh
 
 set -e
 APP="/Applications/Claude.app"
 ASAR="$APP/Contents/Resources/app.asar"
-WORK="/tmp/auramxing-fix"
+WORK="/tmp/auramaxing-fix"
 MAIN_JS=".vite/build/mainView.js"
 
 echo "▸ Cerrando Claude..."
@@ -16,12 +16,12 @@ rm -rf "$WORK"
 npx --yes @electron/asar extract "$ASAR" "$WORK"
 
 # Solo inyectar si no está ya
-if ! grep -q "auramxingInjectStyles" "$WORK/$MAIN_JS" 2>/dev/null; then
-  echo "▸ Inyectando tema AURAMXING..."
+if ! grep -q "auramaxingInjectStyles" "$WORK/$MAIN_JS" 2>/dev/null; then
+  echo "▸ Inyectando tema AURAMAXING..."
   cat >> "$WORK/$MAIN_JS" << 'JSEOF'
 
-// AURAMXING Black + Pastel — preload injection
-;(function auramxingInjectStyles() {
+// AURAMAXING Black + Pastel — preload injection
+;(function auramaxingInjectStyles() {
   var CSS = [
     ':root,[data-color-scheme],[data-theme],.dark,html{',
     '--bg-000:#000!important;--bg-100:#050505!important;--bg-200:#080808!important;',
@@ -47,9 +47,9 @@ if ! grep -q "auramxingInjectStyles" "$WORK/$MAIN_JS" 2>/dev/null; then
     '::selection{background:#2a1a4a!important;color:#F0E6FF!important;}',
   ].join('');
   function inject() {
-    if (document.getElementById('auramxing-css')) return;
+    if (document.getElementById('auramaxing-css')) return;
     var s = document.createElement('style');
-    s.id = 'auramxing-css'; s.textContent = CSS;
+    s.id = 'auramaxing-css'; s.textContent = CSS;
     (document.head || document.documentElement).appendChild(s);
   }
   if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', inject); } else { inject(); }

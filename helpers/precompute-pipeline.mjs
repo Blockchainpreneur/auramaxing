@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * AURAMXING Pre-computation Pipeline
+ * AURAMAXING Pre-computation Pipeline
  *
  * Runs after SessionStop (background, non-blocking).
  * Generates all cached artifacts for the next session:
@@ -26,14 +26,14 @@ import { join } from 'path';
 import { homedir } from 'os';
 
 const HOME = homedir();
-const MEMORY_DIR = join(HOME, '.auramxing', 'memory');
-const LEARNINGS_DIR = join(HOME, '.auramxing', 'learnings');
-const CACHE_DIR = join(HOME, '.auramxing', 'prompt-cache');
+const MEMORY_DIR = join(HOME, '.auramaxing', 'memory');
+const LEARNINGS_DIR = join(HOME, '.auramaxing', 'learnings');
+const CACHE_DIR = join(HOME, '.auramaxing', 'prompt-cache');
 const NLM_BIN = '/Library/Frameworks/Python.framework/Versions/3.12/bin/notebooklm';
-const NB_ID_FILE = join(HOME, '.auramxing', 'nlm-notebook-id');
+const NB_ID_FILE = join(HOME, '.auramaxing', 'nlm-notebook-id');
 const PYTHON_BIN = '/Library/Frameworks/Python.framework/Versions/3.12/bin/python3';
-const LIGHTRAG_CLI = join(HOME, 'auramxing', 'scripts', 'lightrag-cli.py');
-const LIGHTRAG_WORKSPACE = join(HOME, '.auramxing', 'lightrag-workspace');
+const LIGHTRAG_CLI = join(HOME, 'auramaxing', 'scripts', 'lightrag-cli.py');
+const LIGHTRAG_WORKSPACE = join(HOME, '.auramaxing', 'lightrag-workspace');
 
 mkdirSync(CACHE_DIR, { recursive: true });
 
@@ -58,7 +58,7 @@ function nlm(query) {
 // ── Step 0: Verify NLM auth ────────────────────────────────────────────────
 try {
   log('0', 'Checking NLM auth...');
-  const authScript = join(HOME, 'auramxing', 'helpers', 'nlm-auth-refresh.mjs');
+  const authScript = join(HOME, 'auramaxing', 'helpers', 'nlm-auth-refresh.mjs');
   if (existsSync(authScript)) {
     execSync(`node "${authScript}"`, {
       timeout: 15000, stdio: 'pipe',
@@ -125,7 +125,7 @@ try {
 
 try {
   log('1b', 'Ingesting cross-project learnings...');
-  const bridgeScript = join(HOME, 'auramxing', 'helpers', 'lightrag-bridge.mjs');
+  const bridgeScript = join(HOME, 'auramaxing', 'helpers', 'lightrag-bridge.mjs');
   const result = execSync(`node "${bridgeScript}" ingest-cross`, {
     encoding: 'utf8', timeout: 30000,
   }).trim();
@@ -139,7 +139,7 @@ try {
 try {
   log('2/7', 'Extracting structured knowledge via NLM...');
 
-  const NLM_BRIDGE = join(HOME, 'auramxing', 'helpers', 'notebooklm-bridge.mjs');
+  const NLM_BRIDGE = join(HOME, 'auramaxing', 'helpers', 'notebooklm-bridge.mjs');
 
   // Collect recent memory summaries
   const files = existsSync(MEMORY_DIR)
@@ -201,7 +201,7 @@ try {
 
     // Append to master progress file (accumulates forever)
     try {
-      const masterFile = join(HOME, '.auramxing', 'nlm-cache', 'master-progress.md');
+      const masterFile = join(HOME, '.auramaxing', 'nlm-cache', 'master-progress.md');
       let existing = '';
       try { existing = readFileSync(masterFile, 'utf8'); } catch {}
 
@@ -223,14 +223,14 @@ try {
       // Upload master progress to NLM as source (replace existing)
       try {
         // Delete old master source if exists
-        const masterIdFile = join(HOME, '.auramxing', 'nlm-master-source-id');
+        const masterIdFile = join(HOME, '.auramaxing', 'nlm-master-source-id');
         if (existsSync(masterIdFile)) {
           const oldId = readFileSync(masterIdFile, 'utf8').trim();
           try { execSync(`${NLM_BIN} source delete ${oldId.slice(0, 8)}`, { timeout: 10000, stdio: 'ignore' }); } catch {}
         }
         // Add updated master
         const result = execSync(
-          `${NLM_BIN} source add "${masterFile}" --title "AURAMXING Master Progress"`,
+          `${NLM_BIN} source add "${masterFile}" --title "AURAMAXING Master Progress"`,
           { encoding: 'utf8', timeout: 15000 }
         ).trim();
         const idMatch = result.match(/([a-f0-9-]{36})/);
@@ -384,7 +384,7 @@ try {
 
 try {
   log('5/7', 'Predicting next session intent...');
-  execSync(`node "${join(HOME, 'auramxing', 'helpers', 'intent-predictor.mjs')}"`, {
+  execSync(`node "${join(HOME, 'auramaxing', 'helpers', 'intent-predictor.mjs')}"`, {
     encoding: 'utf8', timeout: 15000,
     env: { ...process.env, PATH: `/Library/Frameworks/Python.framework/Versions/3.12/bin:${process.env.PATH}` },
   });
@@ -544,7 +544,7 @@ try {
 // ── Step 7: Generate task-specific CLAUDE.md segments ───────────────────────
 try {
   log('7/7', 'Generating CLAUDE.md segments...');
-  execSync(`node "${join(HOME, 'auramxing', 'helpers', 'claudemd-segments.mjs')}"`, {
+  execSync(`node "${join(HOME, 'auramaxing', 'helpers', 'claudemd-segments.mjs')}"`, {
     encoding: 'utf8', timeout: 10000,
   });
   log('7/7', 'Done');

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * AURAMXING Prompt Engine — FULLY AUTOMATED
+ * AURAMAXING Prompt Engine — FULLY AUTOMATED
  *
  * Runs on every prompt via Aura. Three auto-actions:
  * 1. Retrieves relevant memory via LightRAG semantic search
@@ -15,16 +15,16 @@ import { join } from 'path';
 import { homedir } from 'os';
 
 const HOME = homedir();
-const MEMORY_DIR = join(HOME, '.auramxing', 'memory');
-const LEARNINGS_DIR = join(HOME, '.auramxing', 'learnings');
-const NLM_CACHE = join(HOME, '.auramxing', 'nlm-cache');
+const MEMORY_DIR = join(HOME, '.auramaxing', 'memory');
+const LEARNINGS_DIR = join(HOME, '.auramaxing', 'learnings');
+const NLM_CACHE = join(HOME, '.auramaxing', 'nlm-cache');
 const NLM_BIN = '/Library/Frameworks/Python.framework/Versions/3.12/bin/notebooklm';
-const NLM_BRIDGE = join(HOME, 'auramxing', 'helpers', 'notebooklm-bridge.mjs');
-const NB_ID_FILE = join(HOME, '.auramxing', 'nlm-notebook-id');
+const NLM_BRIDGE = join(HOME, 'auramaxing', 'helpers', 'notebooklm-bridge.mjs');
+const NB_ID_FILE = join(HOME, '.auramaxing', 'nlm-notebook-id');
 const PYTHON_BIN = '/Library/Frameworks/Python.framework/Versions/3.12/bin/python3';
-const LIGHTRAG_CLI = join(HOME, 'auramxing', 'scripts', 'lightrag-cli.py');
-const LIGHTRAG_WORKSPACE = join(HOME, '.auramxing', 'lightrag-workspace');
-const PROMPT_CACHE = join(HOME, '.auramxing', 'prompt-cache');
+const LIGHTRAG_CLI = join(HOME, 'auramaxing', 'scripts', 'lightrag-cli.py');
+const LIGHTRAG_WORKSPACE = join(HOME, '.auramaxing', 'lightrag-workspace');
+const PROMPT_CACHE = join(HOME, '.auramaxing', 'prompt-cache');
 
 mkdirSync(MEMORY_DIR, { recursive: true });
 mkdirSync(LEARNINGS_DIR, { recursive: true });
@@ -187,7 +187,7 @@ try {
 if (lightragResults.length === 0 || (lightragResults.length > 0 && lightragResults[0].score < 0.4)) {
   try {
     const NLM_BIN_PATH = '/Library/Frameworks/Python.framework/Versions/3.12/bin/notebooklm';
-    const NB_ID = join(HOME, '.auramxing', 'nlm-notebook-id');
+    const NB_ID = join(HOME, '.auramaxing', 'nlm-notebook-id');
     if (existsSync(NB_ID)) {
       const deepResult = execSync(
         `${NLM_BIN_PATH} ask "Based on all stored session knowledge and progress, what is relevant context for this task: ${prompt.slice(0, 200).replace(/"/g, '\\"')}"`,
@@ -280,7 +280,7 @@ if (structuredPrompt !== prompt) {
   // Output only the enrichment (anti-laziness + context + quality), not the original prompt
   const enrichment = structuredPrompt.slice(prompt.length);
   if (enrichment.trim()) {
-    process.stdout.write(`[AURAMXING PROMPT-ENGINE]\n${enrichment.trim()}\n[/AURAMXING PROMPT-ENGINE]\n`);
+    process.stdout.write(`[AURAMAXING PROMPT-ENGINE]\n${enrichment.trim()}\n[/AURAMAXING PROMPT-ENGINE]\n`);
   }
 }
 

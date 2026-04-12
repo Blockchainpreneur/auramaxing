@@ -1,14 +1,14 @@
-# AURAMXING
+# AURAMAXING
 
 **A persistent cognitive operating system for Claude Code.**
 
-AURAMXING transforms Claude Code from a stateless terminal assistant into a context-aware, self-routing, self-healing execution environment. Every prompt is classified, enriched, and executed through a defined pipeline. Memory accumulates across sessions via NotebookLM and LightRAG. Safety guards run on every write. The system operates without user intervention.
+AURAMAXING transforms Claude Code from a stateless terminal assistant into a context-aware, self-routing, self-healing execution environment. Every prompt is classified, enriched, and executed through a defined pipeline. Memory accumulates across sessions via NotebookLM and LightRAG. Safety guards run on every write. The system operates without user intervention.
 
 ---
 
 ## Architecture
 
-AURAMXING is composed of seven layers:
+AURAMAXING is composed of seven layers:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -112,14 +112,14 @@ Complexity scoring adjusts dynamically: repeat task types get +15%, large projec
 ## Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Blockchainpreneur/AURAMXING/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Blockchainpreneur/AURAMAXING/main/install.sh | bash
 ```
 
 Or clone and run locally:
 
 ```bash
-git clone https://github.com/Blockchainpreneur/AURAMXING ~/auramxing
-cd ~/auramxing && bash install.sh
+git clone https://github.com/Blockchainpreneur/AURAMAXING ~/auramaxing
+cd ~/auramaxing && bash install.sh
 ```
 
 ---
@@ -156,7 +156,7 @@ Non-negotiable: never ship without `/review` + `/qa` + `/cso`. After deploy: `/c
 
 ## Memory System
 
-Session memory stored at `~/.auramxing/contexts/{project-slug}.md`. NotebookLM notebooks at `~/.auramxing/nlm/{project-slug}/`. LightRAG index at `~/.auramxing/lightrag/`.
+Session memory stored at `~/.auramaxing/contexts/{project-slug}.md`. NotebookLM notebooks at `~/.auramaxing/nlm/{project-slug}/`. LightRAG index at `~/.auramaxing/lightrag/`.
 
 The 10-step precompute pipeline runs on session end:
 1. Accumulate tool events → 2. Synthesize session summary → 3. Update NLM notebook → 4. Rebuild LightRAG index → 5. Deduplicate vectors → 6. Prune by type limits → 7. Generate anti-laziness directives → 8. Compress learnings → 9. Build per-task CLAUDE.md segments → 10. Update cross-project knowledge graph

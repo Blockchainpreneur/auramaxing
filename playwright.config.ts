@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * AURAMXING Playwright Config
+ * AURAMAXING Playwright Config
  *
  * Rules:
  * - ONE browser window, always headed (visible)

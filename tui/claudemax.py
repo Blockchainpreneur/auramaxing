@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""AURAMXING TUI — AI Development Operating System"""
+"""AURAMAXING TUI — AI Development Operating System"""
 
 import curses
 import json
@@ -96,7 +96,7 @@ def init_colors():
 
 
 def draw_screen(stdscr, projects: list[dict], sel: int, daemon_ok: bool):
-    """Draw the full AURAMXING screen."""
+    """Draw the full AURAMAXING screen."""
     stdscr.erase()
     h, w = stdscr.getmaxyx()
 
@@ -252,7 +252,7 @@ def run_wizard(projects: list[dict]) -> bool:
     """
     curses.endwin()
 
-    print("\n  \u25c6 AURAMXING  \u2014  New Project\n")
+    print("\n  \u25c6 AURAMAXING  \u2014  New Project\n")
     try:
         name = input("  Project name: ").strip()
     except (EOFError, KeyboardInterrupt):

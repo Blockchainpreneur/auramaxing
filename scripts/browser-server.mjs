@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * AURAMXING Browser Server — native browser automation
+ * AURAMAXING Browser Server — native browser automation
  *
  * Launches the user's installed Chrome with a persistent profile copy.
  * All sessions, cookies, and logins from the user's Chrome are preserved.
@@ -21,9 +21,9 @@ import { join } from 'path';
 import { homedir } from 'os';
 
 const CDP_PORT = 9222;
-const PID_FILE = '/tmp/auramxing-browser.pid';
+const PID_FILE = '/tmp/auramaxing-browser.pid';
 const HOME = homedir();
-const PROFILE_DIR = join(HOME, '.auramxing', 'chrome-cdp-profile');
+const PROFILE_DIR = join(HOME, '.auramaxing', 'chrome-cdp-profile');
 const CHROME_PROFILE = join(HOME, 'Library', 'Application Support', 'Google', 'Chrome');
 
 const CHROME_PATHS = [
