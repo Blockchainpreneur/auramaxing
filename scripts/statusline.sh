@@ -19,4 +19,4 @@ if [ -n "$R5H" ]; then
   RATE=" ${RC}\033[1m${R5H}%%w\033[0m"
 fi
 
-printf "\033[36m%s\033[0m ${SC}\033[1m${PCT}%%ctx\033[0m${RATE} \033[32m\$${YOUR_COST}\033[0m \033[2mvs\033[0m \033[31m\$${API_COST}\033[0m \033[2m${DIR}\033[0m\n" "$MODEL"
+printf "\033[35m\033[1mMAXING\033[0m \033[36m%s\033[0m ${SC}\033[1m${PCT}%%ctx\033[0m${RATE} \033[32m\$${YOUR_COST}\033[0m \033[2mvs\033[0m \033[31m\$${API_COST}\033[0m \033[2m${DIR}\033[0m\n" "$MODEL"
