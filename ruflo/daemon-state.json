@@ -14,6 +14,6 @@
   "memory": {
     "backend": "hybrid",
     "enableHNSW": true,
-    "namespace": "econ-vibe"
+    "namespace": "auramaxing"
   }
 }

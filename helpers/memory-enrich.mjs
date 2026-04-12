@@ -19,7 +19,7 @@ const cwd           = process.cwd();
 const DATA_DIR      = join(cwd, '.claude-flow', 'data');
 const STORE_PATH    = join(DATA_DIR, 'auto-memory-store.json');
 const PATTERNS_PATH = join(DATA_DIR, 'learned-patterns.json');
-const CACHE_DIR     = join(homedir(), '.claude', 'helpers', '.cache');
+const CACHE_DIR     = join(homedir(), '.auramaxing', 'enrich-cache');
 const CACHE_FILE    = join(CACHE_DIR, 'enrich-cache.json');
 
 // Ensure dirs exist

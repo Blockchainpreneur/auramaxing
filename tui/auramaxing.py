@@ -11,7 +11,7 @@ import urllib.error
 from pathlib import Path
 
 DAEMON_URL = "http://localhost:57821"
-PROJECTS_FILE = Path.home() / ".config" / "econ-vibe" / "projects.json"
+PROJECTS_FILE = Path.home() / ".config" / "auramaxing" / "projects.json"
 DAEMON_TIMEOUT = 0.5
 
 LOGO_LINES = [
@@ -52,7 +52,7 @@ def daemon_post(endpoint: str, data: dict, timeout: float = DAEMON_TIMEOUT):
 
 
 def load_fallback_projects() -> list[dict]:
-    """Load projects from ~/.config/econ-vibe/projects.json."""
+    """Load projects from ~/.config/auramaxing/projects.json."""
     try:
         if PROJECTS_FILE.exists():
             return json.loads(PROJECTS_FILE.read_text())
@@ -62,7 +62,7 @@ def load_fallback_projects() -> list[dict]:
 
 
 def save_fallback_projects(projects: list[dict]) -> None:
-    """Save projects to ~/.config/econ-vibe/projects.json."""
+    """Save projects to ~/.config/auramaxing/projects.json."""
     PROJECTS_FILE.parent.mkdir(parents=True, exist_ok=True)
     PROJECTS_FILE.write_text(json.dumps(projects, indent=2))
 

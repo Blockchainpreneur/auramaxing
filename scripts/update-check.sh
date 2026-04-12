@@ -8,11 +8,11 @@
 # Called by SessionStart hook and rational-router. Non-blocking.
 set -euo pipefail
 
-CM_DIR="${CM_DIR:-$HOME/auramaxing}"
+AX_DIR="${AX_DIR:-$HOME/auramaxing}"
 STATE_DIR="$HOME/.auramaxing"
 CACHE_FILE="$STATE_DIR/last-update-check"
 SNOOZE_FILE="$STATE_DIR/update-snoozed"
-VERSION_FILE="$CM_DIR/VERSION"
+VERSION_FILE="$AX_DIR/VERSION"
 REMOTE_URL="https://raw.githubusercontent.com/Blockchainpreneur/AURAMAXING/main/VERSION"
 
 mkdir -p "$STATE_DIR"

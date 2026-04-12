@@ -12,7 +12,7 @@
 #  5. Installs global CLAUDE.md with gstack + design system rules
 #  6. Installs Ruflo (60+ agents, vector memory, self-learning swarms)
 #  7. Installs MCP servers (context7, playwright, shadcn, magicui)
-#  8. Adds shell alias: `cm` → cd ~/auramaxing && claude
+#  8. Adds shell alias: `ax` → cd ~/auramaxing && claude
 #  9. Verifies all hooks pass a live smoke test
 # ─────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
@@ -430,7 +430,7 @@ install_agent_browser() {
   info "First run syncs your Chrome profile — log in once, sessions persist forever"
 }
 
-# ── Shell alias: cm → cd ~/auramaxing && claude ─────────────────────────────
+# ── Shell alias: ax → cd ~/auramaxing && claude ─────────────────────────────
 install_alias() {
   local NVM_HELPER='_ensure_nvm() { [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" 2>/dev/null; }'
 
@@ -605,31 +605,31 @@ install_lightrag_index() {
 main() {
   print_header
 
-  step "1/10 Checking OS"
+  step "1/14 Checking OS"
   check_os
 
-  step "2/10 Node.js 20+"
+  step "2/14 Node.js 20+"
   install_node
 
-  step "3/10 Claude Code"
+  step "3/14 Claude Code"
   install_claude_code
 
-  step "4/10 gstack (AI Software Factory)"
+  step "4/14 gstack (AI Software Factory)"
   install_gstack
 
-  step "5/10 AURAMAXING hook helpers"
+  step "5/14 AURAMAXING hook helpers"
   install_helpers
 
-  step "6/10 settings.json (smart merge)"
+  step "6/14 settings.json (smart merge)"
   apply_settings
 
-  step "7/10 Global CLAUDE.md"
+  step "7/14 Global CLAUDE.md"
   install_claude_md
 
-  step "8/10 Ruflo (enterprise swarm orchestration)"
+  step "8/14 Ruflo (enterprise swarm orchestration)"
   install_ruflo
 
-  step "9/11 MCP servers"
+  step "9/14 MCP servers"
   install_mcp
 
   step "10/14 agent-browser (token-efficient browser automation)"
@@ -641,7 +641,7 @@ main() {
   step "12/14 Status bar"
   install_statusline
 
-  step "13/14 Shell aliases (claude, auramaxing, cm)"
+  step "13/14 Shell aliases (claude, auramaxing, ax)"
   install_alias
 
   step "14/14 LightRAG initial index"
