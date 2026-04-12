@@ -1,0 +1,19 @@
+{
+  "version": "1.0.0",
+  "daemon": {
+    "autoStart": true,
+    "minFreeMemoryPercent": 2,
+    "maxAgents": 60,
+    "workers": ["map", "audit", "optimize", "consolidate"]
+  },
+  "swarm": {
+    "topology": "hierarchical-mesh",
+    "strategy": "specialized",
+    "consensus": "raft"
+  },
+  "memory": {
+    "backend": "hybrid",
+    "enableHNSW": true,
+    "namespace": "econ-vibe"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "_instructions": "Paste the contents of this file into Claude Desktop → Settings → Personal Preferences (the JSON editor). Remove this _instructions key first.",
+  "theme": "dark",
+  "fontSize": 14,
+  "fastMode": true,
+  "preferredModel": "claude-opus-4-6",
+  "agentTeams": {
+    "enabled": true,
+    "defaultTopology": "hierarchical-mesh",
+    "maxAgents": 15
+  },
+  "memory": {
+    "enabled": true,
+    "backend": "hybrid",
+    "hnsw": true
+  },
+  "notifications": {
+    "taskComplete": true,
+    "agentSpawn": false,
+    "errors": true
+  }
+}

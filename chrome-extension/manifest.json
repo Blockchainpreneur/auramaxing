@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "AURAMXING Theme",
+  "version": "1.0",
+  "description": "Black + Pastel theme for claude.ai",
+  "content_scripts": [
+    {
+      "matches": ["https://claude.ai/*", "https://*.claude.ai/*"],
+      "css": ["theme.css"],
+      "run_at": "document_start"
+    }
+  ]
+}

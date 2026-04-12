@@ -1,0 +1,521 @@
+/* ═══════════════════════════════════════════════════════════
+   AURAMXING — Notion-style dark kanban
+   ═══════════════════════════════════════════════════════════ */
+
+Screen {
+    background: #191919;
+    color: #e3e3e3;
+}
+
+/* ── Root ────────────────────────────────────────────────── */
+#root {
+    layout: vertical;
+    height: 1fr;
+}
+
+/* ── Top header bar ──────────────────────────────────────── */
+#topbar.hidden {
+    display: none;
+}
+
+#topbar {
+    height: 3;
+    layout: horizontal;
+    background: #191919;
+    border-bottom: solid #2a2a2a;
+    padding: 0 2;
+    align: left middle;
+}
+
+#topbar-breadcrumb {
+    color: #555555;
+    width: auto;
+    content-align: left middle;
+}
+
+#topbar-title {
+    color: #e3e3e3;
+    text-style: bold;
+    width: auto;
+    content-align: left middle;
+}
+
+#topbar-tabs {
+    width: 1fr;
+    layout: horizontal;
+    align: left middle;
+    padding: 0 2;
+}
+
+.tab-btn {
+    background: transparent;
+    border: none;
+    color: #555555;
+    padding: 0 2;
+    height: 1;
+    min-width: 8;
+}
+
+.tab-btn:hover {
+    color: #aaaaaa;
+    background: transparent;
+    border: none;
+}
+
+.tab-btn-active {
+    background: #2a2a2a;
+    border: tall #3a3a3a;
+    color: #e3e3e3;
+    text-style: bold;
+    padding: 0 2;
+    height: 1;
+    min-width: 8;
+}
+
+#topbar-actions {
+    layout: horizontal;
+    align: right middle;
+    width: auto;
+}
+
+#new-btn {
+    background: #2383e2;
+    border: tall #2383e2;
+    color: #ffffff;
+    text-style: bold;
+    padding: 0 2;
+    height: 1;
+    min-width: 8;
+}
+
+#new-btn:hover {
+    background: #1a6bc4;
+    border: tall #1a6bc4;
+}
+
+/* ── Body layout ─────────────────────────────────────────── */
+#body {
+    layout: horizontal;
+    height: 1fr;
+}
+
+/* ── Sidebar ─────────────────────────────────────────────── */
+#sidebar {
+    width: 20;
+    min-width: 16;
+    background: #111111;
+    padding: 0;
+    overflow-y: auto;
+    scrollbar-size: 1 1;
+    scrollbar-color: #2a2a2a #111111;
+    border-right: solid #1e1e1e;
+}
+
+#sidebar.hidden {
+    display: none;
+}
+
+.sb-workspace {
+    padding: 1 1 0 1;
+    height: 3;
+    layout: horizontal;
+    align: left middle;
+    border-bottom: solid #1e1e1e;
+}
+
+.sb-workspace-name {
+    color: #e3e3e3;
+    text-style: bold;
+    width: 1fr;
+}
+
+.sb-workspace-icon {
+    width: 3;
+    height: 1;
+    content-align: center middle;
+    background: #5865f2;
+    color: #ffffff;
+    text-style: bold;
+}
+
+.sb-nav-item {
+    layout: horizontal;
+    height: 1;
+    padding: 0 1;
+    align: left middle;
+    color: #555555;
+}
+
+.sb-nav-item:hover {
+    background: #1e1e1e;
+    color: #aaaaaa;
+}
+
+.sb-nav-icon {
+    width: 3;
+    color: #444444;
+}
+
+.sb-nav-label {
+    color: #555555;
+    width: 1fr;
+}
+
+.sb-section-hdr {
+    color: #333333;
+    text-style: bold;
+    padding: 1 1 0 1;
+    height: 2;
+}
+
+.sb-project-item {
+    height: 1;
+    padding: 0 1;
+    layout: horizontal;
+    align: left middle;
+}
+
+.sb-project-item:hover {
+    background: #1e1e1e;
+}
+
+.sb-project-icon {
+    width: 3;
+    color: #555555;
+}
+
+.sb-project-active {
+    height: 1;
+    padding: 0 1;
+    layout: horizontal;
+    align: left middle;
+    background: #1e1e1e;
+}
+
+.sb-project-active .sb-project-label {
+    color: #e3e3e3;
+}
+
+.sb-project-label {
+    color: #666666;
+    width: 1fr;
+}
+
+.sb-divider {
+    height: 1;
+    border-bottom: solid #1e1e1e;
+    margin: 0 1;
+}
+
+.sb-session-row {
+    height: 1;
+    padding: 0 1;
+    layout: horizontal;
+    align: left middle;
+}
+
+.sb-session-label {
+    color: #444444;
+    width: 1fr;
+}
+
+.sb-session-cost {
+    color: #6b21a8;
+}
+
+.sb-footer-area {
+    border-top: solid #1e1e1e;
+    padding: 1 1;
+    margin-top: 1;
+}
+
+.sb-footer-row {
+    height: 1;
+    color: #333333;
+}
+
+/* ── Kanban area ─────────────────────────────────────────── */
+#kanban-scroll {
+    width: 1fr;
+    height: 1fr;
+    overflow-x: auto;
+    overflow-y: hidden;
+    background: #191919;
+    padding: 0 1;
+    scrollbar-size: 1 1;
+    scrollbar-color: #2a2a2a #191919;
+}
+
+#kanban {
+    layout: horizontal;
+    height: 1fr;
+    min-width: 56;
+    padding: 1 0 0 0;
+    background: #191919;
+}
+
+/* ── Kanban columns ──────────────────────────────────────── */
+.kanban-col {
+    width: 26;
+    min-width: 22;
+    height: 1fr;
+    margin: 0 1;
+    layout: vertical;
+    background: #191919;
+}
+
+.col-header-area {
+    height: 3;
+    layout: horizontal;
+    align: left middle;
+    padding: 0 0 1 0;
+}
+
+.col-cards-area {
+    height: 1fr;
+    overflow-y: auto;
+    padding: 0;
+    scrollbar-size: 1 1;
+    scrollbar-color: #2a2a2a #191919;
+}
+
+.col-add-row {
+    height: 1;
+    color: #3a3a3a;
+    padding: 0 1;
+}
+
+.col-add-row:hover {
+    color: #666666;
+}
+
+/* ── Column header pills ─────────────────────────────────── */
+.pill-notstarted {
+    background: #1a1a1a;
+    border: tall #2a2a2a;
+    color: #888888;
+    padding: 0 2;
+    height: 1;
+    width: auto;
+}
+
+.pill-inprogress {
+    background: #0c2340;
+    border: tall #1a4a7a;
+    color: #5ba4cf;
+    padding: 0 2;
+    height: 1;
+    width: auto;
+}
+
+.pill-testing {
+    background: #2d1b00;
+    border: tall #5c3800;
+    color: #d4a017;
+    padding: 0 2;
+    height: 1;
+    width: auto;
+}
+
+.pill-done {
+    background: #0a2010;
+    border: tall #1a4a28;
+    color: #5cb85c;
+    padding: 0 2;
+    height: 1;
+    width: auto;
+}
+
+.pill-default {
+    background: #1a1a1a;
+    border: tall #2a2a2a;
+    color: #777777;
+    padding: 0 2;
+    height: 1;
+    width: auto;
+}
+
+.col-count {
+    color: #3a3a3a;
+    width: auto;
+    padding: 0 1;
+    content-align: left middle;
+}
+
+/* ── Cards ───────────────────────────────────────────────── */
+.notion-card {
+    background: #252525;
+    border: tall #2e2e2e;
+    margin: 0 0 1 0;
+    padding: 1 1;
+    height: auto;
+    min-height: 4;
+}
+
+.notion-card:hover {
+    background: #2d2d2d;
+    border: tall #3a3a3a;
+}
+
+.card-thinking {
+    border: tall #3d2d6e;
+    background: #1f1a2e;
+}
+
+.card-thinking:hover {
+    background: #251f38;
+    border: tall #5b21b6;
+}
+
+.card-working {
+    border: tall #0d3349;
+    background: #0f1e2a;
+}
+
+.card-working:hover {
+    background: #132435;
+    border: tall #0369a1;
+}
+
+.card-done {
+    border: tall #1a3a22;
+    background: #111e15;
+}
+
+.card-error {
+    border: tall #4a1515;
+    background: #1e1010;
+}
+
+.card-idle {
+    border: tall #222222;
+    background: #1e1e1e;
+}
+
+/* ── Empty column ────────────────────────────────────────── */
+.empty-col {
+    color: #2a2a2a;
+    text-align: center;
+    padding: 2 0;
+    height: auto;
+}
+
+/* ── Input / Bottom ──────────────────────────────────────── */
+#bottom-bar {
+    height: 4;
+    background: #111111;
+    border-top: solid #1e1e1e;
+    layout: horizontal;
+    align: left middle;
+    padding: 0 2;
+}
+
+#bottom-prompt-wrap {
+    layout: horizontal;
+    width: 1fr;
+    height: 2;
+    background: #222222;
+    border: tall #2e2e2e;
+    align: left middle;
+    padding: 0 1;
+}
+
+#bottom-prefix {
+    color: #3a3a3a;
+    width: 6;
+    content-align: left middle;
+}
+
+#prompt-input {
+    background: #222222;
+    border: none;
+    color: #e3e3e3;
+    width: 1fr;
+}
+
+#prompt-input:focus {
+    border: none;
+    background: #222222;
+}
+
+#bottom-actions {
+    layout: horizontal;
+    width: auto;
+    align: right middle;
+    padding: 0 0 0 2;
+}
+
+.quick-btn {
+    background: transparent;
+    border: tall #2a2a2a;
+    color: #444444;
+    margin-left: 1;
+    padding: 0 2;
+    height: 1;
+}
+
+.quick-btn:hover {
+    background: #222222;
+    color: #aaaaaa;
+    border: tall #3a3a3a;
+}
+
+#go-btn {
+    background: #2383e2;
+    border: tall #2383e2;
+    color: #ffffff;
+    text-style: bold;
+    margin-left: 2;
+    padding: 0 3;
+    height: 1;
+}
+
+#go-btn:hover {
+    background: #1a6bc4;
+}
+
+/* ── Loading screen ──────────────────────────────────────── */
+LoadingScreen {
+    background: #191919;
+    align: center middle;
+    layout: vertical;
+}
+
+#loading-logo {
+    color: #2383e2;
+    text-style: bold;
+    text-align: center;
+    padding: 0;
+}
+
+#loading-sub {
+    color: #333333;
+    text-align: center;
+    margin-top: 1;
+    margin-bottom: 2;
+}
+
+#loading-progress {
+    width: 30;
+    color: #2383e2;
+}
+
+#loading-step {
+    color: #2a2a2a;
+    text-align: center;
+    margin-top: 1;
+}
+
+/* ── Size warning ────────────────────────────────────────── */
+SizeWarningScreen {
+    background: #191919;
+    align: center middle;
+}
+
+#size-msg {
+    color: #e3a008;
+    text-align: center;
+    border: tall #2a2a2a;
+    background: #252525;
+    padding: 2 4;
+}

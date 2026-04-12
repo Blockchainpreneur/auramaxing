@@ -1,0 +1,5 @@
+{
+  "name": "auramxing-daemon",
+  "scripts": { "start": "bun run src/index.ts" },
+  "dependencies": {}
+}

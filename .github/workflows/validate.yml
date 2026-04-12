@@ -1,0 +1,39 @@
+name: Validate CLAUDEMAX
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python deps
+        run: pip install textual rich
+
+      - name: Syntax check TUI
+        run: python3 -m py_compile tui/app.py tui/ruflo_bridge.py tui/agent_tracker.py tui/session_store.py
+
+      - name: Check install.sh syntax
+        run: bash -n install.sh
+
+      - name: Check scripts syntax
+        run: |
+          bash -n scripts/launch-tui.sh
+          bash -n scripts/ram-manager.sh
+          bash -n scripts/update.sh
+
+      - name: Validate JSON configs
+        run: |
+          python3 -m json.tool setup/mcp-config.json > /dev/null
+          python3 -m json.tool tui/config.json > /dev/null
+          python3 -m json.tool setup/claude-preferences.json > /dev/null

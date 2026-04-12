@@ -1,0 +1,47 @@
+{
+  "app": {
+    "title": "AURAMXING",
+    "refresh_rate": 2,
+    "min_width": 80,
+    "min_height": 24
+  },
+  "ruflo": {
+    "poll_interval": 2,
+    "daemon_check_interval": 10,
+    "memory_search_limit": 10
+  },
+  "ports": [3000, 3001, 5173, 8080, 4000],
+  "sessions": {
+    "save_path": "sessions",
+    "max_history": 30
+  },
+  "kanban": {
+    "columns": [
+      "Thinking",
+      "Designing",
+      "Developing",
+      "Testing",
+      "Reviewing",
+      "Deploying",
+      "Done"
+    ]
+  },
+  "colors": {
+    "bg_base": "#0a0a0a",
+    "bg_surface": "#111111",
+    "bg_card": "#1a1a1a",
+    "accent": "#5865f2",
+    "text_primary": "#ededed",
+    "text_secondary": "#666666",
+    "col_thinking": "#7c3aed",
+    "col_designing": "#2563eb",
+    "col_developing": "#0891b2",
+    "col_testing": "#d97706",
+    "col_reviewing": "#9333ea",
+    "col_deploying": "#16a34a",
+    "col_done": "#374151",
+    "success": "#22c55e",
+    "error": "#ef4444",
+    "cost": "#f472b6"
+  }
+}

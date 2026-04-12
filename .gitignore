@@ -1,0 +1,25 @@
+tui/sessions/
+.env
+.env.*
+.swarm/
+node_modules/
+__pycache__/
+*.pyc
+.DS_Store
+*.log
+.claude-flow/
+*.key
+*.pem
+secrets.json
+tui/.claude/
+tui/.mcp.json
+tui/CLAUDE.md
+.mcp.json
+CLAUDE.md
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/

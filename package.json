@@ -1,0 +1,14 @@
+{
+  "name": "auramxing",
+  "version": "1.0.0",
+  "description": "Auramxing — The AI Development Operating System",
+  "main": "index.js",
+  "scripts": {},
+  "keywords": ["ai", "claude-code", "autopilot", "aura", "development"],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.59.1",
+    "@types/node": "^25.5.0"
+  }
+}
