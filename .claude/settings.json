@@ -157,10 +157,6 @@
       }
     ]
   },
-  "statusLine": {
-    "type": "command",
-    "command": "sh -c 'exec node \"${CLAUDE_PROJECT_DIR:-.}/.claude/helpers/statusline.cjs\"'"
-  },
   "permissions": {
     "allow": [
       "Bash(npx @claude-flow*)",
