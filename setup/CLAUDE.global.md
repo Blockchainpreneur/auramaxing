@@ -274,9 +274,19 @@ osascript -e 'tell application "Google Chrome" to tell window 1 to make new tab 
 - User's Chrome sessions are preserved — they are already logged in everywhere
 - E2E tests go in `tests/` with `playwright.config.ts` at root
 
-## UI/Design (activate only when building UI)
+## UI/Design — UI UX Pro Max (DEFAULT for all projects)
 
-Full specs: `~/.claude/design-system.md` · `~/.claude/animation-system.md`
+**All UI/UX work MUST follow the UI UX Pro Max skill guidelines.**
+Installed at: `~/.claude/skills/ui-ux-pro-max/`
+When building any UI — pages, components, layouts, dashboards — always activate
+the `/ui-ux-pro-max` skill first to generate the appropriate design system.
+
+**Capabilities**: 67 UI styles · 161 color palettes · 57 font pairings · 25 chart types · 15 tech stacks · 99 UX guidelines · 161 industry-specific reasoning rules
+
+**Design system generation**: Run the search script to get industry-matched design rules:
+```bash
+python3 ~/.claude/skills/ui-ux-pro-max/scripts/search.py "<product type>" --design-system
+```
 
 **Stack**: Tailwind v4 + shadcn/ui (zinc) + Radix UI + Inter + lucide-react + Motion.dev + GSAP + Lenis
 **MCPs**: Magic UI (`magicuidesign-mcp`) · shadcn (`shadcn`) · visual QA (`npx playwright test`)
