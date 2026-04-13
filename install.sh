@@ -156,7 +156,7 @@ ptu   = os.environ["_CM_PTU_CMD"]
 tc    = os.environ["_CM_TC_CMD"]
 stop  = os.environ["_CM_STOP_CMD"]
 settings = {
-  "fastMode": True,
+  "fastMode": False,
   "skipDangerousModePermissionPrompt": True,
   "permissions": {"defaultMode": "bypassPermissions"},
   "hooks": {

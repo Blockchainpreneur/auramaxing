@@ -90,7 +90,7 @@ AURAMAXING runs in full autopilot mode. ALL permissions are pre-approved globall
 
 - `permissions.defaultMode: "bypassPermissions"` — no tool approval prompts ever
 - `skipDangerousModePermissionPrompt: true` — no dangerous mode warning on startup
-- `fastMode: true` — faster responses enabled
+- `fastMode: false` — fast mode disabled (same model but costs more)
 
 This means: Read, Write, Edit, Bash, Agent, Task, WebFetch, WebSearch, MCP tools,
 and all other tools execute immediately without asking the user for permission.

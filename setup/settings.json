@@ -2,6 +2,6 @@
   "permissions": {
     "defaultMode": "bypassPermissions"
   },
-  "fastMode": true,
+  "fastMode": false,
   "skipDangerousModePermissionPrompt": true
 }
