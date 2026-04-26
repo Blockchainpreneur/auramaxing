@@ -18,8 +18,60 @@
  * Decision: always "approve" — quality gate is advisory, not blocking (except HIGH)
  */
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, statSync } from 'fs';
 import { join, basename, extname } from 'path';
+
+// ── Context-guard config (Layer 2 — 40% context ceiling) ─────────────────────
+const READ_MAX_BYTES = Number(process.env.AURA_READ_MAX_BYTES || 30720); // 30 KB
+const GREP_REQUIRE_HEAD_LIMIT = process.env.AURA_GREP_REQUIRE_HEAD_LIMIT !== '0';
+const GREP_MAX_HEAD_LIMIT = Number(process.env.AURA_GREP_MAX_HEAD_LIMIT || 250);
+const BASH_DENY_PATTERNS = [
+  // Only block truly unbounded finds: at /, ~, or /Users (no sub-path) AND without -maxdepth
+  { re: /\bfind\s+(?:\/|~|\/Users)\s+(?!.*-maxdepth\s+\d)/, hint: 'narrow path or add -maxdepth N' },
+  { re: /(?:^|\s|;|&&)ls\s+-[lah]*R[lah]*\b/,               hint: 'avoid ls -R; use a scoped Glob' },
+  // cat of large log/data files (but allow cat with head/tail pipe)
+  { re: /(?:^|\s|;|&&)cat\s+\S+\.(?:log|jsonl|csv)(?:\s|$)(?!.*\|\s*(?:head|tail|less|grep))/i, hint: 'pipe through head/tail, or Agent(Explore)' },
+];
+
+function ctxGuardForTool(toolName, toolInput) {
+  try {
+    if (toolName === 'read') {
+      const p = toolInput.file_path;
+      if (p && existsSync(p)) {
+        const size = statSync(p).size;
+        const hasRange = typeof toolInput.offset === 'number' || typeof toolInput.limit === 'number';
+        if (size > READ_MAX_BYTES && !hasRange) {
+          return {
+            decision: 'block',
+            reason: `[Context Guard] ${basename(p)} is ${(size/1024).toFixed(1)}KB (cap ${READ_MAX_BYTES/1024}KB). Use offset+limit, or delegate: Agent(Explore, "read X from ${basename(p)}").`,
+          };
+        }
+      }
+    }
+    if (toolName === 'grep') {
+      const mode = toolInput.output_mode || 'files_with_matches';
+      const limit = toolInput.head_limit;
+      if (GREP_REQUIRE_HEAD_LIMIT && mode === 'content' && (!limit || limit > GREP_MAX_HEAD_LIMIT)) {
+        return {
+          decision: 'block',
+          reason: `[Context Guard] Grep content mode requires head_limit ≤ ${GREP_MAX_HEAD_LIMIT} (got ${limit || 'none'}). Set head_limit, or delegate to Agent(Explore).`,
+        };
+      }
+    }
+    if (toolName === 'bash') {
+      const cmd = toolInput.command || '';
+      for (const p of BASH_DENY_PATTERNS) {
+        if (p.re.test(cmd)) {
+          return {
+            decision: 'block',
+            reason: `[Context Guard] Unbounded-output command blocked. Hint: ${p.hint}. Or delegate to Agent.`,
+          };
+        }
+      }
+    }
+  } catch { /* fail open */ }
+  return null;
+}
 
 const cwd      = process.cwd();
 const DATA_DIR = join(cwd, '.claude-flow', 'data');
@@ -93,9 +145,18 @@ const RULES = [
     severity: 'WARN',
     description: 'Empty catch block swallows errors silently',
     test: (code) => {
-      // catch { } or catch (e) { } with nothing inside
-      return /catch\s*(?:\([^)]*\))?\s*\{\s*\}/.test(code) ||
-             /catch\s*(?:\([^)]*\))?\s*\{\s*\/\/[^\n]*\n?\s*\}/.test(code);
+      // catch { } or catch (e) { } — per-line check, exempts lines with intentional comments
+      const lines = code.split('\n');
+      for (let i = 0; i < lines.length; i++) {
+        if (/catch\s*(?:\([^)]*\))?\s*\{\s*\}/.test(lines[i])) {
+          // Check if this line or the line above has an exemption comment
+          const context = (lines[i - 1] || '') + lines[i];
+          if (!/\/[/*]\s*(?:intentional|ignore|expected|noop|ok to ignore|cleanup|optional)/i.test(context)) {
+            return true;
+          }
+        }
+      }
+      return false;
     },
   },
   {
@@ -130,7 +191,18 @@ async function main() {
       toolResult = typeof payload.tool_result === 'string' ? payload.tool_result : '';
     } catch { console.log('{"decision":"approve"}'); process.exit(0); }
 
-    // Only check Write and Edit operations
+    // Context Guard first (Layer 2 — 40% ceiling) — covers Read/Grep/Glob/Bash
+    if (['read', 'grep', 'glob', 'bash'].includes(toolName)) {
+      const verdict = ctxGuardForTool(toolName, toolInput);
+      if (verdict) {
+        process.stderr.write(`\x1b[33m⚠ Context Guard\x1b[0m ${verdict.reason}\n`);
+        console.log(JSON.stringify(verdict));
+        process.exit(0);
+      }
+      console.log('{"decision":"approve"}');
+      process.exit(0);
+    }
+    // Original quality-gate flow continues for Write/Edit/MultiEdit
     if (!['write', 'edit', 'multiedit'].includes(toolName)) {
       console.log('{"decision":"approve"}');
       process.exit(0);

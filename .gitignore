@@ -44,3 +44,7 @@ tui/.mcp.json
 tui/CLAUDE.md
 .mcp.json
 CLAUDE.md
+
+# Local-only Claude config artifacts
+.claude/settings.local.json
+.claude/*.dead

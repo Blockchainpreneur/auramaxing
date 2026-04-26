@@ -9,11 +9,13 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSy
 import { join } from 'path';
 import { homedir } from 'os';
 import { execSync } from 'child_process';
+import { findPython, findNlm, pythonEnv } from "./find-bin.mjs";
 
 const HOME = homedir();
 const MEMORY_DIR = join(HOME, '.auramaxing', 'memory');
 const CACHE_DIR = join(HOME, '.auramaxing', 'prompt-cache');
-const NLM_BIN = '/Library/Frameworks/Python.framework/Versions/3.12/bin/notebooklm';
+const NLM_BIN = findNlm();
+if (!NLM_BIN) { process.stderr.write('[nlm] NotebookLM CLI not installed. Skipping.\n'); }
 const NB_ID_FILE = join(HOME, '.auramaxing', 'nlm-notebook-id');
 
 mkdirSync(CACHE_DIR, { recursive: true });

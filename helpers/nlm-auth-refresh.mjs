@@ -11,10 +11,12 @@ import { existsSync, mkdirSync, writeFileSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 import { tmpdir } from 'os';
+import { findPython, findNlm, pythonEnv } from "./find-bin.mjs";
 
 const HOME = homedir();
-const NLM_BIN = '/Library/Frameworks/Python.framework/Versions/3.12/bin/notebooklm';
-const PYTHON_BIN = '/Library/Frameworks/Python.framework/Versions/3.12/bin/python3';
+const NLM_BIN = findNlm();
+if (!NLM_BIN) { process.stderr.write('[nlm] NotebookLM CLI not installed. Skipping.\n'); }
+const PYTHON_BIN = findPython();
 const STORAGE_STATE = join(HOME, '.notebooklm', 'storage_state.json');
 const CDP_URL = 'http://localhost:9222';
 
@@ -32,7 +34,7 @@ try {
       timeout: 10000,
       env: {
         ...process.env,
-        PATH: `/Library/Frameworks/Python.framework/Versions/3.12/bin:${process.env.PATH}`,
+        PATH: pythonEnv().PATH,
       },
     });
     if (result.includes('pass') && !result.includes('fail')) {
@@ -134,7 +136,7 @@ try {
       env: {
         ...process.env,
         PLAYWRIGHT_BROWSERS_PATH: join(HOME, 'Library', 'Caches', 'ms-playwright'),
-        PATH: `/Library/Frameworks/Python.framework/Versions/3.12/bin:${process.env.PATH}`,
+        PATH: pythonEnv().PATH,
       },
     });
 
@@ -164,7 +166,7 @@ try {
       stdio: ['pipe', 'pipe', 'pipe'],
       env: {
         ...process.env,
-        PATH: `/Library/Frameworks/Python.framework/Versions/3.12/bin:${process.env.PATH}`,
+        PATH: pythonEnv().PATH,
       },
     });
     if (verify && !verify.includes('Error') && !verify.includes('login')) {

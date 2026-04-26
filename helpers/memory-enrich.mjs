@@ -14,6 +14,7 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync, statSync } from 'fs';
 import { join, basename } from 'path';
 import { homedir } from 'os';
+import { findPython } from './find-bin.mjs';
 
 const cwd           = process.cwd();
 const DATA_DIR      = join(cwd, '.claude-flow', 'data');
@@ -97,7 +98,7 @@ async function main() {
     try {
       const { execFileSync } = await import('child_process');
       const { homedir: getHome } = await import('os');
-      const PYTHON_BIN = '/Library/Frameworks/Python.framework/Versions/3.12/bin/python3';
+      const PYTHON_BIN = findPython();
       const LIGHTRAG_CLI = join(getHome(), 'auramaxing', 'scripts', 'lightrag-cli.py');
       const WORKSPACE = join(getHome(), '.auramaxing', 'lightrag-workspace');
 
@@ -105,7 +106,7 @@ async function main() {
         LIGHTRAG_CLI, 'query',
         '--workspace', WORKSPACE,
         '--query', promptText.slice(0, 300),
-        '--top-k', '3',
+        '--top-k', String(Number(process.env.AURA_LIGHTRAG_TOP_K || 3)),
       ], {
         encoding: 'utf8',
         timeout: 2000,
@@ -116,7 +117,7 @@ async function main() {
       if (results.length > 0) {
         console.log(`\n[Memory] ${results.length} relevant pattern(s) via semantic search:`);
         results.forEach((r, i) => {
-          console.log(`  ${i + 1}. ${r.text?.slice(0, 120) || ''} (score: ${r.score})`);
+          console.log(`  ${i + 1}. ${(r.text || '').slice(0, Number(process.env.AURA_ENRICH_SNIPPET_CHARS || 100))} (score: ${r.score})`);
         });
         found = true;
       }
@@ -129,7 +130,7 @@ async function main() {
         .split(/[\s\-_.,;:!?()[\]{}"'`/\\]+/)
         .map(w => w.replace(/[^a-z0-9]/g, ''))
         .filter(w => w.length >= 3 && !STOPWORDS.has(w) && !seen.has(w) && seen.add(w))
-        .slice(0, 12);
+        .slice(0, Number(process.env.AURA_ENRICH_MAX_KEYWORDS || 8));
 
       if (keywords.length > 0) {
         const allPatterns = loadCached(PATTERNS_PATH);
@@ -166,7 +167,7 @@ async function main() {
         }
 
         matches.sort((a, b) => b.score - a.score);
-        const top = matches.slice(0, 3).filter(m => m.summary);
+        const top = matches.slice(0, Number(process.env.AURA_ENRICH_MAX_MATCHES || 3)).filter(m => m.summary);
         if (top.length > 0) {
           console.log(`\n[Memory] ${top.length} relevant pattern(s) from past sessions:`);
           top.forEach((m, i) => {

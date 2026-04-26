@@ -45,50 +45,52 @@ if (process.argv.includes('--list')) {
   process.exit(0);
 }
 
-// ── Read active page ──────────────────────────────────────────
-if (process.argv.includes('--read')) {
+// ── Async main ────────────────────────────────────────────────
+(async () => {
+  // ── Read active page ────────────────────────────────────────
+  if (process.argv.includes('--read')) {
+    ensureServer();
+    const browser = await chromium.connectOverCDP(CDP_URL, { timeout: 10000 });
+    const pages = browser.contexts().flatMap(c => c.pages());
+    const page = pages.find(p => !p.url().startsWith('chrome')) || pages[0];
+    if (page) {
+      const text = await page.evaluate(() => document.body?.innerText?.slice(0, 3000) || '');
+      console.log(text);
+    }
+    process.exit(0);
+  }
+
+  // ── Open tab ────────────────────────────────────────────────
+  const url = process.argv.find(a => a.startsWith('http'));
+  const ssIdx = process.argv.indexOf('--screenshot');
+  const ssPath = ssIdx > -1 ? process.argv[ssIdx + 1] : null;
+
+  if (!url) {
+    console.error('Usage: node browser-tab.mjs <url> [--screenshot file.png] [--list] [--read]');
+    process.exit(1);
+  }
+
   ensureServer();
-  const browser = await chromium.connectOverCDP(CDP_URL);
-  const pages = browser.contexts().flatMap(c => c.pages());
-  const page = pages.find(p => !p.url().startsWith('chrome')) || pages[0];
-  if (page) {
-    const text = await page.evaluate(() => document.body?.innerText?.slice(0, 3000) || '');
-    console.log(text);
+
+  try {
+    const browser = await chromium.connectOverCDP(CDP_URL, { timeout: 10000 });
+    const contexts = browser.contexts();
+    const context = contexts.length > 0 ? contexts[0] : await browser.newContext();
+
+    const page = await context.newPage();
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
+
+    console.log(`Tab opened: ${url}`);
+    console.log(`Title: ${await page.title()}`);
+
+    if (ssPath) {
+      await page.screenshot({ path: ssPath, fullPage: false });
+      console.log(`Screenshot: ${ssPath}`);
+    }
+  } catch (err) {
+    console.error(`Error: ${err.message}`);
+    process.exit(1);
   }
+
   process.exit(0);
-}
-
-// ── Open tab ──────────────────────────────────────────────────
-const url = process.argv.find(a => a.startsWith('http'));
-const ssIdx = process.argv.indexOf('--screenshot');
-const ssPath = ssIdx > -1 ? process.argv[ssIdx + 1] : null;
-
-if (!url) {
-  console.error('Usage: node browser-tab.mjs <url> [--screenshot file.png] [--list] [--read]');
-  process.exit(1);
-}
-
-ensureServer();
-
-try {
-  const browser = await chromium.connectOverCDP(CDP_URL);
-  const contexts = browser.contexts();
-  const context = contexts.length > 0 ? contexts[0] : await browser.newContext();
-
-  const page = await context.newPage();
-  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
-
-  console.log(`Tab opened: ${url}`);
-  console.log(`Title: ${await page.title()}`);
-
-  if (ssPath) {
-    await page.screenshot({ path: ssPath, fullPage: false });
-    console.log(`Screenshot: ${ssPath}`);
-  }
-  // NEVER close the page
-} catch (err) {
-  console.error(`Error: ${err.message}`);
-  process.exit(1);
-}
-
-process.exit(0);
+})();

@@ -9,14 +9,25 @@
  *
  * Always exits 0. Non-blocking on failure.
  */
-import { execSync } from 'child_process';
+import { execSync, spawn as spawnProc } from 'child_process';
 import { join } from 'path';
 import { homedir } from 'os';
-import { existsSync, readdirSync, readFileSync, mkdirSync, writeFileSync, statSync } from 'fs';
+import { existsSync, readdirSync, readFileSync, mkdirSync, writeFileSync, statSync, copyFileSync, unlinkSync } from 'fs';
 
 const HOME = homedir();
 const MEMORY_DIR = join(HOME, '.auramaxing', 'memory');
 const LEARNINGS_DIR = join(HOME, '.auramaxing', 'learnings');
+
+/** Find Python 3 binary — works on macOS (Framework, Homebrew, pyenv) and Linux */
+function findPython() {
+  for (const bin of ['python3', 'python3.12', 'python']) {
+    try {
+      const p = execSync(`which ${bin} 2>/dev/null`, { encoding: 'utf8', timeout: 1000 }).trim();
+      if (p) return p;
+    } catch {}
+  }
+  return 'python3'; // fallback — let PATH resolve it
+}
 
 try {
   const C = '\x1b[36m', Y = '\x1b[33m', B = '\x1b[1m', R = '\x1b[0m', D = '\x1b[2m';
@@ -46,10 +57,10 @@ try {
         const src = join(srcDir, f);
         const dst = join(dstDir, f);
         if (existsSync(dst)) {
-          const srcSize = require('fs').statSync(src).size;
-          const dstSize = require('fs').statSync(dst).size;
-          if (srcSize !== dstSize) {
-            require('fs').copyFileSync(src, dst);
+          const srcStat = statSync(src);
+          const dstStat = statSync(dst);
+          if (srcStat.size !== dstStat.size || srcStat.mtimeMs > dstStat.mtimeMs) {
+            copyFileSync(src, dst);
           }
         }
       }
@@ -63,7 +74,7 @@ try {
       const pid = parseInt(f.replace('turn-events-', '').replace('.jsonl', ''));
       if (pid && !isNaN(pid)) {
         try { process.kill(pid, 0); } catch { // process dead — orphan file
-          try { require('fs').unlinkSync(join(HOME, '.auramaxing', f)); } catch {}
+          try { unlinkSync(join(HOME, '.auramaxing', f)); } catch {}
         }
       }
     }
@@ -82,8 +93,8 @@ try {
       const logFile = join(HOME, '.auramaxing', 'nlm-setup-stderr.log');
       try {
         execSync(
-          '/bin/bash -c \'export PATH="/Library/Frameworks/Python.framework/Versions/3.12/bin:$PATH" && node "' + nlmSetup + '" "' + projectName + '" >> "' + logFile + '" 2>&1 &\'',
-          { timeout: 2000, stdio: 'ignore' }
+          `node "${nlmSetup}" "${projectName}" >> "${logFile}" 2>&1 &`,
+          { shell: '/bin/bash', timeout: 2000, stdio: 'ignore' }
         );
       } catch {}
     }
@@ -91,11 +102,10 @@ try {
 
   // ── Pre-warm LightRAG model (background, non-blocking) ─────
   try {
-    const { spawn: spawnBg2 } = require('child_process');
     const lrCli = join(HOME, 'auramaxing', 'scripts', 'lightrag-cli.py');
-    const pyBin = '/Library/Frameworks/Python.framework/Versions/3.12/bin/python3';
-    if (existsSync(lrCli)) {
-      const child = spawnBg2(pyBin, [lrCli, 'status', '--workspace', join(HOME, '.auramaxing', 'lightrag-workspace')], {
+    const pyBin = findPython();
+    if (existsSync(lrCli) && pyBin) {
+      const child = spawnProc(pyBin, [lrCli, 'status', '--workspace', join(HOME, '.auramaxing', 'lightrag-workspace')], {
         detached: true, stdio: 'ignore',
         env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1' },
       });
@@ -199,10 +209,57 @@ try {
     ].join('\n') + '\n');
   }
 
+  // ── 40% Auto-Handoff Restore ──────────────────────────────────
+  // If previous session hit the 40% threshold and wrote a handoff, inject it.
+  // This makes /clear truly seamless — the new session knows the last prompt,
+  // the PRD snapshot, and git state from the prior session.
+  let pendingHandoff = null;
+  try {
+    const handoffPath = join(HOME, '.auramaxing', 'pending-handoff.json');
+    if (existsSync(handoffPath)) {
+      const age = Date.now() - statSync(handoffPath).mtimeMs;
+      if (age < 24 * 3600 * 1000) { // only restore if < 24h old
+        pendingHandoff = JSON.parse(readFileSync(handoffPath, 'utf8'));
+      } else {
+        // Stale — rename to archive
+        try { unlinkSync(handoffPath); } catch {}
+      }
+    }
+  } catch {}
+
   // ── Output memory to stdout (Claude reads this) ───────────────
-  if (compressedBrief || synthesizedLearnings || memoryItems.length > 0 || learningItems.length > 0) {
+  if (pendingHandoff || compressedBrief || synthesizedLearnings || memoryItems.length > 0 || learningItems.length > 0) {
     const memoryBlock = [];
     memoryBlock.push('[AURAMAXING MEMORY]');
+
+    // Priority 0: Pending handoff from prior 40%-triggered session
+    if (pendingHandoff) {
+      memoryBlock.push('⚡ RESUMED FROM 40% AUTO-HANDOFF ⚡');
+      memoryBlock.push(`Prior session hit ${pendingHandoff.contextUsedPct}% context on ${pendingHandoff.timestamp?.slice(0,16)}.`);
+      if (pendingHandoff.lastPrompt) {
+        memoryBlock.push('Last user prompt before handoff:');
+        memoryBlock.push(`"${pendingHandoff.lastPrompt.slice(0, 400)}"`);
+      }
+      if (pendingHandoff.prd?.path) {
+        memoryBlock.push(`PRD snapshot preserved: ${pendingHandoff.prd.path}`);
+      }
+      if (pendingHandoff.git) {
+        memoryBlock.push(`Git: ${pendingHandoff.git.branch} @ ${pendingHandoff.git.lastCommit} (${pendingHandoff.git.dirtyFiles?.length || 0} dirty files)`);
+      }
+      memoryBlock.push('Full handoff: ~/.auramaxing/pending-handoff.json + NotebookLM.');
+      memoryBlock.push('Resume the work directly — do not ask user to re-explain.');
+      memoryBlock.push('---');
+
+      // Clear the handoff now that it's been consumed
+      try { unlinkSync(join(HOME, '.auramaxing', 'pending-handoff.json')); } catch {}
+      // Also clear the debounce flag from prior session
+      try {
+        const flagDir = '/tmp';
+        readdirSync(flagDir).filter(f => f.startsWith('auramaxing-handoff-')).forEach(f => {
+          try { unlinkSync(join(flagDir, f)); } catch {}
+        });
+      } catch {}
+    }
 
     // Prefer pre-computed briefing (saves ~70% tokens vs raw entries)
     if (compressedBrief) {

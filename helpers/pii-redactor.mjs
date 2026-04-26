@@ -39,14 +39,32 @@ const MODIFY_RULES = [
 ];
 
 // LOG-ONLY — too noisy to block/modify; just record detection
-// Mnemonic seed: programmatic check (no regex backtracking risk)
+// Mnemonic seed: checks against common BIP-39 words to reduce false positives
+const BIP39_COMMON = new Set([
+  'abandon','ability','able','about','above','absent','absorb','abstract','absurd','abuse',
+  'access','accident','account','accuse','achieve','acid','acoustic','acquire','across','act',
+  'action','actor','actual','adapt','add','addict','address','adjust','admit','adult',
+  'advance','advice','aerobic','affair','afford','afraid','again','age','agent','agree',
+  'ahead','aim','air','airport','aisle','alarm','album','alcohol','alert','alien',
+  'all','alley','allow','almost','alone','alpha','already','also','alter','always',
+  'amateur','amazing','among','amount','amused','analyst','anchor','ancient','anger','angle',
+  'angry','animal','ankle','announce','annual','another','answer','antenna','antique','anxiety',
+  'any','apart','apology','appear','apple','approve','april','arch','arctic','area',
+  'arena','argue','arm','armed','armor','army','around','arrange','arrest','arrive',
+  'arrow','art','artefact','artist','artwork','ask','aspect','assault','asset','assist',
+  'assume','asthma','athlete','atom','attack','attend','attitude','attract','auction','audit',
+  'august','aunt','author','auto','autumn','average','avocado','avoid','awake','aware',
+  'awesome','awful','awkward','axis','baby','bachelor','bacon','badge','bag','balance',
+  'balcony','ball','bamboo','banana','banner','bar','barely','bargain','barrel','base',
+  'basic','basket','battle','beach','bean','beauty','because','become','beef','before',
+  'begin','behave','behind','believe','below','belt','bench','benefit','best','betray',
+]);
 function detectMnemonic(text) {
-  if (text.length > 50000) return false; // skip huge payloads
+  if (text.length > 50000) return false;
   const words = text.match(/\b[a-z]{3,8}\b/g) || [];
-  // Find runs of 12+ consecutive short lowercase words (BIP-39 style)
   let run = 0;
   for (const w of words) {
-    if (w.length >= 3 && w.length <= 8) { run++; if (run >= 12) return true; }
+    if (BIP39_COMMON.has(w)) { run++; if (run >= 12) return true; }
     else run = 0;
   }
   return false;

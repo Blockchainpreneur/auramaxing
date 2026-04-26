@@ -18,9 +18,10 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, statSync, readdirSy
 import { join } from 'path';
 import { homedir } from 'os';
 import { createHash } from 'crypto';
+import { findPython, findNlm, pythonEnv } from './find-bin.mjs';
 
 const HOME = homedir();
-const PYTHON_BIN = '/Library/Frameworks/Python.framework/Versions/3.12/bin/python3';
+const PYTHON_BIN = findPython();
 const CLI_SCRIPT = join(HOME, 'auramaxing', 'scripts', 'lightrag-cli.py');
 const WORKSPACE = join(HOME, '.auramaxing', 'lightrag-workspace');
 const CACHE_DIR = join(HOME, '.auramaxing', 'lightrag-cache');

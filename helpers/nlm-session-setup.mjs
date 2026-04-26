@@ -14,9 +14,11 @@ import { execSync } from 'child_process';
 import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
+import { findPython, findNlm, pythonEnv } from "./find-bin.mjs";
 
 const HOME = homedir();
-const NLM_BIN = '/Library/Frameworks/Python.framework/Versions/3.12/bin/notebooklm';
+const NLM_BIN = findNlm();
+if (!NLM_BIN) { process.stderr.write('[nlm] NotebookLM CLI not installed. Skipping.\n'); }
 const LOG_FILE = join(HOME, '.auramaxing', 'nlm-setup.log');
 const projectName = process.argv[2] || 'unknown';
 
@@ -37,7 +39,7 @@ try {
       timeout: 20000, stdio: 'ignore',
       env: {
         ...process.env,
-        PATH: `/Library/Frameworks/Python.framework/Versions/3.12/bin:${process.env.PATH}`,
+        PATH: pythonEnv().PATH,
         PLAYWRIGHT_BROWSERS_PATH: join(HOME, 'Library', 'Caches', 'ms-playwright'),
       },
     });

@@ -13,15 +13,17 @@ import { execSync, execFileSync, spawn } from 'child_process';
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
+import { findPython, findNlm, pythonEnv } from "./find-bin.mjs";
 
 const HOME = homedir();
 const MEMORY_DIR = join(HOME, '.auramaxing', 'memory');
 const LEARNINGS_DIR = join(HOME, '.auramaxing', 'learnings');
 const NLM_CACHE = join(HOME, '.auramaxing', 'nlm-cache');
-const NLM_BIN = '/Library/Frameworks/Python.framework/Versions/3.12/bin/notebooklm';
+const NLM_BIN = findNlm();
+if (!NLM_BIN) { process.stderr.write('[nlm] NotebookLM CLI not installed. Skipping.\n'); }
 const NLM_BRIDGE = join(HOME, 'auramaxing', 'helpers', 'notebooklm-bridge.mjs');
 const NB_ID_FILE = join(HOME, '.auramaxing', 'nlm-notebook-id');
-const PYTHON_BIN = '/Library/Frameworks/Python.framework/Versions/3.12/bin/python3';
+const PYTHON_BIN = findPython();
 const LIGHTRAG_CLI = join(HOME, 'auramaxing', 'scripts', 'lightrag-cli.py');
 const LIGHTRAG_WORKSPACE = join(HOME, '.auramaxing', 'lightrag-workspace');
 const PROMPT_CACHE = join(HOME, '.auramaxing', 'prompt-cache');
@@ -160,7 +162,7 @@ try {
         const child = spawn(NLM_BIN, ['ask', prompt.slice(0, 200)], {
           detached: true,
           stdio: ['ignore', 'pipe', 'ignore'],
-          env: { ...process.env, PATH: `/Library/Frameworks/Python.framework/Versions/3.12/bin:${process.env.PATH}` },
+          env: { ...process.env, PATH: pythonEnv().PATH },
           timeout: 25000,
         });
         // Capture output and cache it
@@ -183,15 +185,17 @@ try {
   }
 } catch {}
 
-// Deep recall via NLM when LightRAG results are weak
-if (lightragResults.length === 0 || (lightragResults.length > 0 && lightragResults[0].score < 0.4)) {
+// Deep recall via NLM only when LightRAG is UNAVAILABLE (cold start / disabled).
+// Previously fired on every low-score result which duplicated work LightRAG already did
+// and cost 1-2k tokens + 3s latency on ~20% of prompts.
+if (lightragResults === null || (Array.isArray(lightragResults) && lightragResults.length === 0 && process.env.LIGHTRAG_DISABLED)) {
   try {
-    const NLM_BIN_PATH = '/Library/Frameworks/Python.framework/Versions/3.12/bin/notebooklm';
+    const NLM_BIN_PATH = findNlm();
     const NB_ID = join(HOME, '.auramaxing', 'nlm-notebook-id');
-    if (existsSync(NB_ID)) {
+    if (NLM_BIN_PATH && existsSync(NB_ID)) {
       const deepResult = execSync(
         `${NLM_BIN_PATH} ask "Based on all stored session knowledge and progress, what is relevant context for this task: ${prompt.slice(0, 200).replace(/"/g, '\\"')}"`,
-        { encoding: 'utf8', timeout: 3000 }
+        { encoding: 'utf8', timeout: 3000, shell: '/bin/bash' }
       ).trim();
       const answer = deepResult.split('Answer:').pop()?.trim() || deepResult;
       if (answer && answer.length > 30 && !answer.includes('Error:')) {
@@ -230,12 +234,14 @@ try {
       } catch {}
 
       structuredPrompt += `\n[anti-laziness]: ${antiLazy || p.add}`;
+      structuredPrompt += '\n[autonomous mandate]: You do it all — never depend on the user. Deep think → investigate → plan via gstack → execute → full audit → test + review. If changes are needed, restart this chain. Do NOT stop until the result is truly exceptional, immersive, and smooth. Do NOT stop until absolute greatness. No partial deliveries. No "good enough." No asking the user to verify what you can verify yourself.';
       break;
     }
   }
 
   if (memoryContext) structuredPrompt += `\n[past context]:\n${memoryContext}`;
   structuredPrompt += '\n[quality]: Do the COMPLETE thing. Verify claims. Show evidence.';
+  structuredPrompt += '\n[excellence principle]: Deep think → investigate → plan via gstack → execute → full audit → test + review. If result is not exceptional, restart this chain. Ship ONLY when truly exceptional, immersive, and smooth. Never stop before absolute greatness.';
 
   // ── MANDATORY: gstack planning enforcement on every prompt ──
   // Forces structured thinking: analyze → plan → execute → verify

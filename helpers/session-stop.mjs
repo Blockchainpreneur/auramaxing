@@ -10,8 +10,8 @@
  * Always exits 0.
  */
 import { request } from 'http';
-import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, unlinkSync } from 'fs';
-import { spawn } from 'child_process';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, unlinkSync, statSync } from 'fs';
+import { spawn, execSync } from 'child_process';
 import { join } from 'path';
 import { homedir } from 'os';
 
@@ -107,6 +107,30 @@ try {
     prune(decisionFiles, 10);  // keep last 10 decision logs
   } catch {}
 
+  // ── CLEANUP: Kill MCP child processes from this session ────────
+  // [#9] Single fork: get all children with pid+command in one call
+  try {
+    const claudePid = process.ppid;
+    const raw = execSync(
+      `ps -o pid=,command= -p $(pgrep -P ${claudePid} | tr '\\n' ',') 2>/dev/null`,
+      { encoding: 'utf8', timeout: 3000 }
+    ).trim();
+
+    if (raw) {
+      for (const line of raw.split('\n').filter(Boolean)) {
+        const match = line.trim().match(/^(\d+)\s+(.+)/);
+        if (!match) continue;
+        const [, childPid, cmd] = match;
+        const pid = parseInt(childPid);
+        if (pid === process.pid) continue;
+        if (/mcp|shadcn|supabase|context7|magicui|caffeinate/.test(cmd)) {
+          try { execSync(`pkill -P ${pid} 2>/dev/null`, { timeout: 1000 }); } catch {}
+          try { process.kill(pid, 'SIGTERM'); } catch {}
+        }
+      }
+    }
+  } catch {}
+
   // ── AUTO: Pre-computation pipeline (background) ──────────────
   // Replaces NLM-only compress with full pipeline:
   // 1. Ingest memory into vector index
@@ -119,9 +143,56 @@ try {
     if (existsSync(pipelineScript)) {
       const child = spawn('node', [pipelineScript], {
         detached: true, stdio: 'ignore',
-        env: { ...process.env, PATH: `/Library/Frameworks/Python.framework/Versions/3.12/bin:${process.env.PATH}` },
+        env: { ...process.env, PATH: process.env.PATH },
       });
       child.unref();
+    }
+  } catch {}
+
+  // ── Periodic disk hygiene (gated to once per 24h) ──────────────
+  // Prunes: stale turn-events, old nlm-cache entries, Chrome profile bloat.
+  try {
+    const HYGIENE_FLAG = join(HOME, '.auramaxing', '.last-hygiene');
+    const now = Date.now();
+    let lastRun = 0;
+    try { lastRun = parseInt(readFileSync(HYGIENE_FLAG, 'utf8'), 10); } catch {}
+
+    if (now - lastRun > 24 * 3600 * 1000) {
+      writeFileSync(HYGIENE_FLAG, String(now));
+
+      // 1. Delete orphan turn-events (> 7 days old)
+      try {
+        const aurDir = join(HOME, '.auramaxing');
+        for (const f of readdirSync(aurDir)) {
+          if (f.startsWith('turn-events-') && f.endsWith('.jsonl')) {
+            const fp = join(aurDir, f);
+            const age = now - (statSync(fp).mtimeMs || 0);
+            if (age > 7 * 24 * 3600 * 1000) { try { unlinkSync(fp); } catch {} }
+          }
+        }
+      } catch {}
+
+      // 2. Delete nlm-cache entries > 7 days old
+      try {
+        const cacheDir = join(HOME, '.auramaxing', 'nlm-cache');
+        if (existsSync(cacheDir)) {
+          for (const f of readdirSync(cacheDir)) {
+            const fp = join(cacheDir, f);
+            const age = now - (statSync(fp).mtimeMs || 0);
+            if (age > 7 * 24 * 3600 * 1000) { try { unlinkSync(fp); } catch {} }
+          }
+        }
+      } catch {}
+
+      // 3. Chrome profile cache prune (fire-and-forget shell)
+      try {
+        const profile = join(HOME, '.auramaxing', 'chrome-cdp-profile', 'Default');
+        if (existsSync(profile)) {
+          const pruneCmd = `for d in "Cache" "Code Cache" "Service Worker/CacheStorage"; do [ -d "${profile}/$d" ] && rm -rf "${profile}/$d"/* 2>/dev/null; done`;
+          const child = spawn('/bin/bash', ['-c', pruneCmd], { detached: true, stdio: 'ignore' });
+          child.unref();
+        }
+      } catch {}
     }
   } catch {}
 

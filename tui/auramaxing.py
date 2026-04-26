@@ -1,333 +1,451 @@
 #!/usr/bin/env python3
-"""AURAMAXING TUI — AI Development Operating System"""
+"""AURAMAXING TUI — AI Development Operating System
+Simplified launcher: scan projects, pick one, go.
+"""
 
 import curses
 import json
 import os
 import sys
 import time
+import urllib.parse
 import urllib.request
 import urllib.error
+from datetime import datetime
 from pathlib import Path
 
 DAEMON_URL = "http://localhost:57821"
-PROJECTS_FILE = Path.home() / ".config" / "auramaxing" / "projects.json"
+PROJECTS_CACHE = Path.home() / ".config" / "auramaxing" / "projects.json"
 DAEMON_TIMEOUT = 0.5
 
-LOGO_LINES = [
-    " \u2588\u2588\u2588\u2588\u2588\u2588\u2557\u2588\u2588\u2557      \u2588\u2588\u2588\u2588\u2588\u2557 \u2588\u2588\u2557   \u2588\u2588\u2557\u2588\u2588\u2588\u2588\u2588\u2588\u2557 \u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2557 \u2588\u2588\u2588\u2557   \u2588\u2588\u2588\u2557 \u2588\u2588\u2588\u2588\u2588\u2557 \u2588\u2588\u2557  \u2588\u2588\u2557",
-    "\u2588\u2588\u2554\u2550\u2550\u2550\u2550\u255d\u2588\u2588\u2551     \u2588\u2588\u2554\u2550\u2550\u2588\u2588\u2557\u2588\u2588\u2551   \u2588\u2588\u2551\u2588\u2588\u2554\u2550\u2550\u2588\u2588\u2557\u2588\u2588\u2554\u2550\u2550\u2550\u2550\u255d \u2588\u2588\u2588\u2588\u2557 \u2588\u2588\u2588\u2588\u2551\u2588\u2588\u2554\u2550\u2550\u2588\u2588\u2557\u255a\u2588\u2588\u2557\u2588\u2588\u2554\u255d",
-    "\u2588\u2588\u2551     \u2588\u2588\u2551     \u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2551\u2588\u2588\u2551   \u2588\u2588\u2551\u2588\u2588\u2551  \u2588\u2588\u2551\u2588\u2588\u2588\u2588\u2588\u2557   \u2588\u2588\u2554\u2588\u2588\u2588\u2588\u2554\u2588\u2588\u2551\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2551 \u255a\u2588\u2588\u2588\u2554\u255d ",
-    "\u2588\u2588\u2551     \u2588\u2588\u2551     \u2588\u2588\u2554\u2550\u2550\u2588\u2588\u2551\u2588\u2588\u2551   \u2588\u2588\u2551\u2588\u2588\u2551  \u2588\u2588\u2551\u2588\u2588\u2554\u2550\u2550\u255d   \u2588\u2588\u2551\u255a\u2588\u2588\u2554\u255d\u2588\u2588\u2551\u2588\u2588\u2554\u2550\u2550\u2588\u2588\u2551 \u2588\u2588\u2554\u2588\u2588\u2557 ",
-    "\u255a\u2588\u2588\u2588\u2588\u2588\u2588\u2557\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2557\u2588\u2588\u2551  \u2588\u2588\u2551\u255a\u2588\u2588\u2588\u2588\u2588\u2554\u255d\u2588\u2588\u2588\u2588\u2588\u2588\u2554\u255d\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2557 \u2588\u2588\u2551 \u255a\u2550\u255d \u2588\u2588\u2551\u2588\u2588\u2551  \u2588\u2588\u2551\u2588\u2588\u2554\u255d \u2588\u2588\u2557",
-    " \u255a\u2550\u2550\u2550\u2550\u2550\u255d\u255a\u2550\u2550\u2550\u2550\u2550\u2550\u255d\u255a\u2550\u255d  \u255a\u2550\u255d \u255a\u2550\u2550\u2550\u2550\u255d \u255a\u2550\u2550\u2550\u2550\u255d \u255a\u2550\u2550\u2550\u2550\u2550\u2550\u255d \u255a\u2550\u255d     \u255a\u2550\u255d\u255a\u2550\u255d  \u255a\u2550\u255d\u255a\u2550\u255d  \u255a\u2550\u255d",
+# ── Hardcoded defaults (no settings UI) ──────────────────────────────────────
+DEFAULTS = {
+    "slow": False,
+    "danger": True,
+    "auto_relay": True,
+    "multi_project": True,
+    "state_diagram": False,
+}
+
+# ── Directories to scan for projects ──────────────────────────────────────────
+SCAN_DIRS = [
+    Path.home(),
+    Path.home() / "code",
+    Path.home() / "projects",
+    Path.home() / "dev",
+    Path.home() / "src",
+    Path.home() / "work",
+    Path.home() / "Documents",
+    Path.home() / "Desktop",
 ]
 
-SUBTITLE = "AI Development Operating System"
+# Project markers — if a directory contains any of these, it's a project
+PROJECT_MARKERS = [
+    ".git", "package.json", "Cargo.toml", "go.mod", "pyproject.toml",
+    "setup.py", "pom.xml", "build.gradle", "Makefile", "CLAUDE.md",
+    "composer.json", "Gemfile", "mix.exs", "pubspec.yaml",
+]
+
+# Directories to skip during scan
+SKIP_DIRS = {
+    "node_modules", ".git", ".next", "__pycache__", "venv", ".venv",
+    "dist", "build", ".cache", ".npm", ".bun", "Library", ".Trash",
+    "Applications", ".local", ".config", ".claude", ".auramaxing",
+    "Pictures", "Movies", "Music", "Downloads",
+}
+
+LOGO_LINES = [
+    " ██████╗██╗      █████╗ ██╗   ██╗██████╗ ███████╗ ███╗   ███╗ █████╗ ██╗  ██╗",
+    "██╔════╝██║     ██╔══██╗██║   ██║██╔══██╗██╔════╝ ████╗ ████║██╔══██╗╚██╗██╔╝",
+    "██║     ██║     ███████║██║   ██║██║  ██║█████╗   ██╔████╔██║███████║ ╚███╔╝ ",
+    "██║     ██║     ██╔══██║██║   ██║██║  ██║██╔══╝   ██║╚██╔╝██║██╔══██║ ██╔██╗ ",
+    "╚██████╗███████╗██║  ██║╚██████╔╝██████╔╝███████╗ ██║ ╚═╝ ██║██║  ██║██╔╝ ██╗",
+    " ╚═════╝╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚═════╝ ╚══════╝ ╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝",
+]
 
 
-def daemon_get(endpoint: str, timeout: float = DAEMON_TIMEOUT):
-    """GET request to daemon. Returns parsed JSON or None."""
+# ═══════════════════════════════════════════════════════════════════════════════
+# PROJECT SCANNER
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def scan_projects() -> list[dict]:
+    """Scan common directories for coding projects. Fast, max 2 levels deep."""
+    found: dict[str, dict] = {}
+    scanned = set()
+
+    for base in SCAN_DIRS:
+        if not base.exists():
+            continue
+        _scan_dir(base, found, scanned, depth=0, max_depth=2)
+
+    # Sort by last modified (most recent first)
+    projects = sorted(found.values(), key=lambda p: p.get("modified", 0), reverse=True)
+    return projects
+
+
+def _scan_dir(directory: Path, found: dict, scanned: set, depth: int, max_depth: int):
+    """Recursively scan for project markers."""
+    real = str(directory.resolve())
+    if real in scanned or depth > max_depth:
+        return
+    scanned.add(real)
+
     try:
-        with urllib.request.urlopen(f"{DAEMON_URL}{endpoint}", timeout=timeout) as r:
-            return json.loads(r.read().decode())
-    except Exception:
-        return None
+        entries = list(os.scandir(directory))
+    except (PermissionError, OSError):
+        return
+
+    names = {e.name for e in entries}
+
+    # Check if THIS directory is a project
+    if any(marker in names for marker in PROJECT_MARKERS):
+        path_str = str(directory)
+        if path_str not in found:
+            try:
+                mtime = directory.stat().st_mtime
+            except OSError:
+                mtime = 0
+            found[path_str] = {
+                "name": directory.name,
+                "path": path_str,
+                "modified": mtime,
+                "modified_fmt": _fmt_time(mtime),
+            }
+        return  # Don't scan deeper inside a project
+
+    # Recurse into subdirectories
+    for entry in entries:
+        if not entry.is_dir(follow_symlinks=False):
+            continue
+        if entry.name.startswith(".") and entry.name != ".git":
+            continue
+        if entry.name in SKIP_DIRS:
+            continue
+        _scan_dir(Path(entry.path), found, scanned, depth + 1, max_depth)
 
 
-def daemon_post(endpoint: str, data: dict, timeout: float = DAEMON_TIMEOUT):
-    """POST request to daemon. Returns parsed JSON or None."""
+def _fmt_time(ts: float) -> str:
+    """Format timestamp as relative time."""
+    if ts == 0:
+        return ""
+    diff = time.time() - ts
+    if diff < 60:
+        return "just now"
+    if diff < 3600:
+        return f"{int(diff // 60)}m ago"
+    if diff < 86400:
+        return f"{int(diff // 3600)}h ago"
+    if diff < 604800:
+        return f"{int(diff // 86400)}d ago"
+    return datetime.fromtimestamp(ts).strftime("%b %d")
+
+
+def load_cached_projects() -> list[dict]:
+    """Load cached project list."""
     try:
-        payload = json.dumps(data).encode()
-        req = urllib.request.Request(
-            f"{DAEMON_URL}{endpoint}",
-            data=payload,
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
-        with urllib.request.urlopen(req, timeout=timeout) as r:
-            return json.loads(r.read().decode())
-    except Exception:
-        return None
-
-
-def load_fallback_projects() -> list[dict]:
-    """Load projects from ~/.config/auramaxing/projects.json."""
-    try:
-        if PROJECTS_FILE.exists():
-            return json.loads(PROJECTS_FILE.read_text())
+        if PROJECTS_CACHE.exists():
+            return json.loads(PROJECTS_CACHE.read_text())
     except Exception:
         pass
     return []
 
 
-def save_fallback_projects(projects: list[dict]) -> None:
-    """Save projects to ~/.config/auramaxing/projects.json."""
-    PROJECTS_FILE.parent.mkdir(parents=True, exist_ok=True)
-    PROJECTS_FILE.write_text(json.dumps(projects, indent=2))
+def save_cached_projects(projects: list[dict]):
+    """Cache project list for fast startup."""
+    PROJECTS_CACHE.parent.mkdir(parents=True, exist_ok=True)
+    PROJECTS_CACHE.write_text(json.dumps(projects[:100], indent=2))
 
 
-def fetch_projects() -> tuple[list[dict], bool]:
-    """Returns (projects, daemon_available)."""
-    status = daemon_get("/status")
-    if status and status.get("ok"):
-        projects = daemon_get("/projects")
-        if projects is not None:
-            return projects, True
-    return load_fallback_projects(), False
+# ═══════════════════════════════════════════════════════════════════════════════
+# SDR TEMPLATE
+# ═══════════════════════════════════════════════════════════════════════════════
 
+SDR_TEMPLATE = """# {name} — Software Design Record
+
+## Status: Draft
+Generated by AURAMAXING autopilot. Updated automatically during session.
+
+## Overview
+<!-- Autopilot fills this after first prompt -->
+
+## Architecture
+<!-- Generated from implementation decisions -->
+
+## Stack
+{stack}
+
+## Decisions Log
+| # | Decision | Rationale | Date |
+|---|----------|-----------|------|
+
+## Current State
+- Phase: Initial
+- Files: 0
+- Tests: 0
+
+---
+*Auto-generated by AURAMAXING. Do not edit manually — autopilot updates this.*
+"""
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CURSES UI
+# ═══════════════════════════════════════════════════════════════════════════════
 
 def init_colors():
-    """Initialize curses color pairs."""
     curses.start_color()
     curses.use_default_colors()
-    # Pair 1: CLAUDE purple (color 99)
-    curses.init_pair(1, 99, -1)
-    # Pair 2: MAX violet (color 141)
-    curses.init_pair(2, 141, -1)
-    # Pair 3: dim/muted
-    curses.init_pair(3, 8, -1)
-    # Pair 4: selected row (reverse)
-    curses.init_pair(4, -1, -1)
-    # Pair 5: cyan for new project
-    curses.init_pair(5, 75, -1)
-    # Pair 6: white
-    curses.init_pair(6, 255, -1)
+    curses.init_pair(1, 99, -1)    # purple
+    curses.init_pair(2, 141, -1)   # violet
+    curses.init_pair(3, 8, -1)     # dim
+    curses.init_pair(4, 255, -1)   # white
+    curses.init_pair(5, 75, -1)    # cyan
+    curses.init_pair(6, 34, -1)    # green
 
 
-def draw_screen(stdscr, projects: list[dict], sel: int, daemon_ok: bool):
-    """Draw the full AURAMAXING screen."""
+def draw_screen(stdscr, projects: list[dict], sel: int, scroll: int, scanning: bool):
     stdscr.erase()
     h, w = stdscr.getmaxyx()
 
+    row = 1
     logo_w = 80
-    row = 0
-
-    # 3 blank lines
-    row = 3
-
-    # Logo (6 lines, centered)
     lpad = max(0, (w - logo_w) // 2)
+    claude_split = 48
 
-    claude_attr = curses.color_pair(1) | curses.A_BOLD
-    max_attr = curses.color_pair(2) | curses.A_BOLD
-
-    # Split each logo line into CLAUDE part (~50 chars) and MAX part (~29 chars)
-    claude_split = 48  # chars for CLAUDE part per line
-
-    for i, line in enumerate(LOGO_LINES):
+    # ── Logo ──
+    for line in LOGO_LINES:
         if row >= h - 1:
             break
         try:
-            # Write full line with color split
-            claude_part = line[:claude_split]
-            max_part = line[claude_split:]
-            x = lpad
-            stdscr.addstr(row, x, claude_part, claude_attr)
-            stdscr.addstr(row, x + len(claude_part), " " + max_part, max_attr)
+            stdscr.addstr(row, lpad, line[:claude_split],
+                          curses.color_pair(1) | curses.A_BOLD)
+            stdscr.addstr(row, lpad + claude_split, " " + line[claude_split:],
+                          curses.color_pair(2) | curses.A_BOLD)
         except curses.error:
             pass
         row += 1
 
-    # Blank line
     row += 1
-
-    # Subtitle centered, dim
-    if row < h - 1:
-        sub_x = max(0, (w - len(SUBTITLE)) // 2)
-        try:
-            stdscr.addstr(row, sub_x, SUBTITLE, curses.color_pair(3) | curses.A_DIM)
-        except curses.error:
-            pass
-    row += 1
-
-    # 2 blank lines
+    sub = "Multi-Agent Autopilot"
+    try:
+        stdscr.addstr(row, max(0, (w - len(sub)) // 2), sub,
+                      curses.color_pair(3) | curses.A_DIM)
+    except curses.error:
+        pass
     row += 2
 
-    # Separator full width
-    sep_w = min(w - 1, 80)
-    sep_x = max(0, (w - sep_w) // 2)
-    if row < h - 1:
-        try:
-            stdscr.addstr(row, sep_x, "\u2500" * sep_w, curses.color_pair(3))
-        except curses.error:
-            pass
-    row += 1
-
-    # Blank line
-    row += 1
-
-    # Project rows (70 cols wide, centered)
-    row_w = 70
+    # ── New Project ──
+    row_w = min(74, w - 4)
     rpad = max(0, (w - row_w) // 2)
-    total = len(projects) + 1  # +1 for New Project
+    new_idx = 0  # New Project is always index 0
+    is_new_sel = sel == new_idx
+
+    try:
+        icon = "▶" if is_new_sel else "+"
+        label = f"  {icon}  New Project"
+        if is_new_sel:
+            stdscr.addstr(row, rpad, label.ljust(row_w),
+                          curses.color_pair(6) | curses.A_BOLD)
+        else:
+            stdscr.addstr(row, rpad, label.ljust(row_w),
+                          curses.color_pair(5))
+    except curses.error:
+        pass
+    row += 2
+
+    # ── Separator ──
+    sep = "─" * row_w
+    try:
+        stdscr.addstr(row, rpad, sep, curses.color_pair(3))
+    except curses.error:
+        pass
+    row += 1
+
+    # ── Projects header ──
+    hdr = f" PROJECTS ({len(projects)})"
+    if scanning:
+        hdr += "  scanning…"
+    try:
+        stdscr.addstr(row, rpad, hdr, curses.color_pair(3) | curses.A_DIM)
+    except curses.error:
+        pass
+    row += 1
+
+    # ── Project list ──
+    visible_rows = h - row - 3  # leave room for hints
+    if visible_rows < 1:
+        visible_rows = 1
 
     if not projects:
-        msg = "No projects yet  \u00b7  press n to create one"
-        mx = max(0, (w - len(msg)) // 2)
-        if row < h - 1:
-            try:
-                stdscr.addstr(row, mx, msg, curses.color_pair(3) | curses.A_DIM)
-            except curses.error:
-                pass
-        row += 1
+        try:
+            stdscr.addstr(row, rpad + 2, "No projects found. Scanning…",
+                          curses.color_pair(3) | curses.A_DIM)
+        except curses.error:
+            pass
     else:
-        for i, proj in enumerate(projects):
-            if row >= h - 1:
+        for i in range(scroll, min(len(projects), scroll + visible_rows)):
+            if row >= h - 2:
                 break
-            name = (proj.get("name") or "")[:28]
-            stack = (proj.get("stack") or "")[:18]
-            line = f"  {'◆' if i == sel else ' '}  {name:<28}  {stack:<18}  "
+            proj = projects[i]
+            list_idx = i + 1  # +1 because New Project is index 0
+            is_sel = sel == list_idx
+
+            name = (proj.get("name") or "?")[:30]
+            path = (proj.get("path") or "")
+            # Shorten path
+            home = str(Path.home())
+            if path.startswith(home):
+                path = "~" + path[len(home):]
+            path = path[:row_w - 40] if len(path) > row_w - 40 else path
+            mod = proj.get("modified_fmt", "")
+
+            line = f"  {'▶' if is_sel else ' '}  {name:<30} {mod:>8}"
             line = line[:row_w]
 
-            if i == sel:
-                attr = curses.A_REVERSE | curses.A_BOLD
-            else:
-                attr = curses.color_pair(3) | curses.A_DIM
-
             try:
-                stdscr.addstr(row, rpad, line, attr)
+                if is_sel:
+                    stdscr.addstr(row, rpad, line.ljust(row_w),
+                                  curses.A_REVERSE | curses.A_BOLD)
+                    # Show path on next line when selected
+                    if row + 1 < h - 2:
+                        row += 1
+                        stdscr.addstr(row, rpad + 5, path,
+                                      curses.color_pair(3))
+                else:
+                    stdscr.addstr(row, rpad, line, curses.color_pair(3))
             except curses.error:
                 pass
             row += 1
 
-    # Blank line
-    row += 1
-
-    # Thin separator
-    if row < h - 1:
-        try:
-            stdscr.addstr(row, rpad, "\u2500" * min(row_w, w - rpad - 1), curses.color_pair(3))
-        except curses.error:
-            pass
-    row += 1
-
-    # New Project row
-    new_proj_idx = len(projects)
-    new_line = f"  {'◆' if sel == new_proj_idx else '+'}  {'New Project':<{row_w - 6}}"
-    new_line = new_line[:row_w]
-    if row < h - 1:
-        if sel == new_proj_idx:
-            try:
-                stdscr.addstr(row, rpad, new_line, curses.A_REVERSE | curses.color_pair(5) | curses.A_BOLD)
-            except curses.error:
-                pass
-        else:
-            try:
-                stdscr.addstr(row, rpad, new_line, curses.color_pair(5) | curses.A_DIM)
-            except curses.error:
-                pass
-    row += 1
-
-    # 2 blank lines
-    row += 2
-
-    # Bottom separator
-    if row < h - 1:
-        try:
-            stdscr.addstr(row, sep_x, "\u2500" * sep_w, curses.color_pair(3))
-        except curses.error:
-            pass
-    row += 1
-
-    # Hints
-    hints = "\u2191\u2193 navigate   \u21b5 launch   n new   q quit"
-    if not daemon_ok:
-        hints += "   [daemon offline]"
-    hx = max(0, (w - len(hints)) // 2)
-    if row < h - 1:
-        try:
-            stdscr.addstr(row, hx, hints, curses.color_pair(3) | curses.A_DIM)
-        except curses.error:
-            pass
+    # ── Bottom hints ──
+    row = h - 1
+    hints = "↑↓ navigate   ⏎ launch   n new   r rescan   q quit"
+    try:
+        stdscr.addstr(row, max(0, (w - len(hints)) // 2), hints,
+                      curses.color_pair(3) | curses.A_DIM)
+    except curses.error:
+        pass
 
     stdscr.refresh()
 
 
-def run_wizard(projects: list[dict]) -> bool:
-    """
-    Run the new project wizard outside of curses.
-    Returns True if a project was created and claude launched (execvp called).
-    Returns False if cancelled.
-    """
+# ═══════════════════════════════════════════════════════════════════════════════
+# NEW PROJECT — straight to session
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def create_project() -> bool:
+    """Create a new project and launch straight into claude session."""
     curses.endwin()
 
-    print("\n  \u25c6 AURAMAXING  \u2014  New Project\n")
+    print("\n  ▶ AURAMAXING — New Project\n")
     try:
         name = input("  Project name: ").strip()
     except (EOFError, KeyboardInterrupt):
-        name = ""
+        return False
 
     if not name:
         print("  (cancelled)")
-        time.sleep(0.8)
+        time.sleep(0.5)
         return False
 
-    try:
-        stack = input("  Stack / type:  ").strip() or "TypeScript"
-    except (EOFError, KeyboardInterrupt):
-        stack = "TypeScript"
-
     slug = name.lower().replace(" ", "-").replace("_", "-")
-    proj_path = str(Path.home() / "code" / slug)
+    default_path = str(Path.home() / slug)
 
-    # Create directory and CLAUDE.md
-    Path(proj_path).mkdir(parents=True, exist_ok=True)
-    claude_md = Path(proj_path) / "CLAUDE.md"
-    claude_md.write_text(f"# {name} — Claude Code Configuration\n\n## Stack\n{stack}\n\n## Rules\n- Do what has been asked; nothing more, nothing less\n- NEVER create files unless absolutely necessary\n- ALWAYS prefer editing an existing file to creating a new one\n- ALWAYS read a file before editing it\n- NEVER commit secrets, credentials, or .env files\n")
+    try:
+        path = input(f"  Path [{default_path}]: ").strip() or default_path
+    except (EOFError, KeyboardInterrupt):
+        path = default_path
 
-    # POST to daemon
-    daemon_post("/projects", {"name": name, "stack": stack, "path": proj_path})
+    # Create directory
+    Path(path).mkdir(parents=True, exist_ok=True)
 
-    # Save to fallback file
-    fallback = load_fallback_projects()
-    if not any(p.get("path") == proj_path for p in fallback):
-        fallback.append({"name": name, "stack": stack, "path": proj_path, "cost_today": 0})
-        save_fallback_projects(fallback)
+    # Generate SDR file
+    sdr_path = Path(path) / "SDR.md"
+    if not sdr_path.exists():
+        sdr_path.write_text(SDR_TEMPLATE.format(name=name, stack="TBD"))
 
-    print(f"\n  \u2713  {name}  created at {proj_path}\n")
-    time.sleep(0.4)
+    # Create CLAUDE.md with autopilot directives
+    claude_md = Path(path) / "CLAUDE.md"
+    if not claude_md.exists():
+        claude_md.write_text(
+            f"# {name}\n\n"
+            "## Rules\n"
+            "- Do what has been asked; nothing more, nothing less\n"
+            "- NEVER create files unless absolutely necessary\n"
+            "- ALWAYS read a file before editing it\n"
+            "- NEVER commit secrets, credentials, or .env files\n\n"
+            "## SDR\n"
+            "The Software Design Record is at `SDR.md`. Update it when:\n"
+            "- Architecture decisions are made\n"
+            "- Stack choices change\n"
+            "- New phases begin\n"
+        )
 
-    os.chdir(proj_path)
+    # Cache project
+    cached = load_cached_projects()
+    if not any(p.get("path") == path for p in cached):
+        cached.insert(0, {"name": name, "path": path, "modified": time.time(),
+                          "modified_fmt": "just now"})
+        save_cached_projects(cached)
+
+    print(f"\n  ✓ Created {name}")
+    print(f"    {path}")
+    print(f"    SDR.md generated")
+    print(f"\n  Launching session…\n")
+    time.sleep(0.3)
+
+    # Launch claude directly — no wizard steps
+    os.chdir(path)
     os.execvp("claude", ["claude"])
-    return True  # unreachable
+    return True
 
 
-def launch_project(stdscr, proj: dict) -> None:
-    """Launch claude for the given project."""
+def launch_project(proj: dict):
+    """Launch claude for an existing project."""
     path = proj.get("path") or str(Path.home())
     if not os.path.isdir(path):
-        slug = (proj.get("name") or "").lower().replace(" ", "-")
-        path = str(Path.home() / "code" / slug)
-    if not os.path.isdir(path):
-        path = str(Path.home())
+        return
 
-    # Fetch context from daemon
-    ctx = daemon_get(f"/context?cwd={urllib.parse.quote(path)}", timeout=1.0)
-    if ctx and ctx.get("context"):
-        context_dir = Path(path) / ".claude"
-        context_dir.mkdir(parents=True, exist_ok=True)
-        (context_dir / "context.md").write_text(ctx["context"])
+    # Ensure SDR exists
+    sdr_path = Path(path) / "SDR.md"
+    if not sdr_path.exists():
+        sdr_path.write_text(SDR_TEMPLATE.format(
+            name=proj.get("name", Path(path).name), stack="TBD"))
 
     curses.endwin()
     os.chdir(path)
     os.execvp("claude", ["claude"])
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# MAIN
+# ═══════════════════════════════════════════════════════════════════════════════
+
 def main(stdscr):
-    """Main curses entry point."""
     curses.curs_set(0)
     stdscr.keypad(True)
     stdscr.timeout(100)
-
     init_colors()
 
-    projects, daemon_ok = fetch_projects()
+    # Load cached projects first (instant startup)
+    projects = load_cached_projects()
     sel = 0
-    total = len(projects) + 1
+    scroll = 0
+    scanning = True
+
+    # Show cached immediately, scan in background
+    draw_screen(stdscr, projects, sel, scroll, scanning)
+
+    # Scan for projects (blocking but fast)
+    scanned = scan_projects()
+    if scanned:
+        projects = scanned
+        save_cached_projects(projects)
+    scanning = False
 
     while True:
-        draw_screen(stdscr, projects, sel, daemon_ok)
+        total = 1 + len(projects)  # New Project + projects
+        draw_screen(stdscr, projects, sel, scroll, scanning)
 
         try:
             key = stdscr.getch()
@@ -337,8 +455,6 @@ def main(stdscr):
         if key == -1:
             continue
 
-        total = len(projects) + 1
-
         if key in (curses.KEY_UP, ord("k")):
             sel = (sel - 1) % total
 
@@ -346,34 +462,53 @@ def main(stdscr):
             sel = (sel + 1) % total
 
         elif key in (curses.KEY_ENTER, ord("\n"), ord("\r")):
-            if sel == len(projects):
-                # New project
-                run_wizard(projects)
-                # If we get here, wizard was cancelled — reinit
-                projects, daemon_ok = fetch_projects()
+            if sel == 0:
+                # New Project
+                if create_project():
+                    return  # execvp replaced process
+                # Cancelled — reinit
+                projects = load_cached_projects()
                 sel = 0
             else:
-                launch_project(stdscr, projects[sel])
-                # If we return (execvp failed), reload
-                projects, daemon_ok = fetch_projects()
-                sel = 0
+                # Launch existing project
+                proj_idx = sel - 1
+                if proj_idx < len(projects):
+                    launch_project(projects[proj_idx])
+                    # If we return (execvp failed), reload
+                    projects = load_cached_projects()
+                    sel = 0
 
         elif key in (ord("n"), ord("N")):
-            run_wizard(projects)
-            # If cancelled, reinit
-            projects, daemon_ok = fetch_projects()
+            if create_project():
+                return
+            projects = load_cached_projects()
             sel = 0
 
         elif key in (ord("r"), ord("R")):
-            projects, daemon_ok = fetch_projects()
+            scanning = True
+            draw_screen(stdscr, projects, sel, scroll, scanning)
+            projects = scan_projects()
+            save_cached_projects(projects)
+            scanning = False
             sel = 0
 
         elif key in (ord("q"), ord("Q")):
             break
 
+        # Scroll management
+        if sel > 0:
+            proj_scroll_idx = sel - 1
+            h = stdscr.getmaxyx()[0]
+            visible = h - 18  # approximate visible rows
+            if visible < 1:
+                visible = 1
+            if proj_scroll_idx >= scroll + visible:
+                scroll = proj_scroll_idx - visible + 1
+            elif proj_scroll_idx < scroll:
+                scroll = proj_scroll_idx
+        else:
+            scroll = 0
 
-# Import urllib.parse for URL encoding
-import urllib.parse
 
 if __name__ == "__main__":
     curses.wrapper(main)

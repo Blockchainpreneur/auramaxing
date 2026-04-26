@@ -24,14 +24,16 @@ import { execSync, execFileSync } from 'child_process';
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
+import { findPython, findNlm, pythonEnv } from "./find-bin.mjs";
 
 const HOME = homedir();
 const MEMORY_DIR = join(HOME, '.auramaxing', 'memory');
 const LEARNINGS_DIR = join(HOME, '.auramaxing', 'learnings');
 const CACHE_DIR = join(HOME, '.auramaxing', 'prompt-cache');
-const NLM_BIN = '/Library/Frameworks/Python.framework/Versions/3.12/bin/notebooklm';
+const NLM_BIN = findNlm();
+if (!NLM_BIN) { process.stderr.write('[nlm] NotebookLM CLI not installed. Skipping.\n'); }
 const NB_ID_FILE = join(HOME, '.auramaxing', 'nlm-notebook-id');
-const PYTHON_BIN = '/Library/Frameworks/Python.framework/Versions/3.12/bin/python3';
+const PYTHON_BIN = findPython();
 const LIGHTRAG_CLI = join(HOME, 'auramaxing', 'scripts', 'lightrag-cli.py');
 const LIGHTRAG_WORKSPACE = join(HOME, '.auramaxing', 'lightrag-workspace');
 
@@ -62,7 +64,7 @@ try {
   if (existsSync(authScript)) {
     execSync(`node "${authScript}"`, {
       timeout: 15000, stdio: 'pipe',
-      env: { ...process.env, PATH: `/Library/Frameworks/Python.framework/Versions/3.12/bin:${process.env.PATH}`, PLAYWRIGHT_BROWSERS_PATH: `${HOME}/Library/Caches/ms-playwright` },
+      env: { ...process.env, PATH: pythonEnv().PATH, PLAYWRIGHT_BROWSERS_PATH: `${HOME}/Library/Caches/ms-playwright` },
     });
     log('0', 'NLM auth OK');
   }
@@ -386,7 +388,7 @@ try {
   log('5/7', 'Predicting next session intent...');
   execSync(`node "${join(HOME, 'auramaxing', 'helpers', 'intent-predictor.mjs')}"`, {
     encoding: 'utf8', timeout: 15000,
-    env: { ...process.env, PATH: `/Library/Frameworks/Python.framework/Versions/3.12/bin:${process.env.PATH}` },
+    env: { ...process.env, PATH: pythonEnv().PATH },
   });
   log('5/7', 'Done');
 } catch (e) {

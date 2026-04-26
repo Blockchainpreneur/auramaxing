@@ -19,9 +19,11 @@ import { createHash } from 'crypto';
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
+import { findPython, findNlm, pythonEnv } from "./find-bin.mjs";
 
 const HOME = homedir();
-const NLM_BIN = '/Library/Frameworks/Python.framework/Versions/3.12/bin/notebooklm';
+const NLM_BIN = findNlm();
+if (!NLM_BIN) { process.stderr.write('[nlm] NotebookLM CLI not installed. Skipping.\n'); }
 const CACHE_DIR = join(HOME, '.auramaxing', 'nlm-cache');
 const MEMORY_DIR = join(HOME, '.auramaxing', 'memory');
 const NB_ID_FILE = join(HOME, '.auramaxing', 'nlm-notebook-id');

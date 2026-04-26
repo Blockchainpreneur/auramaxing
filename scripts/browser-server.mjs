@@ -21,8 +21,8 @@ import { join } from 'path';
 import { homedir } from 'os';
 
 const CDP_PORT = 9222;
-const PID_FILE = '/tmp/auramaxing-browser.pid';
 const HOME = homedir();
+const PID_FILE = join(HOME, '.auramaxing', 'browser.pid');
 const PROFILE_DIR = join(HOME, '.auramaxing', 'chrome-cdp-profile');
 const CHROME_PROFILE = join(HOME, 'Library', 'Application Support', 'Google', 'Chrome');
 
