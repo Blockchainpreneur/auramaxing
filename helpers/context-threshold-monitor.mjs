@@ -92,10 +92,21 @@ function gitState(cwd) {
   } catch { return null; }
 }
 
+// Returns one of: 'queued' | 'no-cli' | 'no-notebook' | 'auth-expired' | 'spawn-failed'
 function delegateToNLM(handoff) {
   const NLM_BIN = findNlm();
-  if (!NLM_BIN) return false;
-  if (!existsSync(NB_ID_FILE)) return false;
+  if (!NLM_BIN) return { status: 'no-cli', detail: 'NotebookLM CLI not found' };
+  if (!existsSync(NB_ID_FILE)) return { status: 'no-notebook', detail: 'No notebook ID configured' };
+
+  // Pre-flight auth check — fast (~2s timeout). If auth is dead, don't lie about queueing.
+  try {
+    const authOut = execSync(`${NLM_BIN} list 2>&1 | head -3`, {
+      encoding: 'utf8', timeout: 4000, shell: '/bin/bash',
+    });
+    if (/Authentication expired|Redirected to|Run.*notebooklm login/i.test(authOut)) {
+      return { status: 'auth-expired', detail: 'Run: notebooklm login' };
+    }
+  } catch { /* if check itself fails, optimistically continue — better than blocking */ }
 
   const nbId = readFileSync(NB_ID_FILE, 'utf8').trim().slice(0, 8);
   const date = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
@@ -125,8 +136,8 @@ function delegateToNLM(handoff) {
   try {
     const child = spawn('/bin/bash', ['-c', cmd], { detached: true, stdio: 'ignore' });
     child.unref();
-    return true;
-  } catch { return false; }
+    return { status: 'queued', detail: tmpFile };
+  } catch (e) { return { status: 'spawn-failed', detail: (e.message || '').slice(0, 80) }; }
 }
 
 async function main() {
@@ -220,10 +231,18 @@ async function main() {
     `## Recent Decisions`, handoff.recentDecisions || '(none)',
   ].join('\n'));
 
-  const nlmQueued = delegateToNLM(handoff);
+  const nlmResult = delegateToNLM(handoff);
 
   const prdNote = handoff.prd ? `PRD detected at \`${handoff.prd.path}\` — snapshotted.` : 'No PRD file detected (PRD.md, SPEC.md, etc.).';
-  const nlmNote = nlmQueued ? 'Handoff delegated to NotebookLM (queued).' : 'NotebookLM unavailable — local-only handoff.';
+  let nlmNote;
+  switch (nlmResult.status) {
+    case 'queued':        nlmNote = 'Handoff delegated to NotebookLM (queued).'; break;
+    case 'auth-expired':  nlmNote = '⚠️ NotebookLM auth EXPIRED — handoff saved LOCALLY ONLY. Run `notebooklm login` to restore cross-session NLM continuity.'; break;
+    case 'no-cli':        nlmNote = '⚠️ NotebookLM CLI not installed — local-only handoff.'; break;
+    case 'no-notebook':   nlmNote = '⚠️ No NLM notebook configured (~/.auramaxing/nlm-notebook-id missing) — local-only handoff.'; break;
+    case 'spawn-failed':  nlmNote = `⚠️ NLM upload spawn failed: ${nlmResult.detail} — local-only handoff.`; break;
+    default:              nlmNote = `⚠️ NLM status unknown: ${nlmResult.status}`;
+  }
 
   process.stdout.write([
     '[CONTEXT-AUTO-REFRESH]',
