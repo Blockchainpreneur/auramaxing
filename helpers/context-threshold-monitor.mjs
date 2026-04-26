@@ -22,6 +22,29 @@ const FLAG_PATH = `/tmp/auramaxing-handoff-${process.ppid}.flag`;
 const THRESHOLD_USED_PCT = Number(process.env.AURA_CTX_THRESHOLD_PCT || 35);
 const SOFT_THRESHOLD_PCT = Number(process.env.AURA_CTX_SOFT_THRESHOLD_PCT || 28);
 
+// Model→window map for human-readable token counts in advisories.
+// Calibration itself is runtime-driven (statusline reads
+// context_window.used_percentage which Claude Code computes against
+// the active model's actual window), so this map is informational only.
+// Source: https://platform.claude.com/docs/en/docs/about-claude/models
+const MODEL_WINDOWS = {
+  'claude-opus-4-7': 1_000_000,
+  'claude-opus-4-6': 1_000_000,
+  'claude-sonnet-4-6': 1_000_000,
+  'claude-sonnet-4-5-20250929': 200_000,
+  'claude-opus-4-5-20251101': 200_000,
+  'claude-opus-4-1-20250805': 200_000,
+  'claude-haiku-4-5-20251001': 200_000,
+  'claude-haiku-4-5': 200_000,
+};
+function fmtTokenSummary(pct, model) {
+  const win = MODEL_WINDOWS[model] || 200_000;
+  const used = Math.round((pct / 100) * win);
+  const remain = win - used;
+  const k = (n) => n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : `${Math.round(n / 1000)}k`;
+  return `~${k(used)} of ${k(win)} used · ${k(remain)} remaining`;
+}
+
 mkdirSync(AUR, { recursive: true });
 
 function findPRD(cwd) {
@@ -139,11 +162,23 @@ async function main() {
   }
   if (usedPct === null) process.exit(0);
 
+  // Detect model for token-aware messaging (informational; calibration is runtime-driven)
+  let detectedModel = (cw && cw.model) || input.model;
+  if (!detectedModel) {
+    try {
+      const ctxFile = join(AUR, 'last-ctx.json');
+      if (existsSync(ctxFile)) {
+        const data = JSON.parse(readFileSync(ctxFile, 'utf8'));
+        detectedModel = data.model;
+      }
+    } catch {}
+  }
+
   // Soft threshold (28%): emit advisory only, do not trigger handoff
   if (usedPct >= SOFT_THRESHOLD_PCT && usedPct < THRESHOLD_USED_PCT) {
     process.stdout.write([
       '[CONTEXT-ADVISORY]',
-      `ℹ️ Context at ${Math.round(usedPct)}% — approaching ${THRESHOLD_USED_PCT}% auto-handoff ceiling.`,
+      `ℹ️ Context at ${Math.round(usedPct)}% (${fmtTokenSummary(usedPct, detectedModel)}) — approaching ${THRESHOLD_USED_PCT}% auto-handoff ceiling.`,
       'Wrap current sub-task or run /compact proactively to preserve headroom.',
       '[/CONTEXT-ADVISORY]',
     ].join('\n') + '\n');
@@ -192,7 +227,7 @@ async function main() {
 
   process.stdout.write([
     '[CONTEXT-AUTO-REFRESH]',
-    `⚠️ Context at ${handoff.contextUsedPct}% — AURAMAXING 40% threshold triggered.`, '',
+    `⚠️ Context at ${handoff.contextUsedPct}% (${fmtTokenSummary(handoff.contextUsedPct, detectedModel)}) — AURAMAXING ${THRESHOLD_USED_PCT}% threshold triggered.`, '',
     `✅ Saved handoff bundle → ~/.auramaxing/pending-handoff.json`,
     `✅ Saved SDR → ~/.auramaxing/sdr-active.md`,
     `✅ ${prdNote}`,
