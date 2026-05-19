@@ -31,7 +31,37 @@ echo "{\"pct\":$PCT,\"ts\":$(date +%s),\"model\":\"$MODEL_ID\",\"window\":$REAL_
 
 API_COST=$(printf "%.2f" "$(echo "$input" | jq -r '.cost.total_cost_usd // 0' 2>/dev/null)" 2>/dev/null || echo "0.00")
 CWD=$(echo "$input" | jq -r '.cwd // "?"' 2>/dev/null)
-DIR=$(basename "$CWD")
+
+# AURAMAXING: Always show the PROJECT name (not the current subdir).
+# Walk up from cwd to the first ancestor with a project marker. This way
+# `~/auramaxing/helpers` and `~/auramaxing/scripts/foo` both show "auramaxing".
+find_project_root() {
+  local dir="$1"
+  [ -z "$dir" ] || [ "$dir" = "?" ] && { echo "?"; return; }
+  # Pass 1: .git wins. Walk up; the OUTERMOST .git is the repo root.
+  # This means submodules / nested CLAUDE.md / generated configs in subdirs
+  # never get mistaken for the project (e.g. tui/CLAUDE.md inside auramaxing).
+  local d="$dir" git_root=""
+  while [ "$d" != "/" ] && [ -n "$d" ]; do
+    [ -d "$d/.git" ] && git_root="$d"
+    d=$(dirname "$d")
+  done
+  if [ -n "$git_root" ]; then basename "$git_root"; return; fi
+  # Pass 2: no .git anywhere — fall back to first ancestor with another marker
+  d="$dir"
+  while [ "$d" != "/" ] && [ "$d" != "$HOME" ] && [ -n "$d" ]; do
+    if [ -f "$d/package.json" ] || [ -f "$d/Cargo.toml" ] || \
+       [ -f "$d/pyproject.toml" ] || [ -f "$d/go.mod" ] || [ -f "$d/pubspec.yaml" ] || \
+       [ -f "$d/CLAUDE.md" ]; then
+      basename "$d"
+      return
+    fi
+    d=$(dirname "$d")
+  done
+  # No marker anywhere — if we reached HOME show ~, else basename of cwd
+  if [ "$d" = "$HOME" ]; then echo "~"; else basename "$1"; fi
+}
+DIR=$(find_project_root "$CWD")
 R5H=$(echo "$input" | jq -r '.rate_limits.five_hour.used_percentage // empty' 2>/dev/null | cut -d. -f1)
 
 # Your real cost: $200/mo ÷ ~1.35B tokens = ~0.0068x of API cost
