@@ -37,7 +37,14 @@ CWD=$(echo "$input" | jq -r '.cwd // "?"' 2>/dev/null)
 # `~/auramaxing/helpers` and `~/auramaxing/scripts/foo` both show "auramaxing".
 find_project_root() {
   local dir="$1"
-  [ -z "$dir" ] || [ "$dir" = "?" ] && { echo "?"; return; }
+  # AURAMAXING: when Claude Code's statusline harness omits or blanks cwd,
+  # fall back to the shell's actual working directory (the dir Claude Code
+  # was spawned from — which is the project root). This is why the user was
+  # seeing "?" or the wrong name in most sessions.
+  if [ -z "$dir" ] || [ "$dir" = "?" ] || [ "$dir" = "null" ]; then
+    dir="$(pwd 2>/dev/null)"
+  fi
+  [ -z "$dir" ] && { echo "?"; return; }
   # Pass 1: .git wins. Walk up; the OUTERMOST .git is the repo root.
   # This means submodules / nested CLAUDE.md / generated configs in subdirs
   # never get mistaken for the project (e.g. tui/CLAUDE.md inside auramaxing).
