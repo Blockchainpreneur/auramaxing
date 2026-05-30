@@ -146,6 +146,7 @@ install_settings() {
   export _CM_PTU_CMD="${_PFX}node ~/.claude/helpers/post-tool-use-apex.mjs 2>/dev/null || true"
   export _CM_TC_CMD="${_PFX}node ~/.claude/helpers/task-complete.mjs 2>/dev/null || true"
   export _CM_STOP_CMD="${_PFX}node ~/auramaxing/helpers/session-stop.mjs 2>/dev/null || true"
+  export _CM_DEF_CMD="${_PFX}node ~/auramaxing/helpers/defensive-handoff.mjs 2>/dev/null || true"
   export _CM_SETTINGS="$SETTINGS"
 
   # If file doesn't exist or is empty/corrupt → fresh install
@@ -190,7 +191,8 @@ settings = {
     ],
     "Stop": [
       {"hooks": [{"type": "command", "command": tc,   "timeout": 2000}]},
-      {"hooks": [{"type": "command", "command": stop, "timeout": 2000}]}
+      {"hooks": [{"type": "command", "command": stop, "timeout": 2000}]},
+      {"hooks": [{"type": "command", "command": defh, "timeout": 3000}]}
     ],
     "SessionStart": [
       {"hooks": [{"type": "command", "command": ss_h,  "timeout": 3000}]},
