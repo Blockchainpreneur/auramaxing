@@ -10,7 +10,25 @@ Full doctrine + 37-rule Elite UI Checklist: read `~/auramaxing/docs/DESIGN-SUPRE
 ## MANDATORY: on ANY UI task, invoke ALL of these installed skills
 `frontend-design` (anti-slop baseline) · `emil-design-eng` (motion law) · `impeccable` (polish pass) · `design-taste-frontend` (taste/direction) · `high-end-visual-design` ("looks expensive") · `hallmark` (65-gate slop test, HARD gate) · `ui-ux-pro-max` (design-system gen). Style registers per brief: `minimalist-ui` / `gpt-taste` / `industrial-brutalist-ui` / `stitch-design-taste` / `redesign-existing-projects`.
 
-## The enforced sequence
+## TOURNAMENT MODE — the 10x lever for HIGH-VALUE UI (landing, hero, dashboard, key page)
+Don't ship the first thing generated. For any UI that matters, run the tournament:
+1. **EXTRACT a reference first** — `designlang` (MCP) on a best-in-class site for the domain
+   (stripe.com / linear.app / vercel.com) → start from élite tokens, never from scratch.
+2. **GENERATE 3 variants IN PARALLEL** (subagents/Agent Teams), each with DIFFERENT
+   `design-taste-frontend` dials and/or style register:
+   - A: minimal — DESIGN_VARIANCE 3, MOTION_INTENSITY 3, VISUAL_DENSITY 3 (or `minimalist-ui`)
+   - B: bold/dense — VARIANCE 8, MOTION 6, DENSITY 8 (or `gpt-taste` / `industrial-brutalist-ui`)
+   - C: cinematic-balanced — VARIANCE 6, MOTION 8, DENSITY 5
+   (All constrained by the SAME DESIGN.md tokens so they're variations, not chaos.)
+3. **SCREENSHOT each** (Playwright/chrome-devtools MCP, multiple viewports).
+4. **VISION-JUDGE with a SEPARATE judge** — a distinct Opus pass (NOT the builder — self-rating
+   is too generous) scores each variant 0–5 on the hallmark 65-gates + Elite Checklist, per screenshot.
+5. **HUMAN taste gate** — surface the top 2 to the user; they pick. Judges narrow, humans decide taste.
+6. **POLISH the winner** through the sequence below; graft the best ideas from the runner-up.
+Tournament is opt-in by value: full 3-variant for landing/hero/main dashboard; single-pass
+(sequence below) for a button/minor component. Cost ≈ 3× tokens — fine under ultracode.
+
+## The enforced sequence (single-pass, and the polish stage of tournament)
 `design-consultation/DESIGN.md → design-taste-frontend (direction) → high-end-visual-design + build with stack → emil-design-eng (motion) → impeccable (polish) → hallmark 65-gate + axe-core + Lighthouse → vision-QA loop`. If a skill isn't installed, install it (`npx skills add <repo>`) before building.
 
 ## Stack
