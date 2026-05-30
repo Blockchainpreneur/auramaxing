@@ -25,7 +25,7 @@ import { homedir } from 'os';
 const COMPLEXITY = {
   // Entrepreneur tasks
   'brain-dump':     30,
-  'write-content':  25,
+  'write-content':  35,
   brainstorm:       35,
   decide:           45,
   research:         50,
@@ -397,30 +397,36 @@ const ENRICHMENTS = {
 const TOOL_RECS = {
   'new-feature': [
     'gstack: /office-hours → /plan-eng-review → build → /review → /qa → /cso → /ship',
+    'serena (MCP): find_symbol/find_references/atomic edits before hand-editing',
+    'codegraph (MCP): token-cheap repo queries on large codebases (codegraph init first)',
+    'deepwiki (MCP): understand any external/OSS dependency without cloning',
+    'spec-kit: `specify init` then /speckit.specify→plan→tasks for non-trivial scope',
     'playwright CLI: npx playwright test for E2E tests',
-    'mcp__supabase__: backend, auth, storage, RLS policies',
     'mcp__shadcn__: UI component library (check registry first)',
     'mcp__context7__: latest framework docs before coding',
-    'mcp__figma__: read Figma designs if mockups exist',
     'sequential-thinking: plan complex architecture step-by-step',
   ],
   'bug-fix': [
     'gstack: /investigate → fix → /review → /qa',
+    'serena (MCP): trace symbol references to find the real root cause',
+    'deepwiki (MCP): check an external library’s behavior without cloning it',
     'playwright CLI: npx playwright test to reproduce in real browser',
-    'mcp__sentry__: pull error traces, stack traces, affected users',
     'mcp__context7__: check if it is a known framework issue',
   ],
   design: [
+    'DOCTRINE: ~/auramaxing/docs/DESIGN-SUPREMACY.md §0.5 — UX/UI IS A MANDATORY PRIORITY, invoke ALL skills below',
+    'MUST-SKILLS (installed, invoke ALL): frontend-design + emil-design-eng (motion) + impeccable (polish) + design-taste-frontend + high-end-visual-design + hallmark (65-gate) + ui-ux-pro-max. Style variants: minimalist-ui/gpt-taste/industrial-brutalist-ui/stitch-design-taste',
     'gstack: /design-consultation → build → /design-review → /qa → /ship',
-    'mcp__figma__: read Figma designs → generate matching code',
-    'mcp__shadcn__: component library + audit checklist',
-    'mcp__magicuidesign-mcp__: animated/interactive components',
-    'playwright CLI: npx playwright test for visual regression + responsive',
+    'stack: Tailwind v4 @theme OKLCH + shadcn(Base UI) + Fontsource fonts + Motion/AutoAnimate',
+    'micro: pqoqubbw/icons (animated icons) + @number-flow/react (animated numbers)',
+    'blocks: react-bits / animate-ui / mcp__magicuidesign-mcp__ / mcp__shadcn__',
+    'brand SSOT: emit/read DESIGN.md (DTCG tokens) — #1 anti-AI-slop lever',
+    'extract: designlang (MCP) — reference site → DTCG tokens + DESIGN.md (kill generic AI look)',
+    'GATE: hallmark 65-gate slop-test + impeccable polish + axe-core + Lighthouse CI + vision-QA loop. "Looks fine" is NOT the bar.',
   ],
   'deploy-ship': [
     'gstack: /review → /qa → /cso → /ship → /land-and-deploy → /canary',
-    'mcp__github__: PR creation, branch management, release',
-    'mcp__sentry__: verify no new errors after deploy',
+    'gh CLI: PR creation, branch management, release (CLI-first, no MCP)',
   ],
   'e2e-testing': [
     'playwright CLI: npx playwright test for all browser testing',
@@ -429,7 +435,7 @@ const TOOL_RECS = {
   ],
   security: [
     'gstack: /cso for OWASP Top 10 + STRIDE audit',
-    'mcp__supabase__: check RLS policies, auth config, exposed keys',
+    'serena (MCP): trace auth/trust-boundary code paths',
     'sequential-thinking: systematic threat model analysis',
   ],
   performance: [
@@ -439,7 +445,7 @@ const TOOL_RECS = {
   'code-review': [
     'gstack: /review for comprehensive code review',
     'gstack: /cso for security implications',
-    'mcp__sentry__: check if reviewed code has prior error history',
+    'codex CLI: cross-model adversarial review (different model family)',
   ],
   refactor: [
     'gstack: /review → /qa after refactoring',
@@ -449,7 +455,8 @@ const TOOL_RECS = {
   ],
   investigate: [
     'gstack: /investigate for systematic root-cause debugging',
-    'mcp__sentry__: pull error traces, spans, breadcrumbs',
+    'serena (MCP): trace symbol references to the real root cause',
+    'deepwiki (MCP): understand an external/OSS library you depend on (no clone needed)',
     'playwright CLI: npx playwright test to reproduce if UI-related',
     'mcp__context7__: check framework docs for known issues',
     'sequential-thinking: structured reasoning for complex bugs',
@@ -457,7 +464,12 @@ const TOOL_RECS = {
   'web-browse': [
     'gstack: /browse for fast web research',
     'agent-browser: for interactive browsing with low token cost',
-    'mcp__firecrawl__: extract clean data from any URL',
+    'firecrawl CLI: extract clean data from any URL (CLI-first, not MCP)',
+  ],
+  'write-content': [
+    'MARKETING SKILLS (installed, invoke the matching one): copywriting · cro · seo · ai-seo · ads · ad-creative · emails · cold-email · social · content-strategy · launch · pricing · copy-editing · marketing-psychology',
+    'gstack: draft → /review',
+    'If landing-page/site copy: pair with the UX/UI design stack (frontend-design + impeccable) so copy + interface ship together',
   ],
   'brain-dump': [
     'gstack: extract decisions → prioritize → structure',
@@ -465,23 +477,24 @@ const TOOL_RECS = {
   ],
   strategy: [
     'gstack: /office-hours for strategic review',
-    'mcp__firecrawl__: scrape competitor pages, market data',
-    'mcp__context7__: technology landscape research',
+    'firecrawl CLI: scrape competitor pages, market data (CLI-first)',
+    'deepwiki (MCP): study a competitor’s OSS repo for technical positioning',
   ],
   pitch: [
     'gstack: /office-hours for pitch structure and feedback',
-    'mcp__firecrawl__: pull market data, comparable companies',
+    'firecrawl CLI: pull market data, comparable companies (CLI-first)',
   ],
   research: [
     'mcp__context7__: technical docs and framework references',
-    'mcp__firecrawl__: extract structured data from any source',
-    'gstack: /browse for web research',
+    'deepwiki (MCP): grounded Q&A on any public GitHub repo (ask_question/read_wiki)',
+    'firecrawl CLI: extract structured data from any URL (CLI-first, not MCP)',
+    'gstack: /browse for web research · /deep-research for cited multi-source reports',
   ],
   // Automation tasks route to n8n
   planning: [
     'gstack: /office-hours → /plan-ceo-review → /plan-eng-review',
+    'spec-kit: `specify` for spec-driven decomposition into tasks',
     'sequential-thinking: structured planning with revision',
-    'mcp__n8n__: automate recurring workflows',
   ],
 };
 
@@ -681,6 +694,21 @@ async function main() {
   }
   if (enrichLine) directives.push(enrichLine);
   if (toolsLine)  directives.push(toolsLine);
+
+  // ── ORCHESTRATE footer — the composition lever ──────────────────────────
+  // Tells the agent to intelligently compose ANY subset of the capability registry,
+  // scaled to complexity, and loop to the exit bar. Doctrines carry the full detail.
+  if (complexity >= 50) {
+    directives.push('ORCHESTRATE: run the Iron Loop (research→plan→execute→audit→test→self-improve), loop to the exit bar. ' +
+      'Compose the registry (~/auramaxing/docs/CAPABILITIES.md) per fit: gstack + MCP (serena/codegraph/context7) + ' +
+      'parallel subagents or Agent Teams (cap 3-5) or a Workflow + adversarial verify (N skeptics, majority-refute kills). ' +
+      'Cross-model /codex on non-trivial code. Auto-activate Goals/TaskCreate for multi-step work. ' +
+      'May search+install FREE skills/MCP if a capability gap blocks the task. Prove "done" with evidence. ' +
+      'Doctrine: ~/auramaxing/docs/ORCHESTRATION.md');
+  } else if (complexity >= 30) {
+    directives.push('ORCHESTRATE: compose the smallest sufficient set (1 gstack skill + relevant MCP/CLI), ' +
+      'verify claims with evidence, escalate to the Iron Loop if scope grows. Registry: ~/auramaxing/docs/CAPABILITIES.md');
+  }
 
   // Inject task-specific CLAUDE.md segment if available
   let claudemdSegment = '';
