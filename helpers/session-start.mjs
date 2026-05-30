@@ -234,7 +234,12 @@ try {
 
     // Priority 0: Pending handoff from prior 40%-triggered session
     if (pendingHandoff) {
-      memoryBlock.push('⚡ RESUMED FROM 40% AUTO-HANDOFF ⚡');
+      memoryBlock.push('⚡ RESUMED FROM AUTO-HANDOFF ⚡');
+      // FIRST NEXT ACTION + RESUME PLAN come first — they're the resume contract.
+      let na = pendingHandoff.nextAction;
+      try { const naf = join(HOME, '.auramaxing', 'next-action.txt'); if (!na && existsSync(naf)) { na = readFileSync(naf, 'utf8').trim(); unlinkSync(naf); } } catch {}
+      if (na) memoryBlock.push(`▶ FIRST NEXT ACTION: ${na}`);
+      if (pendingHandoff.checkpointDoc) memoryBlock.push(`▶ RESUME PLAN: read ${pendingHandoff.checkpointDoc} FIRST (self-contained; start at its FIRST NEXT ACTION).`);
       memoryBlock.push(`Prior session hit ${pendingHandoff.contextUsedPct}% context on ${pendingHandoff.timestamp?.slice(0,16)}.`);
       if (pendingHandoff.lastPrompt) {
         memoryBlock.push('Last user prompt before handoff:');
@@ -247,7 +252,7 @@ try {
         memoryBlock.push(`Git: ${pendingHandoff.git.branch} @ ${pendingHandoff.git.lastCommit} (${pendingHandoff.git.dirtyFiles?.length || 0} dirty files)`);
       }
       memoryBlock.push('Full handoff: ~/.auramaxing/pending-handoff.json + NotebookLM.');
-      memoryBlock.push('Resume the work directly — do not ask user to re-explain.');
+      memoryBlock.push('Resume the work directly — do not ask user to re-explain. If a RESUME PLAN doc is named, read it first.');
       memoryBlock.push('---');
 
       // Clear the handoff now that it's been consumed
