@@ -92,6 +92,17 @@ function gitState(cwd) {
   } catch { return null; }
 }
 
+// Fresh agent-written checkpoint doc → the handoff points at a real resume plan, not just prose.
+function findCheckpointDoc(cwd) {
+  const cands = [
+    join(cwd, 'docs', 'REFACTOR-CHECKPOINT.md'), join(cwd, 'docs', 'CHECKPOINT.md'),
+    join(cwd, 'CHECKPOINT.md'), join(AUR, 'checkpoint.md'),
+  ];
+  let best = null, bestM = 0;
+  for (const p of cands) { try { if (existsSync(p)) { const m = statSync(p).mtimeMs; if (m > bestM) { bestM = m; best = p; } } } catch {} }
+  return best && (Date.now() - bestM < 6 * 3600 * 1000) ? best : null; // fresh-only (6h)
+}
+
 // Returns one of: 'queued' | 'no-cli' | 'no-notebook' | 'auth-expired' | 'spawn-failed'
 function delegateToNLM(handoff) {
   const NLM_BIN = findNlm();
@@ -204,6 +215,9 @@ async function main() {
   const cwd = input.cwd || process.cwd();
   const lastPrompt = input.prompt || input.user_prompt || input.message || '';
 
+  const checkpointDoc = findCheckpointDoc(cwd);
+  let nextAction = null;
+  try { const na = join(AUR, 'next-action.txt'); if (existsSync(na)) nextAction = readFileSync(na, 'utf8').trim(); } catch {}
   const handoff = {
     timestamp: new Date().toISOString(),
     contextUsedPct: Math.round(usedPct),
@@ -211,6 +225,8 @@ async function main() {
     lastPrompt: lastPrompt.slice(0, 2000),
     prd: findPRD(cwd),
     git: gitState(cwd),
+    checkpointDoc,          // pointer to the agent's resume plan
+    nextAction,             // one-line first-next-action (from next-action.txt)
     recentDecisions: readRecentEntries(MEMORY_DIR, '.json', 3)
       .map(e => `- ${e.name}: ${(e.content || '').slice(0, 200)}`).join('\n'),
     recentLearnings: readRecentEntries(LEARNINGS_DIR, '.json', 3)
@@ -251,11 +267,14 @@ async function main() {
     `✅ Saved SDR → ~/.auramaxing/sdr-active.md`,
     `✅ ${prdNote}`,
     `✅ ${nlmNote}`, '',
-    'ACTION REQUIRED — choose one:',
-    '  A) /clear  (RECOMMENDED) — fully wipe context; next session will auto-restore from handoff + NLM',
-    '  B) /compact            — summarize in-place; keeps current session alive', '',
-    'The handoff preserves: last prompt, PRD snapshot, git state, recent decisions.',
-    'Next session\'s SessionStart hook will detect the handoff and inject the briefing automatically.',
+    'PERFECT-HANDOFF protocol — do steps 1-4 BEFORE recommending /clear (a clear mid-task without a checkpoint loses work):',
+    `  1. CHECKPOINT in-flight work: commit/stash dirty files${handoff.git?.dirtyFiles?.length ? ` (${handoff.git.dirtyFiles.length} uncommitted)` : ''}, or note exactly where they stand.`,
+    `  2. WRITE/REFRESH a checkpoint doc with a self-contained resume plan + explicit "FIRST NEXT ACTION"${checkpointDoc ? ` (found ${checkpointDoc} — refresh it)` : ' (none found — create docs/CHECKPOINT.md)'}.`,
+    '  3. UPDATE persistent memory (~/.claude/projects/.../memory/) with this session\'s decisions/learnings.',
+    '  4. BACKFILL the next action: write your one-line first-next-action to ~/.auramaxing/next-action.txt.',
+    '  5. THEN recommend: A) /clear (RECOMMENDED — auto-restores next session) or B) /compact (summarize in-place).',
+    'The handoff preserves: last prompt, PRD, git state, edited files, checkpoint-doc pointer, next-action, recent decisions.',
+    'Next session\'s SessionStart hook injects the briefing automatically (FIRST NEXT ACTION + RESUME PLAN first).',
     '[/CONTEXT-AUTO-REFRESH]',
   ].join('\n') + '\n');
 
