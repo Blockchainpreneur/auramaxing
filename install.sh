@@ -638,8 +638,9 @@ main() {
 
   step "5/14 AURAMAXING hook helpers"
   install_helpers
+  install_aura_skills
 
-  step "6/14 settings.json (smart merge)"
+  step "6/14 settings.json (ultracode + Opus 4.8)"
   apply_settings
 
   step "7/14 Global CLAUDE.md"
