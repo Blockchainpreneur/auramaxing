@@ -1,0 +1,12 @@
+{"id":"design-dashboard","prompt":"build a dashboard UI with charts and dark mode","expect_task":"design","must_include":["MUST-SKILLS","aura","ORCHESTRATE"],"must_not":["mcp__figma__","mcp__github__"]}
+{"id":"design-landing","prompt":"design a landing page hero section","expect_task":"design","must_include":["MUST-SKILLS","hallmark"],"must_not":["mcp__figma__"]}
+{"id":"feature-auth","prompt":"build a full authentication system with oauth","expect_task":"new-feature","must_include":["serena","ORCHESTRATE","Iron Loop"],"must_not":["mcp__supabase__","mcp__github__"]}
+{"id":"bugfix-login","prompt":"fix the broken login 500 error","expect_task":"bug-fix","must_include":["serena","investigate"],"must_not":["mcp__sentry__"]}
+{"id":"security-audit","prompt":"run a security audit for owasp vulnerabilities","expect_task":"security","must_include":["cso"],"must_not":["mcp__supabase__"]}
+{"id":"deploy","prompt":"deploy and ship to production","expect_task":"deploy-ship","must_include":["ship","gh CLI"],"must_not":["mcp__github__"]}
+{"id":"research","prompt":"research the best vector database options","expect_task":"research","must_include":["deepwiki"],"must_not":["mcp__firecrawl__"]}
+{"id":"refactor","prompt":"refactor and clean up the auth module","expect_task":"refactor","must_include":["review"],"must_not":[]}
+{"id":"marketing","prompt":"write landing page copy and seo content","expect_task":"write-content","must_include":["MARKETING SKILLS","copywriting"],"must_not":[]}
+{"id":"investigate","prompt":"why does the checkout fail intermittently","expect_task":"bug-fix","must_include":["serena"],"must_not":["mcp__sentry__"]}
+{"id":"trivial-greeting","prompt":"hi","expect_task":"","must_include":[],"must_not":["ORCHESTRATE","EXECUTE"]}
+{"id":"plan","prompt":"plan the sprint roadmap and architecture","expect_task":"planning","must_include":["plan-eng-review"],"must_not":["mcp__n8n__"]}
