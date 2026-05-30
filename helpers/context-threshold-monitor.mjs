@@ -170,19 +170,36 @@ async function main() {
     if (typeof cw.used_percentage === 'number') usedPct = cw.used_percentage;
     else if (typeof cw.remaining_percentage === 'number') usedPct = 100 - cw.remaining_percentage;
   }
+  // OPTION 2 — statusline-agnostic: read % from multiple sources, wide TTL, never miss on stale data.
   if (usedPct === null) {
-    try {
-      const ctxFile = join(AUR, 'last-ctx.json');
-      if (existsSync(ctxFile)) {
-        const age = Date.now() - statSync(ctxFile).mtimeMs;
-        if (age < 120000) {
-          const data = JSON.parse(readFileSync(ctxFile, 'utf8'));
-          if (typeof data.pct === 'number') usedPct = data.pct;
+    const sources = [
+      join(AUR, 'last-ctx.json'),                        // statusline writer (primary)
+      join(AUR, 'prompt-cache', 'last-ctx.json'),        // alt location
+    ];
+    let best = null, bestAge = Infinity;
+    for (const f of sources) {
+      try {
+        if (!existsSync(f)) continue;
+        const age = Date.now() - statSync(f).mtimeMs;
+        if (age < 600000 && age < bestAge) {             // 600s TTL (was 120s) — survives slow turns
+          const data = JSON.parse(readFileSync(f, 'utf8'));
+          const p = typeof data.pct === 'number' ? data.pct
+                  : typeof data.used_percentage === 'number' ? data.used_percentage : null;
+          if (p !== null) { best = p; bestAge = age; }
         }
-      }
-    } catch {}
+      } catch {}
+    }
+    usedPct = best;
   }
-  if (usedPct === null) process.exit(0);
+  // If % is STILL unknown, don't silently bail — fall through with a conservative estimate so the
+  // defensive Stop-hook handoff (defensive-handoff.mjs) is the real safety net, but advisory still fires.
+  if (usedPct === null) {
+    // unknown context → emit a soft advisory once, then exit (don't trigger a full handoff on a guess)
+    if (!existsSync(FLAG_PATH)) {
+      process.stdout.write(`[CONTEXT-ADVISORY]\nℹ️ Context % unavailable (statusline stale) — defensive checkpoint runs on session end regardless. Consider /clear if this is a long session.\n[/CONTEXT-ADVISORY]\n`);
+    }
+    process.exit(0);
+  }
 
   // Detect model for token-aware messaging (informational; calibration is runtime-driven)
   let detectedModel = (cw && cw.model) || input.model;
