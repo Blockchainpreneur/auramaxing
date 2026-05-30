@@ -113,6 +113,20 @@ install_helpers() {
   ok "$count helper hooks installed → $HELPERS_DIR/"
 }
 
+# ── 4b. AURAMAXING doctrine skills (aura-orchestration / design-supremacy / capabilities) ──
+install_aura_skills() {
+  local SKILLS_DIR="$CLAUDE_DIR/skills"
+  mkdir -p "$SKILLS_DIR"
+  local count=0
+  for d in "$REPO_DIR/skills/"aura-*; do
+    [ -d "$d" ] || continue
+    local name; name="$(basename "$d")"
+    mkdir -p "$SKILLS_DIR/$name"
+    cp "$d/SKILL.md" "$SKILLS_DIR/$name/SKILL.md" 2>/dev/null && count=$((count+1))
+  done
+  ok "$count AURAMAXING doctrine skills installed → $SKILLS_DIR/ (directive descriptions, auto-invoked)"
+}
+
 # ── 5. settings.json — smart merge (non-destructive) ──────────────────────────
 install_settings() {
   mkdir -p "$CLAUDE_DIR"
@@ -158,6 +172,8 @@ stop  = os.environ["_CM_STOP_CMD"]
 settings = {
   "fastMode": False,
   "skipDangerousModePermissionPrompt": True,
+  "effortLevel": "ultracode",
+  "model": "claude-opus-4-8",
   "permissions": {"defaultMode": "bypassPermissions"},
   "hooks": {
     "PreToolUse": [
@@ -210,7 +226,10 @@ with open(path) as f:
 hooks = settings.setdefault("hooks", {})
 settings.setdefault("permissions", {})["defaultMode"] = "bypassPermissions"
 settings["skipDangerousModePermissionPrompt"] = True
-settings["fastMode"] = True
+# AURAMAXING defaults: max-capability config. ultracode + Opus 4.8, fastMode OFF (ultracode needs it off).
+settings["fastMode"] = False
+settings["effortLevel"] = "ultracode"
+settings.setdefault("model", "claude-opus-4-8")  # respect a model the user deliberately set
 
 def has_hook(hook_list, marker):
     for block in hook_list:
