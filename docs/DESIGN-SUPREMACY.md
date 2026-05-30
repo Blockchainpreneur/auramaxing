@@ -50,8 +50,27 @@ whether the whole project reads as elite or as generic AI output. Treat it as lo
 Run this closed loop for any UI of consequence. Human owns only the taste gate (Stage 3).
 
 ```
-BRIEF → TOKENS → MULTI-VARIANT → VISION-JUDGE → IMPLEMENT → QA GATES → POLISH LOOP ↺
+BRIEF → EXTRACT-REF → TOKENS → 3-VARIANT TOURNAMENT → VISION-JUDGE → HUMAN GATE → POLISH LOOP ↺
 ```
+
+### ⭐ TOURNAMENT MODE (the 10x lever — high-value UI: landing, hero, dashboard, key page)
+The biggest quality jump is moving from one self-rated pass to **N diverse variants judged by a
+SEPARATE critic**. Opt-in by value (full tournament for important UI; single-pass for minor parts):
+1. **EXTRACT-REF** — `designlang` MCP on a best-in-class site (stripe/linear/vercel) → seed élite
+   tokens. Never start blank — that's where the "generic AI look" originates.
+2. **3 VARIANTS in parallel** (subagents), SAME DESIGN.md tokens, DIFFERENT `design-taste-frontend`
+   dials so they are real explorations, not noise:
+   | Variant | DESIGN_VARIANCE | MOTION_INTENSITY | VISUAL_DENSITY | or register |
+   |---|---|---|---|---|
+   | A minimal | 3 | 3 | 3 | `minimalist-ui` |
+   | B bold/dense | 8 | 6 | 8 | `gpt-taste` / `industrial-brutalist-ui` |
+   | C cinematic | 6 | 8 | 5 | `stitch-design-taste` |
+3. **SCREENSHOT** each at desktop+mobile (Playwright bundled Chromium / chrome-devtools MCP).
+4. **SEPARATE-JUDGE** — a distinct Opus pass (NOT the builder; self-rating runs ~too generous)
+   scores each 0–5 vs the hallmark 65-gates + §6 Elite Checklist, per screenshot. Pick the top.
+5. **HUMAN TASTE GATE** — surface top-2 to the user; they choose. Judges narrow, humans decide taste.
+6. **POLISH** the winner via the steps below; graft the best ideas from the runner-up.
+Cost ≈3× tokens — acceptable under ultracode. Mirrors the eval-harness "separate judge" pattern, on pixels.
 
 0. **Brief → constraints** — `/office-hours` or `/design-consultation`; emit/refresh
    `DESIGN.md` (DTCG tokens + rationale) as the brand source of truth read on every step.
