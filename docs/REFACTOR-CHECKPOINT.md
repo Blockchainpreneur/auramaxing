@@ -68,5 +68,22 @@ After each step: `Iron Loop` (research→plan→execute→AUDIT→TEST→self-im
 ## Exit bar
 AURAMAXING v2 is done when: CLAUDE.md ≤2.5k tok, router ≤150 lines (no per-task regex tables), doctrine lives in directive-described skills, eval harness + Gatekeeper gate every change, and a measured eval score exists that v2 ≥ v1. "Feels better" is not the bar — the eval score is.
 
+## PROGRESS (2026-05-30)
+- ✅ **STEP 1 DONE** — 3 doctrine skills created with DIRECTIVE descriptions, live + verified in skill list:
+  `aura-orchestration`, `aura-design-supremacy`, `aura-capabilities` (in `~/.claude/skills/`, bodies point to the docs).
+- ✅ **STEP 2 SUBSTANTIALLY DONE** — CLAUDE.md slimmed **6899 → 4017 tokens (−42%, ~2.9k tok/turn saved)**.
+  Collapsed Perpetual-Perfection + Design-Supremacy + UI/UX + gstack verbose sections into thin pointers to the
+  3 skills, keeping INVARIANTS (Iron Loop one-liner, UX/UI-mandatory, anti-slop, gstack decision tree, permissions,
+  Visual Protocol, memory/handoff). All critical invariants verified present.
+- ⏳ Optional: shave CLAUDE.md further toward ≤2.5k (remaining is mostly legit always-on: Aura autopilot, browser,
+  permissions). Diminishing returns — don't cut real invariants.
+- ✅ Perfect-handoff mechanism upgraded (context-threshold-monitor + session-start): captures checkpoint-doc +
+  next-action + edited files; restore surfaces FIRST NEXT ACTION + RESUME PLAN. Committed (0368cea).
+
+## NEXT: STEP 3 — EVAL HARNESS + GATEKEEPER (the 10x move; see section above)
+This is THE move. Build `~/.auramaxing/evals/` golden set + separate-Opus judge + a `Stop` gatekeeper hook.
+Then STEP 4 (GEPA), STEP 5 (failing-feature handoff / fleet / E2B), STEP 6 (plugin).
+
 ## First action next session
-Start STEP 1. It's reversible, free, highest-ROI, no API keys. `git -C ~/auramaxing add -A && git commit -m "checkpoint: pre-v2-refactor"` first.
+Start **STEP 3** (eval harness + Gatekeeper). It needs no API keys (DeepEval is OSS) and makes every further
+change measurable. If STEPs 1-2 need a final polish first, do that, else go straight to STEP 3.
