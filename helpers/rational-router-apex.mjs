@@ -414,15 +414,18 @@ const TOOL_RECS = {
     'mcp__context7__: check if it is a known framework issue',
   ],
   design: [
-    'DOCTRINE: ~/auramaxing/docs/DESIGN-SUPREMACY.md §0.5 — UX/UI IS A MANDATORY PRIORITY, invoke ALL skills below',
+    'ENTRY: invoke the front-10x skill FIRST (cinematic 10x orchestrator) — it runs component-discovery + the ALWAYS-ON tournament + the cinematic playbook, then composes the skills below. Or run /design-tournament for the N-variant + separate-judge pass on demand.',
+    'DOCTRINE: ~/auramaxing/docs/DESIGN-SUPREMACY.md — anchor = CINEMATIC / AWWWARDS-tier (NOT "clean SaaS"); TOURNAMENT IS ALWAYS ON (≥3 judged cinematic variants on every surface).',
     'MUST-SKILLS (installed, invoke ALL): frontend-design + emil-design-eng (motion) + impeccable (polish) + design-taste-frontend + high-end-visual-design + hallmark (65-gate) + ui-ux-pro-max. Style variants: minimalist-ui/gpt-taste/industrial-brutalist-ui/stitch-design-taste',
+    'START FROM KIT: ~/auramaxing/design-kit/ (DESIGN.md + globals.css OKLCH + tokens.json + signature components) — never start a front file blank.',
     'gstack: /design-consultation → build → /design-review → /qa → /ship',
     'stack: Tailwind v4 @theme OKLCH + shadcn(Base UI) + Fontsource fonts + Motion/AutoAnimate',
+    'cinematic layer: R3F+drei+postprocessing / OGL / @paper-design/shaders-react (shader heroes) + Lenis+GSAP ScrollTrigger (scroll storytelling) + Theatre.js + Rive/Lottie',
     'micro: pqoqubbw/icons (animated icons) + @number-flow/react (animated numbers)',
-    'blocks: react-bits / animate-ui / mcp__magicuidesign-mcp__ / mcp__shadcn__',
+    'blocks (DISCOVER + COMPARE per §11, pick the BEST, re-theme to tokens): mcp__shadcn__ / mcp__magicuidesign-mcp__ / react-bits / animate-ui / Aceternity / Cult UI / motion-primitives',
     'brand SSOT: emit/read DESIGN.md (DTCG tokens) — #1 anti-AI-slop lever',
     'extract: designlang (MCP) — reference site → DTCG tokens + DESIGN.md (kill generic AI look)',
-    'GATE: hallmark 65-gate slop-test + impeccable polish + axe-core + Lighthouse CI + vision-QA loop. "Looks fine" is NOT the bar.',
+    'GATE: hallmark 65-gate slop-test + impeccable polish + axe-core + Lighthouse CI + vision-QA loop. Must read Awwwards-tier. "Looks fine" is NOT the bar.',
   ],
   'deploy-ship': [
     'gstack: /review → /qa → /cso → /ship → /land-and-deploy → /canary',
@@ -599,8 +602,11 @@ async function main() {
     }
   } catch {}
 
-  // Spin up Ruflo swarm for complex tasks
-  if (complexity >= 50 && primary.agents?.length) {
+  // Ruflo swarm DISABLED — claude-flow is NOT the engine (see CLAUDE.md "Swarm stance":
+  // benchmark fabricated, core paths stubbed, ~92% overlap with native). Backbone is native
+  // Claude Code (subagents + Agent Teams + Skills) + ReasoningBank. This spawn thrashed the
+  // 8GB Mac on every complex prompt. Re-enable explicitly with AURA_RUFLO_SWARM=1.
+  if (process.env.AURA_RUFLO_SWARM === '1' && complexity >= 50 && primary.agents?.length) {
     try {
       const nodeBin = dirname(process.execPath);
       let nvmBin = '';
@@ -699,15 +705,15 @@ async function main() {
   // Tells the agent to intelligently compose ANY subset of the capability registry,
   // scaled to complexity, and loop to the exit bar. Doctrines carry the full detail.
   if (complexity >= 50) {
-    directives.push('ORCHESTRATE: run the Iron Loop (research→plan→execute→audit→test→self-improve), loop to the exit bar. ' +
-      'Compose the registry (~/auramaxing/docs/CAPABILITIES.md) per fit: gstack + MCP (serena/codegraph/context7) + ' +
-      'parallel subagents or Agent Teams (cap 3-5) or a Workflow + adversarial verify (N skeptics, majority-refute kills). ' +
-      'Cross-model /codex on non-trivial code. Auto-activate Goals/TaskCreate for multi-step work. ' +
-      'May search+install FREE skills/MCP if a capability gap blocks the task. Prove "done" with evidence. ' +
-      'Doctrine: ~/auramaxing/docs/ORCHESTRATION.md');
+    directives.push('PHASED EXCELLENCE LOOP (MANDATORY — operate extended, never shortcut, never stop early; gstack is IMPLICIT in EVERY task): ' +
+      '1) Route through gstack; decompose into explicit PHASES tracked with TaskCreate — all phases live in THIS task. Auto-INJECT supporting sub-tasks per phase: tool/repo/skill SEARCH, investigation/research, reference EXAMPLES — finish them before EXECUTE. ' +
+      '2) EVERY phase opens with the SAME steps: AUDIT (current state) → INVESTIGATE (read all files, verify APIs via context7/codegraph/serena/deepwiki, gather real EXAMPLES, never guess) → PLAN (full approach) → SELECT THE BEST (actively SEARCH + COMPARE candidate tools/repos/skills via ToolSearch + ~/auramaxing/docs/CAPABILITIES.md + WebSearch for best-in-class; install FREE on a gap; pick the BEST, not merely available) → EXECUTE the complete thing — ROOT-CAUSE fixes only, no symptom patch, no vague workaround, no placeholders (states, errors, edge cases, tests). ' +
+      '3) After EACH phase: TEST + VERIFY + REVIEW WITH EVIDENCE — actually RUN tests/build/typecheck/lint (or /qa + /review + /cso) and QUOTE the output, state root cause with file:line, add a regression test; then ADVERSARIALLY verify (a separate skeptic pass tries to BREAK it; default to NOT-done if unsure — self-rating is too generous). SCORE 0–100 honestly against that evidence; LOOP into the phase until 100/100 WITH evidence BEFORE advancing. ' +
+      '4) After ALL phases: run the SAME full evidence-backed TEST + VERIFY + REVIEW across the whole deliverable, SCORE 0–100, LOOP until 100/100. ' +
+      '5) NEVER stop until absolute greatness at the highest standard, PROVEN by evidence — no "good enough", no partials, no asking the user to verify what you can verify. BANNED: "should work"/"I think"/"probably"/declaring done without running it/TODO-placeholders/un-rerun fixes — a claim without evidence counts as FALSE. ' +
+      'Compose per phase: gstack + MCP (serena/codegraph/context7/deepwiki) + parallel subagents/Agent Teams (cap 3-5) or a Workflow with adversarial verify (N skeptics, majority-refute kills). Doctrine: ~/auramaxing/docs/ORCHESTRATION.md');
   } else if (complexity >= 30) {
-    directives.push('ORCHESTRATE: compose the smallest sufficient set (1 gstack skill + relevant MCP/CLI), ' +
-      'verify claims with evidence, escalate to the Iron Loop if scope grows. Registry: ~/auramaxing/docs/CAPABILITIES.md');
+    directives.push('PHASED EXCELLENCE LOOP (condensed, MANDATORY; gstack implicit): split into PHASES + auto-inject tool-SEARCH / research / EXAMPLES sub-tasks. Each phase → AUDIT → INVESTIGATE (+ examples) → PLAN → SELECT THE BEST → EXECUTE (root-cause, no placeholder); then TEST + VERIFY + REVIEW WITH EVIDENCE (RUN it + paste output + root-cause file:line + regression test + adversarial skeptic pass) and LOOP to 100/100 before advancing. After all phases, full evidence-backed verify LOOP to 100/100. BANNED: "should work"/done-without-running/TODO — claims without evidence are FALSE. Never stop before proven greatness. Registry: ~/auramaxing/docs/CAPABILITIES.md');
   }
 
   // Inject task-specific CLAUDE.md segment if available

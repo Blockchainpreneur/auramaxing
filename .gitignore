@@ -48,3 +48,4 @@ CLAUDE.md
 # Local-only Claude config artifacts
 .claude/settings.local.json
 .claude/*.dead
+install.sh.bak.macperf.*

@@ -14,9 +14,27 @@ continuity + a coherent single direction. The goal is not "more effects" — it'
 elite design engineer would ship. Every surface must pass the Elite UI Checklist (§6) and
 the automated gates (§7). Never converge on the same trendy default across projects.
 
+**Default anchor: cinematic / award-winning (Awwwards · Active Theory · Basement · Rauno tier).**
+The bar is not "clean SaaS page" — it is a site that could win an Awwwards Site of the Day:
+intentional motion narrative, scroll-driven scenes, a signature hero, depth and atmosphere,
+kinetic typography, and craft in every transition. Product-grade minimal (Linear/Vercel/Stripe)
+is the FLOOR for dense app UI; cinematic is the TARGET for anything public-facing. The 10x comes
+from: (a) starting from extracted élite references, never blank; (b) an ALWAYS-ON variant
+tournament judged by a separate critic; (c) a closed vision-QA loop where the agent sees and
+fixes its own pixels; (d) leveraging the best component/WebGL libraries instead of hand-rolling.
+See §1.5 for the cinematic playbook, §10 for the runnable starter kit, §11 for component-discovery.
+
 ## 0.5 UX/UI IS A FIRST-CLASS PRIORITY — MANDATORY SKILL INVOCATION
 **Any interface built with AURAMAXING — any page, component, layout, dashboard, landing,
 form — MUST invoke the full design skill stack. This is non-negotiable, not opt-in.**
+
+**Entry point: invoke `front-10x` FIRST** (the cinematic 10x orchestrator skill) — it runs
+component-discovery (§11), the always-on tournament, and the cinematic playbook (§1.5), then
+composes the skills below. The dedicated **`/design-tournament`** command runs the N-variant +
+separate-judge tournament on demand. **TOURNAMENT MODE IS ALWAYS ON** (not value-gated): every
+surface — down to key components — gets ≥3 judged cinematic variants. Start every project from the
+runnable kit in §10; never begin a front task from a blank file.
+
 When a task touches UX/UI, the agent MUST load and apply ALL of these (free, `npx skills add`):
 
 All INSTALLED (`~/.claude/skills/`) — invoke by these exact names:
@@ -37,12 +55,14 @@ Plus the stack libs (§2): Fontsource · OKLCH/Radix Colors/tweakcn · Motion+Au
 **pqoqubbw/icons** (animated icons) · **@number-flow/react** (animated numbers) · react-bits/animate-ui.
 Plus the brand SSOT: a committed **DESIGN.md** (DTCG tokens) + **designlang** to extract from references.
 
-**The sequence on any UX/UI task (enforced):**
-`design-consultation/DESIGN.md → design-taste-frontend (direction) → high-end-visual-design +
-build with stack → emil-design-eng (motion) → impeccable (polish) → hallmark 65-gate + axe +
-Lighthouse → vision-QA loop`. All skills are already installed in `~/.claude/skills/`.
-"Looks fine" is not the bar — it must pass hallmark + the Elite Checklist (§6). UX/UI quality decides
-whether the whole project reads as elite or as generic AI output. Treat it as load-bearing.
+**The sequence on any UX/UI task (enforced, tournament-first):**
+`front-10x (orchestrate) → component-discovery (§11) → designlang EXTRACT-REF → DESIGN.md tokens
+→ ALWAYS-ON TOURNAMENT (≥3 cinematic variants via design-taste-frontend dials, §1/§1.5) →
+SEPARATE vision-judge → human taste gate → build winner with stack → emil-design-eng (motion +
+scroll-storytelling) → impeccable (polish) → hallmark 65-gate + axe + Lighthouse → vision-QA loop ↺`.
+All skills are installed in `~/.claude/skills/`. "Looks fine" is not the bar — it must pass hallmark +
+the Elite Checklist (§6) AND read as Awwwards-tier. UX/UI quality decides whether the whole project
+reads as elite or as generic AI output. Treat it as load-bearing.
 
 ---
 
@@ -94,6 +114,32 @@ Cost ≈3× tokens — acceptable under ultracode. Mirrors the eval-harness "sep
 
 ---
 
+## 1.5 Cinematic / award-winning playbook (the default anchor)
+For public-facing UI (landing, hero, marketing, product showcase) target Awwwards-SOTD craft.
+The moves that separate award-tier from a "nice SaaS page":
+
+- **Signature hero.** A WebGL/shader background (`@paper-design/shaders-react` gradient meshes,
+  or R3F + `postprocessing` bloom/grain), or a kinetic-typography hero. Never a flat centered H1.
+- **Scroll as narrative.** `Lenis` smooth scroll + `GSAP ScrollTrigger` (now 100% free, incl.
+  SplitText/MorphSVG) for pinned sections, scroll-driven scenes, parallax depth, reveal
+  choreography. `Theatre.js` to author the timeline. Always respect `prefers-reduced-motion`.
+- **3D / WebGL when it earns its place.** React Three Fiber + drei + `maath`; `OGL` for a light
+  footprint; `Spline` (key-gated) for authored scenes; `Rive` for interactive vector.
+- **Micro-craft.** Magnetic buttons + cursor-following (`@use-gesture`/React Spring), WebGL image
+  hover transitions, marquees, `@number-flow/react` counters, View Transitions for route morphs,
+  `pqoqubbw/icons` animated icons.
+- **Atmosphere.** Grain/noise overlays, gradient mesh, layered transparency, one coherent light
+  source for multi-layer shadows. Dark-first is the cinematic default.
+- **Performance is non-negotiable even when cinematic.** Lazy-load 3D below the fold, cap DPR,
+  pause off-screen RAF loops, ship a static `reduced-motion` fallback. §6/§7 gates still apply —
+  award craft AND LCP ≤2.5s / 60fps.
+
+Reference corpus (study, encode as rules): Awwwards SOTD, Active Theory, Basement Studio, Unseen
+Studio, Resn, Locomotive, **Olivier Larose** (blog.olivierlarose.com — copy-paste React cinematic
+components), **codrops** (tutorials/demos), Rauno (interaction spine).
+
+---
+
 ## 2. Canonical stack (the kit)
 **Core:** Tailwind v4 (CSS-first `@theme`) + shadcn/ui (zinc base; **Base UI** backend on new
 projects) + Radix/Base primitives + lucide-react.
@@ -108,6 +154,12 @@ on every list (highest polish-per-effort); Lenis + GSAP ScrollTrigger for landin
 **anime.js v4** (~10KB MIT) as the lightweight JS alternative; native View Transitions (first-class
 in React 19.2) for route morphs; React Spring + `@use-gesture` for magnetic/drag; Rive for
 interactive vector, Lottie for branded loops.
+**Cinematic/3D (the award-tier layer, §1.5):** React Three Fiber + drei + `maath` +
+`postprocessing` (bloom/DOF/film-grain) for 3D heroes; **OGL** for a light WebGL footprint;
+**@paper-design/shaders-react** for shader gradient backgrounds; **Lenis** + **GSAP
+ScrollTrigger** (free, +SplitText/MorphSVG) for scroll storytelling; **Theatre.js** to author
+motion timelines; **Spline** (key-gated) for authored 3D scenes. Olivier Larose components +
+codrops demos = copy-paste cinematic patterns.
 **Micro-interactions:** **pqoqubbw/icons** (animated Lucide, copy-paste, uses your Motion+lucide deps)
 + **@number-flow/react** (animated counters/prices/metrics — default for dashboard stats).
 **Breadth/data:** Kibo UI (stateful complex components), Tremor (charts/dashboards), Origin
@@ -215,3 +267,31 @@ design-token lint passes (no raw hex/px outside the token system).
 v0 (Model + Platform API), Mobbin MCP/REST (Pro+), Magic Patterns API,
 Builder.io / Subframe, Exa. Free-now: Geist, Fontshare, Radix Colors, tweakcn, culori/apcach,
 Utopia, AutoAnimate, Argos (free tier), axe-core, Lighthouse CI, View Transitions, Motion.
+
+---
+
+## 10. The runnable starter kit (start every front project here)
+`~/auramaxing/design-kit/` is the drop-in elite design layer — never start a front project blank.
+- `DESIGN.md` — DTCG token SSOT template, cinematic-anchored, with the taste dials + rationale.
+- `tokens.json` — the same tokens in DTCG JSON (feed Style Dictionary / native platforms).
+- `globals.css` — Tailwind v4 `@theme` + `:root`/`.dark`, OKLCH cinematic palette, fluid type
+  scale, motion + easing tokens, dark-first. Edit this one file; everything re-themes.
+- `package.json` — the canonical dependency set (Tailwind v4, shadcn/Base UI, Motion, Fontsource,
+  number-flow, Lenis, GSAP, R3F/drei, paper shaders).
+- `components/` — signature reference implementations that define the bar: a cinematic hero and a
+  six-microstate button. Copy + adapt; never regress below their craft.
+Workflow: copy the kit into the project → run `designlang` on a reference to retune `DESIGN.md` →
+enter the tournament. The kit is the floor; the tournament raises the ceiling.
+
+## 11. Component-discovery protocol (search the best, never hand-roll the generic)
+Before building any non-trivial block, RUN A DISCOVERY PASS (part of `front-10x` and the
+SELECT-THE-BEST step of the Phased Excellence Loop):
+1. **Search + compare** candidates live: `mcp__shadcn__`, `mcp__magicuidesign-mcp__`, react-bits,
+   animate-ui, Aceternity, Cult UI, Kibo UI, motion-primitives, + `WebSearch` for
+   "<component> awwwards / codrops <pattern>".
+2. **Score** on: token-themability, motion quality, a11y, license (flag Commons-Clause react-bits /
+   AGPL Origin UI), bundle cost. Pick the BEST fit, not the first hit.
+3. **Adapt to DESIGN.md tokens** — never paste foreign hardcoded colors/spacing (that is how the
+   generic look leaks back in). Re-theme to the project's OKLCH variables.
+4. **Install free, flag key-gated/paid** to the user before adopting.
+Hand-roll only when discovery finds nothing better than what you'd build.

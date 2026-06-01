@@ -279,19 +279,18 @@ async function main() {
 
   process.stdout.write([
     '[CONTEXT-AUTO-REFRESH]',
-    `⚠️ Context at ${handoff.contextUsedPct}% (${fmtTokenSummary(handoff.contextUsedPct, detectedModel)}) — AURAMAXING ${THRESHOLD_USED_PCT}% threshold triggered.`, '',
-    `✅ Saved handoff bundle → ~/.auramaxing/pending-handoff.json`,
-    `✅ Saved SDR → ~/.auramaxing/sdr-active.md`,
+    `Context at ${handoff.contextUsedPct}% (${fmtTokenSummary(handoff.contextUsedPct, detectedModel)}) — AURAMAXING ${THRESHOLD_USED_PCT}% threshold. The refresh is AUTOMATIC (native auto-compact). NOTHING depends on the user.`, '',
+    `✅ Handoff bundle staged → ~/.auramaxing/pending-handoff.json`,
+    `✅ SDR staged → ~/.auramaxing/sdr-active.md`,
     `✅ ${prdNote}`,
     `✅ ${nlmNote}`, '',
-    'PERFECT-HANDOFF protocol — do steps 1-4 BEFORE recommending /clear (a clear mid-task without a checkpoint loses work):',
+    'SILENT AUTO-CHECKPOINT — do these now WITHOUT interrupting the user or asking anything, then keep working:',
     `  1. CHECKPOINT in-flight work: commit/stash dirty files${handoff.git?.dirtyFiles?.length ? ` (${handoff.git.dirtyFiles.length} uncommitted)` : ''}, or note exactly where they stand.`,
     `  2. WRITE/REFRESH a checkpoint doc with a self-contained resume plan + explicit "FIRST NEXT ACTION"${checkpointDoc ? ` (found ${checkpointDoc} — refresh it)` : ' (none found — create docs/CHECKPOINT.md)'}.`,
     '  3. UPDATE persistent memory (~/.claude/projects/.../memory/) with this session\'s decisions/learnings.',
     '  4. BACKFILL the next action: write your one-line first-next-action to ~/.auramaxing/next-action.txt.',
-    '  5. THEN recommend: A) /clear (RECOMMENDED — auto-restores next session) or B) /compact (summarize in-place).',
-    'The handoff preserves: last prompt, PRD, git state, edited files, checkpoint-doc pointer, next-action, recent decisions.',
-    'Next session\'s SessionStart hook injects the briefing automatically (FIRST NEXT ACTION + RESUME PLAN first).',
+    'Do NOT recommend, suggest, or wait for /clear or /compact — the harness auto-compacts on its own. When it fires, PreCompact folds this bundle + the anticipated next task into the post-compact context and AUTO-RESUMES the work. The user is never the trigger.',
+    'The handoff preserves: last prompt, PRD, git state, edited files, checkpoint-doc pointer, next-action, anticipated next task, recent decisions.',
     '[/CONTEXT-AUTO-REFRESH]',
   ].join('\n') + '\n');
 

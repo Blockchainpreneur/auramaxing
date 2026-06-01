@@ -276,8 +276,11 @@ if not has_hook(ss, "session-start.mjs"):
     ss.insert(0, {"hooks": [{"type": "command", "command": ss_h, "timeout": 3000}]})
 if not has_hook(ss, "session-start-daemon"):
     ss.append({"hooks": [{"type": "command", "command": ssd, "timeout": 2000}]})
-if not has_hook(ss, "ruflo") and not has_hook(ss, "daemon start"):
-    ss.append({"hooks": [{"type": "command", "command": ruflo, "timeout": 5000}]})
+# RUFLO SWARM DISABLED (mac-perf 2026-05-31): claude-flow is NOT the engine (see CLAUDE.md
+# "Swarm stance" + EVOLUTION-V2 ReasoningBank). Auto-starting it thrashed the 8GB Mac on every
+# session. Backbone is native Claude Code + ReasoningBank. To re-enable, restore the two lines below.
+# if not has_hook(ss, "ruflo") and not has_hook(ss, "daemon start"):
+#     ss.append({"hooks": [{"type": "command", "command": ruflo, "timeout": 5000}]})
 
 # Remove old noisy hooks
 for event in ["PostToolUse", "Stop"]:
@@ -648,8 +651,8 @@ main() {
   step "7/14 Global CLAUDE.md"
   install_claude_md
 
-  step "8/14 Ruflo (enterprise swarm orchestration)"
-  install_ruflo
+  step "8/14 Ruflo — DISABLED (mac-perf): claude-flow not the engine, thrashed 8GB Mac"
+  # install_ruflo  # disabled 2026-05-31 — see SessionStart block above
 
   step "9/14 MCP servers"
   install_mcp

@@ -1,0 +1,130 @@
+/* AURAMAXING design-kit — globals.css
+ * Tailwind v4 (@theme, CSS-first) · OKLCH · dark-first cinematic.
+ * Edit THIS file; everything re-themes. No raw hex/px in components.
+ */
+@import "tailwindcss";
+
+/* ─── Runtime semantic tokens (the SSOT; same names flip in light) ─────────── */
+:root {
+  /* dark-first cinematic palette */
+  --bg: oklch(0.15 0.006 286);
+  --bg-subtle: oklch(0.18 0.008 286);
+  --surface: oklch(0.21 0.009 286);
+  --surface-2: oklch(0.25 0.010 286);
+  --border: oklch(0.30 0.010 286);
+  --border-strong: oklch(0.40 0.012 286);
+  --text: oklch(0.97 0.004 286);
+  --text-muted: oklch(0.74 0.008 286);
+  --text-subtle: oklch(0.58 0.009 286);
+  /* signature accent — acid chartreuse (anti-slop: NOT purple→blue) */
+  --accent: oklch(0.88 0.21 125);
+  --accent-hover: oklch(0.83 0.21 125);
+  --accent-contrast: oklch(0.18 0.04 130);
+  --danger: oklch(0.64 0.21 25);
+  --success: oklch(0.74 0.17 150);
+  /* depth: multi-layer shadow from one light source */
+  --shadow-1: 0 1px 2px oklch(0 0 0 / 0.30), 0 1px 1px oklch(0 0 0 / 0.20);
+  --shadow-2: 0 4px 12px oklch(0 0 0 / 0.35), 0 2px 4px oklch(0 0 0 / 0.25);
+  --shadow-3: 0 12px 40px oklch(0 0 0 / 0.45), 0 4px 12px oklch(0 0 0 / 0.30);
+  --ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
+  /* motion */
+  --dur-fast: 150ms;
+  --dur-base: 250ms;
+  --dur-slow: 450ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* optional light mode — flip values, never invert token roles */
+.light {
+  --bg: oklch(0.99 0.003 286);
+  --bg-subtle: oklch(0.97 0.004 286);
+  --surface: oklch(1 0 0);
+  --surface-2: oklch(0.98 0.004 286);
+  --border: oklch(0.90 0.005 286);
+  --border-strong: oklch(0.82 0.007 286);
+  --text: oklch(0.20 0.010 286);
+  --text-muted: oklch(0.44 0.010 286);
+  --text-subtle: oklch(0.56 0.009 286);
+  --accent-contrast: oklch(0.20 0.04 130);
+}
+
+/* ─── Expose tokens to Tailwind utilities (bg-bg, text-accent, etc.) ───────── */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-bg-subtle: var(--bg-subtle);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-text-subtle: var(--text-subtle);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-contrast: var(--accent-contrast);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+
+  --font-display: "Satoshi Variable", "Geist Variable", system-ui, sans-serif;
+  --font-sans: "Geist Variable", system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", "Monaspace Neon", monospace;
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+
+  /* fluid type scale (Utopia clamp()) */
+  --text-step--1: clamp(0.83rem, 0.8rem + 0.15vw, 0.94rem);
+  --text-step-0: clamp(1rem, 0.95rem + 0.25vw, 1.13rem);
+  --text-step-1: clamp(1.2rem, 1.1rem + 0.5vw, 1.5rem);
+  --text-step-2: clamp(1.44rem, 1.27rem + 0.85vw, 2rem);
+  --text-step-3: clamp(1.73rem, 1.46rem + 1.36vw, 2.66rem);
+  --text-step-4: clamp(2.07rem, 1.67rem + 2vw, 3.55rem);
+  --text-step-5: clamp(2.49rem, 1.9rem + 2.95vw, 4.74rem);
+}
+
+/* ─── Base ─────────────────────────────────────────────────────────────────── */
+* { border-color: var(--border); }
+html { color-scheme: dark; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--text-step-0);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-optical-sizing: auto;
+}
+h1, h2, h3 { font-family: var(--font-display); font-weight: 600; line-height: 1.05; letter-spacing: -0.02em; }
+:where(table, .tabular) { font-variant-numeric: tabular-nums; }
+
+/* custom focus ring (box-shadow, never outline) */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+  border-radius: var(--radius-sm);
+}
+
+/* cinematic atmosphere: subtle film grain overlay (toggle per project) */
+.grain::after {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 9999;
+  opacity: 0.035; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* skeleton shimmer (loading = skeletons, never spinners) */
+@keyframes shimmer { 100% { transform: translateX(100%); } }
+.skeleton { position: relative; overflow: hidden; background: var(--surface); border-radius: var(--radius-md); }
+.skeleton::after {
+  content: ""; position: absolute; inset: 0; transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, oklch(1 0 0 / 0.06), transparent);
+  animation: shimmer 1.6s var(--ease-out) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  .skeleton::after { animation: none; }
+}

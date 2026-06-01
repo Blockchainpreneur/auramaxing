@@ -54,8 +54,10 @@ const promptLower = prompt.toLowerCase();
 let memoryContext = '';
 let lightragResults = [];
 try {
-  // Priority 1: LightRAG semantic search (replaces keyword matching)
-  try {
+  // Priority 1: LightRAG semantic search (replaces keyword matching).
+  // Skipped under AURA_PE_FAST (eval/test mode) — this Python subprocess is the slow,
+  // non-deterministic part; the structuring/gate logic below does not depend on it.
+  if (!process.env.AURA_PE_FAST) try {
     const result = execFileSync(PYTHON_BIN, [
       LIGHTRAG_CLI, 'query',
       '--workspace', LIGHTRAG_WORKSPACE,
@@ -210,13 +212,13 @@ let structuredPrompt = prompt;
 try {
   // Static patterns as fallback
   const staticPatterns = [
-    { test: /^(fix|update|change|modify)\s/i, type: 'bug-fix', add: 'Read the code first. Show root cause before patching. Write regression test.' },
-    { test: /^(build|create|make|add)\s/i, type: 'new-feature', add: 'Include: input validation, error states, loading states, edge cases, tests.' },
-    { test: /^(check|review|look at)\s/i, type: 'code-review', add: 'Read every file involved. List findings with file:line references.' },
-    { test: /^(deploy|ship|push)\s/i, type: 'deploy-ship', add: 'Pre-deploy: tests, diff review, secrets check. Post-deploy: canary.' },
-    { test: /^(test|qa|verify)\s/i, type: 'e2e-testing', add: 'Test: happy path, error paths, edge cases, mobile. Show evidence.' },
-    { test: /^(research|find|search)\s/i, type: 'research', add: 'Multiple sources. Verify claims. Note conflicts. Cite sources.' },
-    { test: /^(design|ui|ux)\s/i, type: 'design', add: 'Mobile-first. Dark mode. Loading/empty/error states. WCAG 2.1.' },
+    { test: /^(fix|update|change|modify)\s/i, type: 'bug-fix', add: 'Read the full code path first. Find and STATE the root cause with file:line BEFORE touching anything — no symptom patch, no guess. Write a regression test that fails before / passes after; RUN it and paste the output.' },
+    { test: /^(build|create|make|add)\s/i, type: 'new-feature', add: 'Build COMPLETE: input validation, error/empty/loading states, edge cases, accessibility, tests. No placeholders/TODOs. RUN it (build + tests) and show it working before claiming done.' },
+    { test: /^(check|review|look at)\s/i, type: 'code-review', add: 'Read EVERY file involved fully. List findings with file:line + a concrete fix each. Verify every claim against the code — no hand-waving.' },
+    { test: /^(deploy|ship|push)\s/i, type: 'deploy-ship', add: 'Pre-deploy: RUN tests + diff review + /cso secrets check (paste results). Post-deploy: /canary. Have a rollback plan.' },
+    { test: /^(test|qa|verify)\s/i, type: 'e2e-testing', add: 'Test happy path + error paths + edge cases + mobile. RUN the suite and paste real output — never assert "passes" without the run.' },
+    { test: /^(research|find|search)\s/i, type: 'research', add: 'Multiple independent sources. Verify each claim; adversarially check the surprising ones. Note conflicts. Cite every source. No unsourced assertions.' },
+    { test: /^(design|ui|ux)\s/i, type: 'design', add: 'Invoke front-10x. Cinematic anchor, always-on tournament, start from ~/auramaxing/design-kit/. Screenshot + vision-QA loop. Mobile-first, dark mode, all states, WCAG 2.1.' },
   ];
 
   for (const p of staticPatterns) {
@@ -241,20 +243,26 @@ try {
 
   if (memoryContext) structuredPrompt += `\n[past context]:\n${memoryContext}`;
   structuredPrompt += '\n[quality]: Do the COMPLETE thing. Verify claims. Show evidence.';
-  structuredPrompt += '\n[excellence principle]: Deep think → investigate → plan via gstack → execute → full audit → test + review. If result is not exceptional, restart this chain. Ship ONLY when truly exceptional, immersive, and smooth. Never stop before absolute greatness.';
-
-  // ── MANDATORY: gstack planning enforcement on every prompt ──
-  // Forces structured thinking: analyze → plan → execute → verify
-  const planningGate = [
-    '[PLANNING GATE]: Before executing, you MUST:',
-    '1. State what you understand the task to be (1 sentence)',
-    '2. Identify what files/systems are involved',
-    '3. Describe your approach (not "I\'ll look at it" — the ACTUAL steps)',
-    '4. Execute with evidence at each step',
-    '5. Verify the result works before reporting done',
-    'Skip this gate ONLY for pure questions with no action needed.',
+  // ── MANDATORY: Phased Excellence Loop — forced on every actionable prompt ──
+  // gstack route → phases → per-phase opening steps → per-phase verify loop → final verify loop.
+  const phasedLoop = [
+    '[PHASED EXCELLENCE LOOP — MANDATORY, NON-NEGOTIABLE]: Operate extended. Do NOT shortcut, do NOT stop early, do NOT hand work back to the user. gstack is IMPLICIT in EVERY task — always route through it.',
+    '0. ROUTE through gstack. Decompose the task into explicit PHASES; track them with TaskCreate. ALL phases live inside THIS task. Auto-INJECT supporting sub-tasks for each phase: (i) tool/repo/skill SEARCH, (ii) investigation/research, (iii) reference EXAMPLES — and complete them before EXECUTE.',
+    'For EVERY phase, run the SAME opening sequence — no phase skips a step:',
+    '  a. AUDIT — inspect the current real state of what this phase touches.',
+    '  b. INVESTIGATE — read every relevant file completely; verify APIs/behaviors via context7/codegraph/serena/deepwiki/WebSearch; gather real reference EXAMPLES / proven implementations; never guess.',
+    '  c. PLAN — state the full approach for the phase before writing any code.',
+    '  d. SELECT THE BEST — actively SEARCH and COMPARE candidate tools, repos and skills (ToolSearch + ~/auramaxing/docs/CAPABILITIES.md registry + WebSearch for best-in-class); pick the BEST fit, not merely an available one; install FREE skills/MCP on a capability gap. gstack skills are always in scope.',
+    '  e. EXECUTE — build the COMPLETE thing: states, errors, edge cases, tests. ROOT-CAUSE fixes only — never a symptom patch, never a vague/temporary workaround. No placeholders, no partials.',
+    'After EACH phase: TEST + VERIFY + REVIEW WITH EVIDENCE — actually RUN the tests/build/typecheck/lint (or /qa + /review + /cso) and QUOTE the output; state the root cause with file:line; add a regression test. Then ADVERSARIALLY VERIFY: a separate skeptic pass tries to BREAK the result (self-rating is too generous); default to "not done" if uncertain. SCORE 0–100 HONESTLY against that evidence.',
+    '  → If < 100/100: fix and LOOP back into this phase. Do NOT advance until this phase is 100/100 WITH evidence.',
+    'After ALL phases: run the SAME full evidence-backed TEST + VERIFY + REVIEW across the ENTIRE deliverable; SCORE 0–100.',
+    '  → LOOP until 100/100. NEVER stop until absolute greatness at the highest standard, PROVEN by evidence.',
+    'BANNED: "should work", "I think", "probably", "this should fix it", declaring done without running it, leaving a TODO/placeholder, a fix you have not re-run. A claim without evidence is treated as FALSE.',
+    'No "good enough". No partial delivery. No asking the user to verify what you can verify yourself.',
+    'Skip this loop ONLY for a pure question with zero actions needed.',
   ].join('\n');
-  structuredPrompt += `\n${planningGate}`;
+  structuredPrompt += `\n${phasedLoop}`;
 } catch {}
 
 // ── 4. AUTO: Save prompt to memory + ingest to vector index ─────
