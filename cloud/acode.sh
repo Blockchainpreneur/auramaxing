@@ -63,10 +63,6 @@ fi
 # Box-side env: exploit the full 16 GB heap; OAuth token already set on the box.
 REMOTE_ENV='. ~/.nvm/nvm.sh 2>/dev/null; export NODE_OPTIONS="--max-old-space-size=12288"; export IS_SANDBOX=1'
 
-# Only request the -R tunnel if the box can't ALREADY reach the Mac's Chrome (a live tunnel still
-# serves :9222) — avoids the "remote port forwarding failed" warning on reuse.
-if [ -n "$TUNNEL" ] && aura_box_has_mac_chrome "$HOST"; then TUNNEL=""; fi
-
 if [ -n "$ONESHOT" ]; then
   echo "▸ one-shot on box (compute only)"
   printf '%s\n' "$AURA_EMPTY_MCP" | ssh $AURA_SSH_OPTS "$HOST" 'cat > ~/.swarm-empty-mcp.json'
@@ -75,12 +71,22 @@ if [ -n "$ONESHOT" ]; then
   ssh $AURA_SESSION_SSH "$HOST" "$REMOTE_ENV; cd ~/$REMOTE && claude -p \"\$(printf %s '$B64' | base64 -d)\" --strict-mcp-config --mcp-config ~/.swarm-empty-mcp.json --dangerously-skip-permissions"
   echo "▸ syncing results back"; sync_back
 else
-  echo "▸ opening Claude Code ON the box (Mac = thin client). Exit to sync back."
+  echo "▸ opening Claude Code ON the box (resilient: runs in tmux, survives SSH drops). Exit to sync back."
   # Ensure the browser MCP config exists on the box, else `claude --mcp-config` errors at startup.
   printf '%s\n' "$AURA_BROWSER_MCP" | ssh $AURA_SSH_OPTS "$HOST" 'cat > ~/.acode-mcp.json'
-  # Own connection (AURA_SESSION_SSH) so the -R tunnel establishes reliably; chrome-devtools MCP
-  # then reaches the Mac's Chrome through it.
-  ssh -t $AURA_SESSION_SSH $TUNNEL "$HOST" "$REMOTE_ENV; cd ~/$REMOTE && claude --mcp-config ~/.acode-mcp.json" || true
+  TMUX_SESSION="aura-$NAME"
+  # RESILIENCE: claude runs inside tmux ON THE BOX, so a dropped/reset SSH ("Connection reset by
+  # peer"/"Broken pipe") never kills the session — it keeps running. Auto-reconnect: if ssh ends
+  # while the tmux session still lives (= a network drop), re-attach with NO work lost; exit only
+  # when the user actually quits claude (tmux session then gone). Keepalives (lib.sh) prevent most
+  # drops in the first place.
+  while :; do
+    TUN="$TUNNEL"; aura_box_has_mac_chrome "$HOST" && TUN=""   # reuse a live tunnel, else open -R
+    ssh -t $AURA_SESSION_SSH $TUN "$HOST" \
+      "$REMOTE_ENV; tmux new-session -A -s '$TMUX_SESSION' 'cd ~/$REMOTE && claude --mcp-config ~/.acode-mcp.json'" || true
+    ssh $AURA_SSH_OPTS "$HOST" "tmux has-session -t '$TMUX_SESSION' 2>/dev/null" || break
+    echo "▸ connection dropped — re-attaching to your live box session (no work lost)…"; sleep 1
+  done
   echo "▸ session ended — syncing results back"; sync_back
 fi
 echo "▸ done."

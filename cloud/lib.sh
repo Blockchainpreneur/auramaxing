@@ -3,9 +3,11 @@
 # Single source of truth for SSH options, rsync excludes, MCP configs, and reachability —
 # so they can't drift across scripts. Keep POSIX-bash; no side effects on source.
 
-# Base SSH options used everywhere: trust-on-first-use (MITM protection on key change),
-# never hang on a prompt, bounded connect.
-AURA_SSH_BASE="-o StrictHostKeyChecking=accept-new -o BatchMode=yes -o ConnectTimeout=10"
+# Base SSH options used everywhere: trust-on-first-use (MITM protection on key change), never hang
+# on a prompt, bounded connect, AND keepalives — ServerAlive probes every 15s (×4 = 60s grace) stop
+# NAT/firewall/idle from resetting a long interactive session ("Connection reset by peer" / "Broken
+# pipe"); TCPKeepAlive adds OS-level liveness. This is the resilience floor for every connection.
+AURA_SSH_BASE="-o StrictHostKeyChecking=accept-new -o BatchMode=yes -o ConnectTimeout=10 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 -o TCPKeepAlive=yes"
 
 # Warm, MULTIPLEXED connection for sequential aux calls (reachability, env-check, rsync): one
 # shared master reused across calls → near-instant relaunch. NOT for parallel work.

@@ -55,4 +55,7 @@ ssh $AURA_SSH_OPTS "$HOST" 'python3 -c "import sentence_transformers, notebooklm
   python3 -m pip install --user --break-system-packages -q sentence-transformers notebooklm-py==0.3.4 >/dev/null 2>&1; \
   python3 -c "import sentence_transformers" 2>/dev/null && echo "  [box-env] memory deps installed" || echo "  [box-env] WARN: memory deps install failed"; }'
 
+# 7) Ensure tmux on the box — interactive sessions run inside it so a dropped SSH never kills them.
+ssh $AURA_SSH_OPTS "$HOST" 'command -v tmux >/dev/null 2>&1 || { DEBIAN_FRONTEND=noninteractive apt-get install -y -qq tmux >/dev/null 2>&1; }'
+
 echo "▸ env synced (autopilot + memory live on box)."
