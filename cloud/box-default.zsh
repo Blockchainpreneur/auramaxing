@@ -1,39 +1,36 @@
-# AURAMAXING — box-default delegation (philosophy: NO manual commands; heavy compute on the box).
-# Source this from ~/.zshrc. It wraps `claude` so a normal interactive launch runs the SESSION on
-# the 16GB Hetzner box (Mac = thin client): node, MCP servers, Python (LightRAG/NLM) and all agent
-# compute live on the box. The browser/CDP stays on the Mac and is reachable from the box via a
-# reverse SSH tunnel (acode sets up -R 9222 → the Mac's Chrome at localhost:9222).
+# AURAMAXING — cloud delegation (CORRECTED philosophy, 2026-06-03).
 #
-# It stays out of your way: utility commands, piped/non-interactive use, and an unreachable box all
-# fall through to LOCAL claude automatically — so nothing breaks when you don't want the box.
+# Your interactive Claude Code session runs LOCALLY on the Mac — so it keeps NATIVE, full access to
+# ALL your project files, your CDP Chrome, and the MAXING statusline footer. Only heavy COMPUTE
+# (parallel agent fleets, batch refactors, indexing) is delegated to the 16 GB cloud box, where the
+# project is mirrored per-job and the results come back. The box NEVER hosts your session.
+#
+# Why this replaced the old "run the whole session on the box" default: hosting the session remotely
+# meant the box could only ever see ONE synced project dir (or an empty workspace when launched from
+# $HOME), the browser had to be reverse-tunneled, and the statusline depended on a fragile box
+# env-sync. Running locally + offloading only compute is what you actually want:
+#   "delega solo lo que requiere cómputo; navegador y archivos locales desde mi Mac."
+#
+# Source this from ~/.zshrc.
 
-# Explicit box command (always available).
+# `claude` is intentionally NOT wrapped — a normal launch is a fully native LOCAL session
+# (full files + CDP browser + MAXING statusline, all on your Mac).
+
+# Delegate a parallel agent FLEET to the box (project stays local; diffs land in ./fleet-results/).
+#   fleet <project-dir> "subtask one" "subtask two" ...
+fleet() { command bash ~/auramaxing/cloud/fleet.sh "$@"; }
+
+# Drain a task BACKLOG through a bounded worker pool on the box (one prompt per line, N-wide).
+#   swarm <project-dir> <tasks-file>
+swarm() { command bash ~/auramaxing/cloud/swarm.sh "$@"; }
+
+# Explicit opt-in: run a WHOLE interactive session ON the box (16 GB TUI). Use ONLY when you
+# deliberately want the box as the host (e.g. away from your Mac, or a RAM-bound interactive job) —
+# it mirrors one project dir and reverse-tunnels your Chrome. For normal work just run `claude`.
 acode() { command bash ~/auramaxing/cloud/acode.sh "$@"; }
 
-# Force a local session when you explicitly want one.
-claude-local() { command claude "$@"; }
-
-claude() {
-  emulate -L zsh
-  local box="${AURA_FLEET_HOST:-}"
-
-  # Only auto-delegate a REAL human interactive launch (TTY in+out) with no claude utility flags.
-  # Everything else → local `command claude` (so --version, mcp, config, -c/--continue, -r/--resume,
-  # update, doctor, piped `... | claude -p`, and any scripted use keep working locally & instantly).
-  if [[ -n "$box" && -t 0 && -t 1 ]]; then
-    case "${1:-}" in
-      ''|-p|/*|./*|../*|'~'*)
-        if command ssh -o ConnectTimeout=4 -o BatchMode=yes -o ControlMaster=auto -o ControlPath="$HOME/.ssh/cm-%r@%h:%p" -o ControlPersist=600 "$box" true 2>/dev/null; then
-          command bash ~/auramaxing/cloud/acode.sh "$@"
-          return $?
-        else
-          print -u2 "▸ AURAMAXING: box ($box) unreachable — running Claude Code LOCALLY this time. (\`acode\` retries the box.)"
-        fi
-        ;;
-    esac
-  fi
-  command claude "$@"
-}
-
-# Force a fresh AURAMAXING env push to the box (after updating helpers/skills/memory).
+# Force-refresh the box's AURAMAXING env (autopilot + memory + statusline) after local updates.
 acode-sync() { command rm -f ~/.auramaxing/.last-box-envsync; command bash ~/auramaxing/cloud/box-sync-env.sh && date +%s > ~/.auramaxing/.last-box-envsync; }
+
+# Back-compat shim: some muscle memory / scripts still call `claude-local`. It's plain local claude now.
+claude-local() { command claude "$@"; }

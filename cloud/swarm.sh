@@ -11,31 +11,41 @@ set -euo pipefail
 
 HOST="${AURA_FLEET_HOST:-}"
 [ -z "$HOST" ] && { echo "set AURA_FLEET_HOST=root@<box-ip> first"; exit 1; }
+. "$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)/lib.sh"   # shared SSH hardening + excludes + name helpers (DRY)
 PROJ="${1:?usage: swarm.sh <project-dir> <tasks-file>}"
 TASKS="${2:?usage: swarm.sh <project-dir> <tasks-file>}"
 [ -d "$PROJ" ] || { echo "no such project dir: $PROJ"; exit 1; }
 [ -f "$TASKS" ] || { echo "no such tasks file: $TASKS"; exit 1; }
-PROJ="$(cd "$PROJ" && pwd)"; NAME="$(basename "$PROJ")"
+PROJ="$(cd "$PROJ" && pwd)"; NAME="$(aura_safe_name "$PROJ")"
 N="${SWARM_N:-4}"; MEM="${SWARM_MEM:-3G}"; TO="${SWARM_TIMEOUT:-600}"; RETRIES="${SWARM_RETRIES:-2}"
+# validate the knobs — they are interpolated RAW into the remote `bash -lc '…'`; reject injection/garbage
+aura_require_int SWARM_N "$N"; aura_require_int SWARM_TIMEOUT "$TO"; aura_require_int SWARM_RETRIES "$RETRIES"; aura_require_mem SWARM_MEM "$MEM"
 REMOTE="swarm/$NAME"
 
 echo "▸ swarm: $NAME → $HOST  (workers=$N mem=$MEM/task timeout=${TO}s)"
-ssh "$HOST" "mkdir -p ~/$REMOTE/base ~/$REMOTE/out"
-rsync -az --delete \
-  --exclude '.git' --exclude 'node_modules' --exclude 'dist' --exclude '.next' \
-  --exclude 'target' --exclude '.venv' --exclude '__pycache__' \
+
+# DRY_RUN=1 → print the plan and exit before any box/network side effect (used by smoke-test.sh).
+if [ "${DRY_RUN:-0}" = "1" ]; then
+  n=$(grep -vcE '^[[:space:]]*(#|$)' "$TASKS" || true); n=${n:-0}
+  echo "[dry-run] would sync $PROJ → $HOST:~/$REMOTE and drain $n tasks ${N}-wide (mem=$MEM timeout=${TO}s)"
+  exit 0
+fi
+
+ssh $AURA_SESSION_SSH "$HOST" "mkdir -p ~/$REMOTE/base ~/$REMOTE/out"
+rsync -az --delete -e "ssh $AURA_SESSION_SSH" "${AURA_RSYNC_EXCLUDES[@]}" \
   "$PROJ"/ "$HOST:~/$REMOTE/base/"
-# strip comments/blanks, ship the queue
-grep -vE '^\s*(#|$)' "$TASKS" > /tmp/.swarm-tasks.$$ || true
-NTASK=$(wc -l < /tmp/.swarm-tasks.$$ | tr -d ' ')
+# strip comments/blanks, ship the queue ([[:space:]] = POSIX-portable; \s is non-portable in BSD grep)
+trap 'rm -f /tmp/.swarm-tasks.$$' EXIT   # clean the queue temp even on early failure
+grep -vE '^[[:space:]]*(#|$)' "$TASKS" > /tmp/.swarm-tasks.$$ || true
+NTASK=$(awk 'END{print NR}' /tmp/.swarm-tasks.$$)   # awk counts a final unterminated line; wc -l would undercount
 echo "▸ $NTASK tasks queued, draining ${N}-wide"
-rsync -az /tmp/.swarm-tasks.$$ "$HOST:~/$REMOTE/tasks.txt"; rm -f /tmp/.swarm-tasks.$$
+rsync -az -e "ssh $AURA_SESSION_SSH" /tmp/.swarm-tasks.$$ "$HOST:~/$REMOTE/tasks.txt"; rm -f /tmp/.swarm-tasks.$$
 
 # write a CLEAN empty-MCP json on the box (single-quoted → no escaping corruption)
-printf '%s\n' '{"mcpServers":{}}' | ssh "$HOST" 'cat > ~/.swarm-empty-mcp.json'
+printf '%s\n' "$AURA_EMPTY_MCP" | ssh $AURA_SESSION_SSH "$HOST" 'cat > ~/.swarm-empty-mcp.json'
 
 # remote driver: one fresh, capped, MCP-disabled claude -p per task; reap orphans; joblog
-ssh "$HOST" "bash -lc '
+ssh $AURA_SESSION_SSH "$HOST" "bash -lc '
 set -euo pipefail
 cd ~/$REMOTE
 . \$HOME/.nvm/nvm.sh 2>/dev/null || true
@@ -62,7 +72,7 @@ echo \"--- joblog (rc!=0 = failed) ---\"; awk -F\"\t\" \"NR>1{print \\\$4, \\\"r
 
 mkdir -p "$PROJ/swarm-results"
 # pull only the lean meta dirs (clean diff + result + err) and the joblog — not the full repo copies
-rsync -az --include='joblog.tsv' --include='*.meta/' --include='*.meta/**' --exclude='*' \
+rsync -az -e "ssh $AURA_SESSION_SSH" --include='joblog.tsv' --include='*.meta/' --include='*.meta/**' --exclude='*' \
   "$HOST:~/$REMOTE/out/" "$PROJ/swarm-results/" 2>/dev/null || true
 echo "▸ done. Results in $PROJ/swarm-results/task-N.meta/ (_agent.diff = clean code, _result.txt, _err.log) + joblog.tsv"
 echo "  apply a diff:  (cd $PROJ && git apply swarm-results/task-N.meta/_agent.diff)"

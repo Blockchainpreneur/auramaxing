@@ -5,7 +5,7 @@
 # the 8.6 GB Chrome profile, logs, dead-letters, and session transcripts. Fast/incremental (rsync).
 # Called by acode (TTL-gated). Safe to run standalone:  bash box-sync-env.sh
 set -uo pipefail
-. "$HOME/auramaxing/cloud/lib.sh"
+. "$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)/lib.sh"   # script-relative → works at any install path
 HOST="${AURA_FLEET_HOST:?set AURA_FLEET_HOST=root@<box-ip>}"
 R() { rsync -az -e "ssh $AURA_SSH_OPTS" "$@" 2>/dev/null; }
 
@@ -19,10 +19,17 @@ R --delete \
   "$HOME/auramaxing/" "$HOST:~/auramaxing/"
 
 # 2) Autopilot wiring → ~/.claude/. NEVER sync ~/.claude.json (that is the box's own auth/OAuth).
-[ -f "$HOME/.claude/settings.json" ] && R "$HOME/.claude/settings.json" "$HOST:~/.claude/settings.json"
-[ -f "$HOME/.claude/CLAUDE.md" ]     && R "$HOME/.claude/CLAUDE.md"     "$HOST:~/.claude/CLAUDE.md"
+# These are CRITICAL (settings.json + the statusline it references) — a silent failure here is
+# exactly what made the MAXING footer vanish on box sessions, so warn loudly instead of hiding it.
+Rcrit() { R "$1" "$2" || echo "  [box-env] ⚠️  WARN: failed to sync $(basename "$1") to the box — box may be stale"; }
+[ -f "$HOME/.claude/settings.json" ] && Rcrit "$HOME/.claude/settings.json" "$HOST:~/.claude/settings.json"
+[ -f "$HOME/.claude/CLAUDE.md" ]     && Rcrit "$HOME/.claude/CLAUDE.md"     "$HOST:~/.claude/CLAUDE.md"
 # statusLine.command in settings.json points here — without it the box shows no MAXING footer.
-[ -f "$HOME/.claude/statusline.sh" ] && { R "$HOME/.claude/statusline.sh" "$HOST:~/.claude/statusline.sh"; ssh $AURA_SSH_OPTS "$HOST" 'chmod +x ~/.claude/statusline.sh' 2>/dev/null; }
+if [ -f "$HOME/.claude/statusline.sh" ]; then
+  Rcrit "$HOME/.claude/statusline.sh" "$HOST:~/.claude/statusline.sh"
+  ssh $AURA_SSH_OPTS "$HOST" 'chmod +x ~/.claude/statusline.sh' 2>/dev/null \
+    || echo "  [box-env] ⚠️  WARN: could not chmod +x statusline.sh on the box"
+fi
 R --delete "$HOME/.claude/helpers/" "$HOST:~/.claude/helpers/"
 R --delete "$HOME/.claude/skills/"  "$HOST:~/.claude/skills/"
 

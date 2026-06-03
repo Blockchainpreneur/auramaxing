@@ -5,25 +5,36 @@
 # Flow: rsync local project → box → spawn N parallel `claude -p` agents (one per subtask, each
 # in its own copy, capped at FLEET_N) → rsync each agent's diff/log back to ./fleet-results/.
 #
-# Setup: export AURA_FLEET_HOST="ubuntu@<box-ip>"   (add to ~/.zshrc)
+# Setup: export AURA_FLEET_HOST="root@<box-ip>"   (add to ~/.zshrc)
 # Usage:  fleet.sh <project-dir> "subtask one" "subtask two" ...
 #   or:   fleet.sh <project-dir> --file tasks.txt    (one subtask per line)
 set -euo pipefail
 
 HOST="${AURA_FLEET_HOST:-}"
 [ -z "$HOST" ] && { echo "set AURA_FLEET_HOST=root@<box-ip> first (see ~/auramaxing/cloud/README.md)"; exit 1; }
-. "$HOME/auramaxing/cloud/lib.sh"
+. "$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)/lib.sh"   # script-relative → works at any install path
 
 PROJ="${1:?usage: fleet.sh <project-dir> <subtasks...>}"; shift
 [ -d "$PROJ" ] || { echo "no such project dir: $PROJ"; exit 1; }
-PROJ="$(cd "$PROJ" && pwd)"; NAME="$(basename "$PROJ")"
+PROJ="$(cd "$PROJ" && pwd)"; NAME="$(aura_safe_name "$PROJ")"
 
 # collect subtasks (args or --file)
 TASKS=()
-if [ "${1:-}" = "--file" ]; then mapfile -t TASKS < "${2:?--file needs a path}"; else TASKS=("$@"); fi
+# portable read loop instead of `mapfile` (bash-4 only — absent on macOS /bin/bash 3.2);
+# `|| [ -n "$_l" ]` also captures a final line with no trailing newline.
+if [ "${1:-}" = "--file" ]; then
+  TASKS=(); while IFS= read -r _l || [ -n "$_l" ]; do TASKS+=("$_l"); done < "${2:?--file needs a path}"
+else TASKS=("$@"); fi
 [ "${#TASKS[@]}" -gt 0 ] || { echo "give at least one subtask"; exit 1; }
 
 REMOTE_BASE="fleet/$NAME"
+
+# DRY_RUN=1 → print the plan and exit before any box/network side effect (used by smoke-test.sh).
+if [ "${DRY_RUN:-0}" = "1" ]; then
+  echo "[dry-run] would sync $PROJ → $HOST:~/$REMOTE_BASE/base and dispatch ${#TASKS[@]} agents (max ${FLEET_N:-6})"
+  exit 0
+fi
+
 echo "▸ syncing $NAME → $HOST:~/$REMOTE_BASE/base"
 ssh $AURA_SESSION_SSH "$HOST" "mkdir -p ~/$REMOTE_BASE/base"
 rsync -az --delete -e "ssh $AURA_SESSION_SSH" "${AURA_RSYNC_EXCLUDES[@]}" \
@@ -31,7 +42,7 @@ rsync -az --delete -e "ssh $AURA_SESSION_SSH" "${AURA_RSYNC_EXCLUDES[@]}" \
 
 # Each agent uses its OWN connection (AURA_SESSION_SSH, no ControlMaster) — multiplexing would
 # serialize the parallel agents over one socket. FLEET_N caps concurrency (sshd MaxStartups).
-FLEET_N="${FLEET_N:-6}"
+FLEET_N="${FLEET_N:-6}"; aura_require_int FLEET_N "$FLEET_N"
 echo "▸ dispatching ${#TASKS[@]} parallel agents on the cloud box (max $FLEET_N concurrent)"
 i=0
 for task in "${TASKS[@]}"; do

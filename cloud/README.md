@@ -1,9 +1,14 @@
-# AURAMAXING — Cloud Fleet (Oracle Always-Free, $0/mo, Max-billed, terminal-operated)
+# AURAMAXING — Cloud Fleet (Max-billed, terminal-operated)
 
-Delegate parallel agent execution to a free 24GB ARM cloud box. **Projects stay local** (synced per
-task); you **operate from your terminal** (SSH); billed to your **Claude Max** (no API key).
+Delegate **heavy compute** (parallel agent fleets / batch refactors) to a cloud box. Your interactive
+Claude Code session stays **LOCAL on the Mac** (full files + CDP browser + MAXING statusline, native);
+**projects stay local** (synced per job); billed to your **Claude Max** (no API key).
 
-Why: your Mac is 8GB. The cloud box is 4 cores / 24GB → run agent fleets without melting your laptop.
+Why: your Mac is 8GB. The box absorbs the RAM-heavy parallel sub-work so the laptop never thrashes.
+
+> **Current production box:** Hetzner **cpx42** (8 vCPU / 16 GB x86, Ubuntu 24.04) at
+> `AURA_FLEET_HOST=root@<ip>` — **paid (~€29.99/mo)**, already provisioned. Power it off when idle.
+> (The provisioner is vendor-neutral — any Ubuntu x86/ARM box works, incl. Oracle's free A1 shape.)
 
 ---
 
@@ -61,4 +66,6 @@ diffs back. No GitHub remote required (works for local-only projects like polyma
   install `mutagen` later (optional upgrade).
 - **Billing:** `claude login` uses Max OAuth on the box (no API key). Heavy non-interactive fleets
   may draw the Agent-SDK credit pool after 2026-06-15 — watch usage.
-- **Cost:** Oracle Always-Free = $0/mo as long as you stay on the A1 free shape (≤4 OCPU/24GB).
+- **Cost:** current box is Hetzner cpx42 (~€29.99/mo, ~€0.049/hr) — **power it off when idle** to save.
+  For $0/mo, re-provision on Oracle's Always-Free A1 shape (≤4 OCPU/24 GB) instead; `provision.sh` is
+  vendor-neutral. Either way the interactive session runs locally — the box only does compute jobs.
