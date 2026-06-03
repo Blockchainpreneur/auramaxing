@@ -40,4 +40,19 @@ if [ -d "$HOME/.claude/projects/-Users-macbook/memory" ]; then
   R "$HOME/.claude/projects/-Users-macbook/memory/" "$HOST:~/.claude/projects/-Users-macbook/memory/"
 fi
 
+# 5) NotebookLM auth (Google session storage_state) so NLM deep-recall works 1:1 on the box.
+#    Sensitive — rsync only, NEVER committed to git.
+if [ -d "$HOME/.notebooklm" ]; then
+  ssh $SSH_OPTS "$HOST" 'mkdir -p ~/.notebooklm'
+  R "$HOME/.notebooklm/" "$HOST:~/.notebooklm/"
+fi
+
+# 6) Ensure the box has the memory-stack Python deps (LightRAG semantic search via
+#    sentence-transformers + NotebookLM via notebooklm-py) so memory is 1:1 with the Mac.
+#    Idempotent: installs ONLY if missing (e.g. after a fresh box reprovision). One-time ~few min.
+ssh $SSH_OPTS "$HOST" 'python3 -c "import sentence_transformers, notebooklm" 2>/dev/null || { \
+  command -v pip3 >/dev/null 2>&1 || { apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq python3-pip python3-numpy; } >/dev/null 2>&1; \
+  python3 -m pip install --user --break-system-packages -q sentence-transformers notebooklm-py==0.3.4 >/dev/null 2>&1; \
+  python3 -c "import sentence_transformers" 2>/dev/null && echo "  [box-env] memory deps installed" || echo "  [box-env] WARN: memory deps install failed"; }'
+
 echo "▸ env synced (autopilot + memory live on box)."
