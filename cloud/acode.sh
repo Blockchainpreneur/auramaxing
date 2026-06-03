@@ -18,6 +18,10 @@ SSH_OPTS="-o StrictHostKeyChecking=accept-new -o BatchMode=yes -o ConnectTimeout
 # user's logged-in browser via connectOverCDP('http://localhost:9222'). Browser stays on the Mac
 # (the agreed split); only the session's COMPUTE moves to the box. Verified box→tunnel→Mac Chrome.
 TUNNEL="-R 9222:localhost:9222"
+# The interactive SESSION carries the -R tunnel and is long-lived, so it opens its OWN connection
+# (ControlPath=none) instead of multiplexing: a master created by the quick aux calls has no -R, and
+# adding -R to an existing master is unreliable across OpenSSH versions. Aux calls keep the warm master.
+SESSION_SSH="-o StrictHostKeyChecking=accept-new -o BatchMode=yes -o ConnectTimeout=10 -o ControlPath=none"
 # Fail fast + clear if the box is unreachable (powered off to save €, wrong host) instead of a confusing rsync error.
 if ! ssh $SSH_OPTS "$HOST" 'true' 2>/dev/null; then
   echo "✗ box $HOST unreachable — powered off? wrong AURA_FLEET_HOST? Start the box, then retry." >&2
@@ -93,7 +97,7 @@ if [ -n "$ONESHOT" ]; then
   # `claude -p \"$ONESHOT\"` let a prompt like '"; rm -rf ~; echo "' execute on the box (CRITICAL #2).
   # PROMPT_B64 is pure [A-Za-z0-9+/=], safe to interpolate; the box decodes it to a single quoted arg.
   PROMPT_B64="$(printf '%s' "$ONESHOT" | base64 | tr -d '\n')"
-  ssh $SSH_OPTS $TUNNEL "$HOST" "$REMOTE_ENV; cd ~/$REMOTE && claude -p \"\$(printf %s '$PROMPT_B64' | base64 -d)\" --strict-mcp-config --mcp-config ~/.swarm-empty-mcp.json --dangerously-skip-permissions"
+  ssh $SESSION_SSH "$HOST" "$REMOTE_ENV; cd ~/$REMOTE && claude -p \"\$(printf %s '$PROMPT_B64' | base64 -d)\" --strict-mcp-config --mcp-config ~/.swarm-empty-mcp.json --dangerously-skip-permissions"
   echo "▸ syncing results back"; sync_back
 else
   echo "▸ opening Claude Code ON the box (Mac = thin client). Exit to sync back."
@@ -102,7 +106,7 @@ else
   printf '%s\n' '{"mcpServers":{"chrome-devtools":{"command":"npx","args":["-y","chrome-devtools-mcp@1.1.0","--browserUrl","http://127.0.0.1:9222"]}}}' | ssh $SSH_OPTS "$HOST" 'cat > ~/.acode-mcp.json'
   # --mcp-config gives the box session chrome-devtools MCP pointed at 127.0.0.1:9222, which the
   # $TUNNEL forwards to the Mac's logged-in Chrome → browser automation works from the box session.
-  ssh -t $SSH_OPTS $TUNNEL "$HOST" "$REMOTE_ENV; cd ~/$REMOTE && claude --mcp-config ~/.acode-mcp.json" || true
+  ssh -t $SESSION_SSH $TUNNEL "$HOST" "$REMOTE_ENV; cd ~/$REMOTE && claude --mcp-config ~/.acode-mcp.json" || true
   echo "▸ session ended — syncing results back"; sync_back
 fi
 echo "▸ done."
