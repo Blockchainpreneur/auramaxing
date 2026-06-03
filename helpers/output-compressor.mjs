@@ -14,14 +14,14 @@
  * Never compresses Edit/Write results (would break downstream review).
  * Always exits 0. Fail-open on any error.
  */
-import { writeFileSync, mkdirSync, existsSync } from 'fs';
+import { writeFileSync, mkdirSync, existsSync, readdirSync, statSync, unlinkSync } from 'fs';
 import { createHash } from 'crypto';
 import { join } from 'path';
 import { homedir } from 'os';
 
 const HOME = homedir();
 const STASH = join(HOME, '.auramaxing', 'tool-outputs');
-const OUTPUT_MAX_BYTES = Number(process.env.AURA_OUTPUT_MAX_BYTES || 5120); // 5 KB
+const OUTPUT_MAX_BYTES = Number(process.env.AURA_OUTPUT_MAX_BYTES || 51200); // 50 KB — at 5 KB Claude only saw head/tail fragments of any Read/Grep/Bash output, degrading edit accuracy (finding #4)
 const SUMMARY_HEAD = 400;
 const SUMMARY_TAIL = 200;
 const STASH_TTL_MS = 7 * 24 * 3600 * 1000; // 7 days
@@ -32,7 +32,6 @@ mkdirSync(STASH, { recursive: true });
 function pruneOldStash() {
   try {
     const now = Date.now();
-    const { readdirSync, statSync, unlinkSync } = require('fs');
     for (const f of readdirSync(STASH)) {
       const full = join(STASH, f);
       try {

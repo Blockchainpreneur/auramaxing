@@ -49,3 +49,5 @@ CLAUDE.md
 .claude/settings.local.json
 .claude/*.dead
 install.sh.bak.macperf.*
+swarm-results/
+fleet-results/

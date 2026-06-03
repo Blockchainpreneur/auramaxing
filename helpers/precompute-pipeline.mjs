@@ -24,7 +24,7 @@ import { execSync, execFileSync } from 'child_process';
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
-import { findPython, findNlm, pythonEnv } from "./find-bin.mjs";
+import { findPython, findNlm, findNlmArgs, pythonEnv } from "./find-bin.mjs";
 
 const HOME = homedir();
 const MEMORY_DIR = join(HOME, '.auramaxing', 'memory');
@@ -45,10 +45,16 @@ function log(step, msg) {
 
 function nlm(query) {
   try {
+    // Guard: a null NLM_BIN ran `null use ...` (misleading "command not found"); a missing
+    // notebook-id file silently no-op'd the whole pipeline. Skip cleanly instead (finding #9).
+    // execFileSync (array args) also removes shell injection from the ask query (finding #6).
+    const resolved = findNlmArgs();
+    if (!resolved || !existsSync(NB_ID_FILE)) return null;
     const nbId = readFileSync(NB_ID_FILE, 'utf8').trim().slice(0, 8);
-    execSync(`${NLM_BIN} use ${nbId}`, { timeout: 5000, stdio: 'ignore' });
-    const result = execSync(
-      `${NLM_BIN} ask "${query.replace(/"/g, '\\"').slice(0, 500)}"`,
+    execFileSync(resolved.bin, [...resolved.args, 'use', nbId], { timeout: 5000, stdio: 'ignore' });
+    const result = execFileSync(
+      resolved.bin,
+      [...resolved.args, 'ask', query.slice(0, 500)],
       { encoding: 'utf8', timeout: 30000 }
     ).trim();
     return result.split('Answer:').pop()?.trim() || result;
@@ -189,10 +195,10 @@ try {
     // Step 2b: Store structured knowledge as NLM source via store-knowledge
     if (structuredKnowledge) {
       try {
-        const storeResult = execSync(
-          `echo '${JSON.stringify(structuredKnowledge).replace(/'/g, "'\\''")}' | node "${NLM_BRIDGE}" store-knowledge`,
-          { encoding: 'utf8', timeout: 30000 }
-        ).trim();
+        const storeResult = execFileSync('node', [NLM_BRIDGE, 'store-knowledge'], {
+          input: JSON.stringify(structuredKnowledge),  // via stdin — no shell echo, no injection (finding #6)
+          encoding: 'utf8', timeout: 30000,
+        }).trim();
         log('2/7', `Structured knowledge stored: ${storeResult.slice(0, 60)}`);
       } catch (e) {
         log('2/7', `store-knowledge failed (non-blocking): ${e.message?.slice(0, 60)}`);

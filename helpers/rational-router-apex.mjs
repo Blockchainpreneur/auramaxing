@@ -170,8 +170,12 @@ const RULES = [
   {
     id: 'new-feature',
     patterns: [
-      /\b(build|create|make|implement|add|develop)\b.{0,30}\b(feature|component|page|api|endpoint|module|system)\b/,
+      /\b(build|create|make|implement|add|develop|set up|scaffold|wire up)\b.{0,40}\b(feature|component|page|api|endpoint|module|system|service|function|integration|flow|screen|form|dashboard|auth|login|token|button|hook|route|model|schema|migration|webhook|queue|worker)\b/,
       /\bnew feature\b/,
+      // Fallback: leading feature-verb + an object. Prevents silent-drop of the most common
+      // feature phrasings ("build a … system", "add oauth login", "implement refresh tokens")
+      // whose object noun sits >40 chars away or isn't in the list above (Finding #11, found in verify).
+      /^(build|create|implement|develop|add|scaffold)\s+(a|an|the|some|new)?\s*\w+/i,
     ],
     skill: '/office-hours → /plan-eng-review → build → /review → /qa → /cso → /ship',
     label: 'Building something new',
@@ -535,16 +539,36 @@ async function main() {
     /^(is |are |was |were |has |have |does |do |did |can |could |would |should |what |why |how |when |where |who |describe |explain |tell me|give me)/i.test(normalized.trim()) &&
     !ACTION_VERBS.test(normalized) &&
     !ENTREPRENEUR_INTENT.test(prompt);
-  const INVESTIGATION_INTENT = /\b(how does|how do|how is|how are|what causes|what happens|why does|why is|why are|where is|where does)\b.*\b(work|fail|break|crash|error|happen|run|execute|function|behave|connect|interact)\b/i;
-  if (isQuestion && !INVESTIGATION_INTENT.test(prompt)) process.exit(0);
+  const INVESTIGATION_INTENT = /\b(how does|how do|how is|how are|what causes|what happens|why does|why is|why are|where is|where does)\b.*\b(work|fail|break|crash|error|happen|run|execute|function|behave|connect|interact|wrong|broken)\b/i;
+  // Rescue direct investigation phrasings with no second-clause verb: "Why is auth failing?",
+  // "What's wrong with X?", "How do I debug this?" — silently dropped before (Finding #9).
+  const INVESTIGATION_DIRECT = /\b(why (is|are|isn.?t|does|do)|what.?s wrong|what.?s broken|how (do|should) i (debug|fix|diagnose|troubleshoot))\b/i;
+  const isInvestigation = INVESTIGATION_INTENT.test(prompt) || INVESTIGATION_DIRECT.test(prompt);
 
-  // Match rules
-  const matches = RULES
+  // Match rules FIRST, decide after (root fix for Finding #9). The old code ran the question
+  // filter BEFORE rule-matching, so an actionable question that DOES match a rule
+  // ("what is broken in checkout" → bug-fix) was silently dropped. Now: a question routes if it
+  // matches anything; a question matching nothing falls through to the silent exit below.
+  let matches = RULES
     .map(r => ({ ...r, hits: r.patterns.filter(p => p.test(prompt)).length }))
     .filter(r => r.hits > 0)
     .sort((a, b) => b.hits - a.hits);
 
+  // Investigation phrasing with no rule hit still deserves the /investigate route
+  // ("What's wrong with the payment flow?") instead of a silent drop.
+  if (matches.length === 0 && isInvestigation) {
+    const inv = RULES.find(r => r.id === 'bug-fix');
+    if (inv) matches = [{ ...inv, hits: 1 }];
+  }
+
   if (matches.length === 0) process.exit(0);
+
+  // A PURE (non-investigation) question routes only when it names a concrete problem or build
+  // target (bug-fix/new-feature/refactor/…). Definitional or chit-chat questions that merely
+  // brush a keyword — "explain how promises work" (→investigate), "who are you" (→research),
+  // "should I use React or Vue" (→decide) — stay silent. Investigation phrasings already routed above.
+  const ACTIONABLE_AS_QUESTION = new Set(['bug-fix', 'new-feature', 'refactor', 'code-review', 'security', 'deploy-ship', 'e2e-testing', 'performance', 'design']);
+  if (isQuestion && !isInvestigation && !ACTIONABLE_AS_QUESTION.has(matches[0].id)) process.exit(0);
 
   const primary         = matches[0];
   let   complexity      = matches.reduce((max, m) => Math.max(max, COMPLEXITY[m.id] || 50), 0);
@@ -557,7 +581,10 @@ async function main() {
       const { size } = statSync(ctxFile);
       if (size < 512 * 1024) { // skip files > 512 KB to avoid memory/perf issues
         const ctx = readFileSync(ctxFile, 'utf8').toLowerCase();
-        if (ctx.includes(primary.id))  complexity = Math.min(85, complexity + 15); // seen before
+        // Frequency-weighted: a single passing mention ("not a bug-fix") must NOT escalate the tier.
+        // Require the task id to recur (≥3×, whole-word) to count as genuine history (Finding #8).
+        const _idRe = new RegExp(`\\b${primary.id.replace(/[^a-z0-9]/gi, '\\$&')}\\b`, 'g');
+        if ((ctx.match(_idRe) || []).length >= 3) complexity = Math.min(85, complexity + 15); // recurring task
         if (ctx.length > 2000)         complexity = Math.min(85, complexity + 5);  // big project
       }
     }
@@ -576,12 +603,15 @@ async function main() {
       JSON.stringify({ id: primary.id, label: primary.label, ts: new Date().toISOString() }));
   } catch {}
 
-  // Version check — synchronous, BLOCKS before routing (same pattern as gstack preamble)
-  // Cache-backed: 60min TTL for UP_TO_DATE, so this is instant after first check
+  // Version check — NON-BLOCKING. A synchronous execSync (5s timeout) inside the 3s
+  // UserPromptSubmit hook gets killed when it overruns and silently drops ALL routing output
+  // (Finding #4). So: serve the LAST result from cache instantly, refresh in background (TTL-gated).
   try {
     const checkScript = join(homedir(), 'auramaxing', 'scripts', 'update-check.sh');
-    if (existsSync(checkScript)) {
-      const result = execSync(`bash "${checkScript}" 2>/dev/null`, { encoding: 'utf8', timeout: 5000 }).trim();
+    const upCache = join(homedir(), '.auramaxing', 'update-pending.txt');
+    // 1. Serve cached result instantly — never blocks
+    if (existsSync(upCache)) {
+      const result = readFileSync(upCache, 'utf8').trim();
       if (result.startsWith('UPGRADE_AVAILABLE')) {
         const [, local, remote] = result.split(' ');
         // Inject blocking update directive — Claude MUST use AskUserQuestion before proceeding
@@ -599,6 +629,12 @@ async function main() {
           `[/AURAMAXING UPDATE]`,
         ].join('\n') + '\n');
       }
+    }
+    // 2. Refresh the cache in the background for the NEXT prompt (TTL-gated to ~1/hr)
+    const ttlOk = !existsSync(upCache) || (Date.now() - statSync(upCache).mtimeMs) > 3600000;
+    if (existsSync(checkScript) && ttlOk) {
+      spawn('bash', ['-c', `bash "${checkScript}" 2>/dev/null > "${upCache}.tmp" && mv "${upCache}.tmp" "${upCache}"`],
+        { detached: true, stdio: 'ignore' }).unref();
     }
   } catch {}
 
@@ -632,9 +668,14 @@ async function main() {
   try {
     const engineScript = join(homedir(), 'auramaxing', 'helpers', 'prompt-engine.mjs');
     if (existsSync(engineScript)) {
+      process.env.AURA_COMPLEXITY = String(complexity);  // gate the duplicate phased-loop in prompt-engine (Finding #5)
+      // 2200ms < the 3000ms outer hook budget on purpose: if prompt-engine/LightRAG runs long,
+      // the router kills it HERE (caught below) and still emits routing — the outer hook never
+      // kills the whole router and drops all directives (hardening of Finding #4).
       const enriched = execSync(`node "${engineScript}" 2>/dev/null`, {
         input: JSON.stringify({ prompt: promptText, cwd: process.cwd() }),
-        encoding: 'utf8', timeout: 3000,
+        encoding: 'utf8', timeout: 2200,
+        env: process.env,
       }).trim();
       if (enriched) process.stdout.write(enriched + '\n');
     }

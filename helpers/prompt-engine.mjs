@@ -13,7 +13,7 @@ import { execSync, execFileSync, spawn } from 'child_process';
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
-import { findPython, findNlm, pythonEnv } from "./find-bin.mjs";
+import { findPython, findNlm, findNlmArgs, pythonEnv } from "./find-bin.mjs";
 
 const HOME = homedir();
 const MEMORY_DIR = join(HOME, '.auramaxing', 'memory');
@@ -65,7 +65,7 @@ try {
       '--top-k', '3',
     ], {
       encoding: 'utf8',
-      timeout: 6000,
+      timeout: 1800,  // must fit the 3s UserPromptSubmit budget (was 6000 → outer execSync killed it → semantic memory never fired). Finding #1.
       env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1' },
     }).trim();
     lightragResults = JSON.parse(result);
@@ -161,22 +161,26 @@ try {
       const nbId = readFileSync(NB_ID_FILE, 'utf8').trim().slice(0, 8);
       // Fire and forget — result will be cached for next time
       try {
-        const child = spawn(NLM_BIN, ['ask', prompt.slice(0, 200)], {
-          detached: true,
-          stdio: ['ignore', 'pipe', 'ignore'],
-          env: { ...process.env, PATH: pythonEnv().PATH },
-          timeout: 25000,
-        });
-        // Capture output and cache it
-        let output = '';
-        child.stdout.on('data', d => { output += d.toString(); });
-        child.on('close', () => {
-          const answer = output.split('Answer:').pop()?.trim() || output.trim();
-          if (answer.length > 20) {
-            try { writeFileSync(cacheFile, answer); } catch {}
-          }
-        });
-        child.unref();
+        // Structured bin+args — spawn() does not shell-split "python3 -m notebooklm". Finding #3.
+        const { bin: nlmBin, args: nlmBase = [] } = findNlmArgs() || {};
+        if (nlmBin) {
+          const child = spawn(nlmBin, [...nlmBase, 'ask', prompt.slice(0, 200)], {
+            detached: true,
+            stdio: ['ignore', 'pipe', 'ignore'],
+            env: { ...process.env, PATH: pythonEnv().PATH },
+            timeout: 25000,
+          });
+          // Capture output and cache it
+          let output = '';
+          child.stdout.on('data', d => { output += d.toString(); });
+          child.on('close', () => {
+            const answer = output.split('Answer:').pop()?.trim() || output.trim();
+            if (answer.length > 20) {
+              try { writeFileSync(cacheFile, answer); } catch {}
+            }
+          });
+          child.unref();
+        }
       } catch {}
     }
 
@@ -187,21 +191,34 @@ try {
   }
 } catch {}
 
-// Deep recall via NLM only when LightRAG is UNAVAILABLE (cold start / disabled).
-// Previously fired on every low-score result which duplicated work LightRAG already did
-// and cost 1-2k tokens + 3s latency on ~20% of prompts.
-if (lightragResults === null || (Array.isArray(lightragResults) && lightragResults.length === 0 && process.env.LIGHTRAG_DISABLED)) {
+// Deep recall via NLM when LightRAG returned nothing (cold start / failure / disabled). Finding #2.
+// NON-BLOCKING: serve a cached deep-recall answer instantly; otherwise populate it in the
+// background so the NEXT prompt benefits. A synchronous NLM call here would blow the 3s hook
+// budget and silently kill all routing (the Finding #4 failure mode) — so we never run one.
+if (lightragResults.length === 0) {
   try {
-    const NLM_BIN_PATH = findNlm();
+    const drCache = join(NLM_CACHE, 'deep-recall.txt');
     const NB_ID = join(HOME, '.auramaxing', 'nlm-notebook-id');
-    if (NLM_BIN_PATH && existsSync(NB_ID)) {
-      const deepResult = execSync(
-        `${NLM_BIN_PATH} ask "Based on all stored session knowledge and progress, what is relevant context for this task: ${prompt.slice(0, 200).replace(/"/g, '\\"')}"`,
-        { encoding: 'utf8', timeout: 3000, shell: '/bin/bash' }
-      ).trim();
-      const answer = deepResult.split('Answer:').pop()?.trim() || deepResult;
-      if (answer && answer.length > 30 && !answer.includes('Error:')) {
-        memoryContext += `\n[NLM deep recall]: ${answer.slice(0, 300)}`;
+    if (existsSync(drCache) && (Date.now() - statSync(drCache).mtimeMs) < 3600000) {
+      const cached = readFileSync(drCache, 'utf8').trim();
+      if (cached.length > 30) memoryContext += `\n[NLM deep recall]: ${cached.slice(0, 300)}`;
+    } else if (NLM_BIN && existsSync(NB_ID)) {
+      const { bin: drBin, args: drBase = [] } = findNlmArgs() || {};
+      if (drBin) {
+        const q = `Based on all stored session knowledge and progress, what is relevant context for this task: ${prompt.slice(0, 200)}`;
+        const child = spawn(drBin, [...drBase, 'ask', q], {
+          detached: true, stdio: ['ignore', 'pipe', 'ignore'],
+          env: { ...process.env, PATH: pythonEnv().PATH }, timeout: 25000,
+        });
+        let out = '';
+        child.stdout.on('data', d => { out += d.toString(); });
+        child.on('close', () => {
+          const answer = out.split('Answer:').pop()?.trim() || out.trim();
+          if (answer && answer.length > 30 && !answer.includes('Error:')) {
+            try { writeFileSync(drCache, answer); } catch {}
+          }
+        });
+        child.unref();
       }
     }
   } catch {}
@@ -262,7 +279,11 @@ try {
     'No "good enough". No partial delivery. No asking the user to verify what you can verify yourself.',
     'Skip this loop ONLY for a pure question with zero actions needed.',
   ].join('\n');
-  structuredPrompt += `\n${phasedLoop}`;
+  // Gate: rational-router-apex emits its own phased loop for complexity ≥30 (full ≥50, condensed
+  // 30–49). Only emit here when the router won't (<30), to avoid duplicating ~375 tokens/prompt
+  // (Finding #5). When run standalone (no router, AURA_COMPLEXITY unset → 0) the loop still fires.
+  const _auraComplexity = parseInt(process.env.AURA_COMPLEXITY || '0', 10);
+  if (_auraComplexity < 30) structuredPrompt += `\n${phasedLoop}`;
 } catch {}
 
 // ── 4. AUTO: Save prompt to memory + ingest to vector index ─────

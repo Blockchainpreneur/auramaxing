@@ -30,20 +30,25 @@ rsync -az --delete \
   --exclude 'target' --exclude '.venv' --exclude '__pycache__' \
   "$PROJ"/ "$HOST:~/$REMOTE_BASE/base/"
 
-echo "▸ dispatching ${#TASKS[@]} parallel agents on the cloud box"
+SSH_OPTS="-o StrictHostKeyChecking=accept-new -o BatchMode=yes -o ConnectTimeout=10"
+FLEET_N="${FLEET_N:-6}"   # cap concurrent SSH sessions — was unbounded (50 tasks = 50 sshd sessions → MaxStartups), cloud-fleet #4
+echo "▸ dispatching ${#TASKS[@]} parallel agents on the cloud box (max $FLEET_N concurrent)"
 i=0
 for task in "${TASKS[@]}"; do
   i=$((i+1))
-  esc=$(printf '%s' "$task" | sed "s/'/'\\\\''/g")
-  ssh "$HOST" "
+  # base64 the task so its content can never break out of the remote shell (cloud-fleet #7 injection)
+  B64=$(printf '%s' "$task" | base64 | tr -d '\n')
+  ssh $SSH_OPTS "$HOST" "
     set -e
     . ~/.nvm/nvm.sh 2>/dev/null || true
     rm -rf ~/$REMOTE_BASE/agent-$i && cp -r ~/$REMOTE_BASE/base ~/$REMOTE_BASE/agent-$i
     cd ~/$REMOTE_BASE/agent-$i
     git init -q 2>/dev/null && git add -A && git commit -qm baseline 2>/dev/null || true
-    claude -p '$esc' --dangerously-skip-permissions > _agent.log 2>&1 || true
+    claude -p \"\$(printf %s '$B64' | base64 -d)\" --dangerously-skip-permissions > _agent.log 2>&1 || true
     git add -A && git diff --cached > _agent.diff 2>/dev/null || true
   " &
+  # bash 3.2-safe concurrency throttle (macOS /bin/bash has no 'wait -n')
+  while [ "$(jobs -r | wc -l)" -ge "$FLEET_N" ]; do sleep 0.3; done
 done
 wait
 echo "▸ all agents finished — pulling results back"

@@ -8,8 +8,8 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
-import { execSync } from 'child_process';
-import { findPython, findNlm, pythonEnv } from "./find-bin.mjs";
+import { execSync, execFileSync } from 'child_process';
+import { findPython, findNlm, findNlmArgs, pythonEnv } from "./find-bin.mjs";
 
 const HOME = homedir();
 const MEMORY_DIR = join(HOME, '.auramaxing', 'memory');
@@ -111,7 +111,9 @@ let nlmUsed = false;
 try {
   if (existsSync(NB_ID_FILE)) {
     const nbId = readFileSync(NB_ID_FILE, 'utf8').trim().slice(0, 8);
-    execSync(`${NLM_BIN} use ${nbId}`, { timeout: 5000, stdio: 'ignore' });
+    const nlm = findNlmArgs(); // { bin, args } — array-form, no shell interpolation (finding #6)
+    if (!nlm) throw new Error('NLM CLI not available');
+    execFileSync(nlm.bin, [...nlm.args, 'use', nbId], { timeout: 5000, stdio: 'ignore' });
 
     const context = [
       `Last 10 sessions task types: ${sortedTasks.map(([t, c]) => `${t}(${c})`).join(', ')}`,
@@ -121,8 +123,9 @@ try {
       predictedFromPattern ? `Pattern detected: after ${lastTask}, user usually does ${predictedFromPattern}` : '',
     ].filter(Boolean).join('. ');
 
-    const result = execSync(
-      `${NLM_BIN} ask "Based on this user's recent coding sessions, predict in 1-2 sentences what they will work on next. Be specific. Context: ${context.replace(/"/g, '\\"').slice(0, 800)}"`,
+    const result = execFileSync(
+      nlm.bin,
+      [...nlm.args, 'ask', `Based on this user's recent coding sessions, predict in 1-2 sentences what they will work on next. Be specific. Context: ${context.slice(0, 800)}`],
       { encoding: 'utf8', timeout: 30000 }
     ).trim();
 

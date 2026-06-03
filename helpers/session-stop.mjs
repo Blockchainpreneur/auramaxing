@@ -18,7 +18,8 @@ import { homedir } from 'os';
 const HOME = homedir();
 const MEMORY_DIR = join(HOME, '.auramaxing', 'memory');
 const LEARNINGS_DIR = join(HOME, '.auramaxing', 'learnings');
-const EVENTS_FILE = join(HOME, '.auramaxing', 'turn-events.jsonl');
+const SESSION_PID = process.ppid || process.pid;
+const EVENTS_FILE = join(HOME, '.auramaxing', `turn-events-${SESSION_PID}.jsonl`); // match post-tool-use-apex writer + hygiene glob; was un-suffixed → tool/file counts always 0 (finding #9)
 const TASK_FILE = join(HOME, '.auramaxing', 'current-task.json');
 const DECISIONS_FILE = join(HOME, '.auramaxing', 'decisions.md');
 
@@ -107,9 +108,11 @@ try {
     prune(decisionFiles, 10);  // keep last 10 decision logs
   } catch {}
 
-  // ── CLEANUP: Kill MCP child processes from this session ────────
-  // [#9] Single fork: get all children with pid+command in one call
-  try {
+  // ── CLEANUP: optionally kill MCP child processes ───────────────
+  // GATED OFF by default. This hook runs on Stop (EVERY turn, not session end), so killing MCP
+  // servers here destroyed serena/context7/shadcn + their warm state every turn → cold restart
+  // each turn (audit CRITICAL #2). Opt into aggressive RAM reclaim with AURA_KILL_MCP_ON_STOP=1.
+  if (process.env.AURA_KILL_MCP_ON_STOP === '1') try {
     const claudePid = process.ppid;
     const raw = execSync(
       `ps -o pid=,command= -p $(pgrep -P ${claudePid} | tr '\\n' ',') 2>/dev/null`,
@@ -140,7 +143,14 @@ try {
   // 5. Compress ENRICHMENTS → enrichments-compressed.json
   try {
     const pipelineScript = join(HOME, 'auramaxing', 'helpers', 'precompute-pipeline.mjs');
-    if (existsSync(pipelineScript)) {
+    // TTL-gated (default 20 min): this pipeline spawns node + Python (LightRAG/NLM, embeddings) —
+    // heavy on an 8GB Mac. Stop fires EVERY turn, so spawning it per-turn was constant local CPU/RAM
+    // burn. The cache/memory it builds barely changes turn-to-turn, so once per window is plenty.
+    const pcFlag = join(HOME, '.auramaxing', '.last-precompute');
+    const pcTtl = Number(process.env.AURA_PRECOMPUTE_TTL_MS || 20 * 60 * 1000);
+    let lastPc = 0; try { lastPc = parseInt(readFileSync(pcFlag, 'utf8'), 10) || 0; } catch {}
+    if (existsSync(pipelineScript) && (Date.now() - lastPc) > pcTtl) {
+      try { writeFileSync(pcFlag, String(Date.now())); } catch {}
       const child = spawn('node', [pipelineScript], {
         detached: true, stdio: 'ignore',
         env: { ...process.env, PATH: process.env.PATH },
@@ -210,10 +220,11 @@ try {
     hostname: 'localhost', port: 57821, path: '/session/end', method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) },
   });
-  req.on('error', () => {});
+  req.on('error', () => process.exit(0));
+  req.on('close', () => process.exit(0));
   req.write(payload);
   req.end();
 
-} catch {}
+} catch { process.exit(0); }
 
-setTimeout(() => process.exit(0), 500);
+setTimeout(() => process.exit(0), 80).unref(); // exit immediately on req close/error; was an unconditional 500ms floor every turn (finding #3)

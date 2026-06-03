@@ -17,11 +17,11 @@
  * Library (import):
  *   ensureAll(), notebookFor(type, project), readMap(), writeMap(map)
  */
-import { execSync } from 'child_process';
+import { execSync, execFileSync } from 'child_process';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
-import { findNlm, pythonEnv } from './find-bin.mjs';
+import { findNlm, findNlmArgs, pythonEnv } from './find-bin.mjs';
 
 const HOME = homedir();
 const AUR = join(HOME, '.auramaxing');
@@ -64,9 +64,13 @@ export function writeMap(map) {
   try { writeFileSync(MAP_FILE, JSON.stringify(map, null, 2)); } catch {}
 }
 
-function nlm(args, { timeout = 15000 } = {}) {
+// argv is an array of args (no shell). execFileSync does not interpret backticks/$()/;
+// so titles derived from process.cwd() can't inject commands (P1 audit finding #6).
+function nlm(argv, { timeout = 15000 } = {}) {
   if (!NLM_BIN) throw new Error('NLM CLI not available');
-  return execSync(`${NLM_BIN} ${args}`, {
+  const resolved = findNlmArgs(); // { bin, args } — handles "python3 -m notebooklm"
+  const extra = Array.isArray(argv) ? argv : [argv];
+  return execFileSync(resolved.bin, [...resolved.args, ...extra], {
     encoding: 'utf8',
     timeout,
     env: { ...process.env, PATH: pythonEnv().PATH },
@@ -74,7 +78,7 @@ function nlm(args, { timeout = 15000 } = {}) {
 }
 
 function createNotebook(title) {
-  const out = nlm(`create "${title.replace(/"/g, '\\"')}"`);
+  const out = nlm(['create', title]); // title passed as one arg — no escaping, no injection
   const m = out.match(/([a-f0-9-]{36})/);
   return m ? m[1] : null;
 }
