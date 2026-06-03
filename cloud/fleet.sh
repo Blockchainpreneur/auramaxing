@@ -13,10 +13,12 @@ set -euo pipefail
 HOST="${AURA_FLEET_HOST:-}"
 [ -z "$HOST" ] && { echo "set AURA_FLEET_HOST=root@<box-ip> first (see ~/auramaxing/cloud/README.md)"; exit 1; }
 . "$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)/lib.sh"   # script-relative → works at any install path
+aura_require_host "$HOST"
 
 PROJ="${1:?usage: fleet.sh <project-dir> <subtasks...>}"; shift
 [ -d "$PROJ" ] || { echo "no such project dir: $PROJ"; exit 1; }
 PROJ="$(cd "$PROJ" && pwd)"; NAME="$(aura_safe_name "$PROJ")"
+FLEET_N="${FLEET_N:-6}"; aura_require_posint FLEET_N "$FLEET_N"   # validated BEFORE the dry-run exit; ≥1 (0 would hang the throttle)
 
 # collect subtasks (args or --file)
 TASKS=()
@@ -42,7 +44,6 @@ rsync -az --delete -e "ssh $AURA_SESSION_SSH" "${AURA_RSYNC_EXCLUDES[@]}" \
 
 # Each agent uses its OWN connection (AURA_SESSION_SSH, no ControlMaster) — multiplexing would
 # serialize the parallel agents over one socket. FLEET_N caps concurrency (sshd MaxStartups).
-FLEET_N="${FLEET_N:-6}"; aura_require_int FLEET_N "$FLEET_N"
 echo "▸ dispatching ${#TASKS[@]} parallel agents on the cloud box (max $FLEET_N concurrent)"
 i=0
 for task in "${TASKS[@]}"; do

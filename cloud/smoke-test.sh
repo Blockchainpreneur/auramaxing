@@ -31,7 +31,24 @@ check "swarm.sh DRY_RUN exits 0" "DRY_RUN=1 AURA_FLEET_HOST=x bash swarm.sh '$tm
 printf '# only comments\n\n' > "$tmp/allcomments.txt"
 check "swarm.sh DRY_RUN all-comment file" "DRY_RUN=1 AURA_FLEET_HOST=x bash swarm.sh '$tmp' '$tmp/allcomments.txt'"
 check "fleet.sh --file branch (no mapfile)" "DRY_RUN=1 AURA_FLEET_HOST=x bash fleet.sh '$tmp' --file '$tmp/tasks.txt'"
+# portability: the --file branch must ALSO work on macOS system bash 3.2 (not just brew bash 5) — guards the mapfile regression
+[ -x /bin/bash ] && check "fleet.sh --file on /bin/bash (3.2)" "DRY_RUN=1 AURA_FLEET_HOST=x /bin/bash fleet.sh '$tmp' --file '$tmp/tasks.txt'"
 check "swarm rejects non-int SWARM_N" "! SWARM_N=evil DRY_RUN=1 AURA_FLEET_HOST=x bash swarm.sh '$tmp' '$tmp/tasks.txt'"
+
+echo "== acode.sh behavioral (DRY_RUN — zero box contact) =="
+check "acode.sh DRY_RUN no-args (CWD)"   "DRY_RUN=1 AURA_FLEET_HOST=x bash acode.sh"
+check "acode.sh DRY_RUN -p prompt"        "DRY_RUN=1 AURA_FLEET_HOST=x bash acode.sh -p 'do X'"
+check "acode.sh DRY_RUN dir arg"          "DRY_RUN=1 AURA_FLEET_HOST=x bash acode.sh '$tmp'"
+check "acode.sh DRY_RUN HOME→skip-sync"   "DRY_RUN=1 AURA_FLEET_HOST=x bash acode.sh \"\$HOME\" 2>&1 | grep -q SKIP_SYNC=1"
+check "acode.sh -p with no prompt rejects" "! DRY_RUN=1 AURA_FLEET_HOST=x bash acode.sh -p"
+check "acode.sh rejects unsafe HOST (-o…)" "! DRY_RUN=1 AURA_FLEET_HOST=-oProxyCommand=id bash acode.sh"
+
+echo "== validators (subshell so exit stays local) =="
+check "ccr-launch.sh no-args fails"       "! bash ccr-launch.sh"
+check "aura_require_mem rejects 1G2M"     "! ( . ./lib.sh; aura_require_mem M '1G2M' )"
+check "aura_require_mem rejects GGGG"     "! ( . ./lib.sh; aura_require_mem M 'GGGG' )"
+check "aura_require_posint rejects 0"     "! ( . ./lib.sh; aura_require_posint FLEET_N 0 )"
+check "aura_require_host rejects -o…"     "! ( . ./lib.sh; aura_require_host '-oProxyCommand=id' )"
 rm -rf "$tmp"
 
 echo "== lib.sh helpers (pure, no network) =="

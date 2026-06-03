@@ -12,6 +12,7 @@ set -euo pipefail
 HOST="${AURA_FLEET_HOST:-}"
 [ -z "$HOST" ] && { echo "set AURA_FLEET_HOST=root@<box-ip> first"; exit 1; }
 . "$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)/lib.sh"   # shared SSH hardening + excludes + name helpers (DRY)
+aura_require_host "$HOST"
 PROJ="${1:?usage: swarm.sh <project-dir> <tasks-file>}"
 TASKS="${2:?usage: swarm.sh <project-dir> <tasks-file>}"
 [ -d "$PROJ" ] || { echo "no such project dir: $PROJ"; exit 1; }

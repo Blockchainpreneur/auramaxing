@@ -58,7 +58,11 @@ aura_run() {
 }
 
 # aura_require_int LABEL VALUE — abort unless VALUE is a non-negative integer. Guards numeric knobs
-# (FLEET_N/SWARM_N/timeouts/retries) that get interpolated RAW into remote shell strings.
+# (SWARM_N/timeouts/retries) that get interpolated RAW into remote shell strings.
 aura_require_int() { case "$2" in ''|*[!0-9]*) echo "✗ $1 must be a non-negative integer, got: '$2'" >&2; exit 2 ;; esac; }
-# aura_require_mem LABEL VALUE — abort unless VALUE looks like a systemd memory limit (e.g. 3G, 512M).
-aura_require_mem() { case "$2" in ''|*[!0-9KMGkmg]*) echo "✗ $1 must look like 3G/512M, got: '$2'" >&2; exit 2 ;; esac; }
+# aura_require_posint LABEL VALUE — as aura_require_int but ≥ 1 (e.g. FLEET_N=0 would infinite-loop the throttle).
+aura_require_posint() { aura_require_int "$1" "$2"; [ "$2" -ge 1 ] || { echo "✗ $1 must be an integer ≥ 1, got: '$2'" >&2; exit 2; }; }
+# aura_require_mem LABEL VALUE — abort unless VALUE is a well-formed memory limit: digits + optional K/M/G.
+aura_require_mem() { printf '%s' "$2" | grep -qE '^[0-9]+[KMGkmg]?$' || { echo "✗ $1 must look like 3G/512M, got: '$2'" >&2; exit 2 ;}; }
+# aura_require_host VALUE — reject an AURA_FLEET_HOST ssh could misread as an option (leading '-') or with spaces.
+aura_require_host() { case "$1" in ''|-*|*[[:space:]]*) echo "✗ AURA_FLEET_HOST unsafe/empty: '$1' (want user@host, no leading '-'/spaces)" >&2; exit 2 ;; esac; }

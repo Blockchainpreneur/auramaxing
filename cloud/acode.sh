@@ -10,10 +10,10 @@
 set -uo pipefail
 . "$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)/lib.sh"   # script-relative → works at any install path
 
-HOST="${AURA_FLEET_HOST:?set AURA_FLEET_HOST=root@<box-ip>}"
+HOST="${AURA_FLEET_HOST:?set AURA_FLEET_HOST=root@<box-ip>}"; aura_require_host "$HOST"
 TUNNEL="-R 9222:localhost:9222"   # expose the Mac's CDP Chrome (:9222) to the box session
 
-if ! aura_box_reachable "$HOST"; then
+if [ "${DRY_RUN:-0}" != "1" ] && ! aura_box_reachable "$HOST"; then
   echo "✗ box $HOST unreachable — powered off? wrong AURA_FLEET_HOST? Start the box, then retry." >&2
   exit 1
 fi
@@ -22,15 +22,17 @@ fi
 # TTL-gated: the first launch provisions (~2 min), later launches skip. Force a refresh: acode-sync.
 ENVSYNC_FLAG="$HOME/.auramaxing/.last-box-envsync"
 ENVSYNC_TTL=$(( ${AURA_ENVSYNC_TTL_MIN:-120} * 60 ))
-if [ ! -f "$ENVSYNC_FLAG" ] || [ "$(( $(date +%s) - $(cat "$ENVSYNC_FLAG" 2>/dev/null || echo 0) ))" -gt "$ENVSYNC_TTL" ]; then
-  bash "$HOME/auramaxing/cloud/box-sync-env.sh" && date +%s > "$ENVSYNC_FLAG"
-fi
-# Self-heal: even inside the TTL window, GUARANTEE the MAXING statusline can render on the box.
-# Without an executable ~/.claude/statusline.sh + jq the footer silently disappears (the exact
-# symptom this fixes), so force a one-off env push if either is missing — independent of the TTL.
-if ! ssh $AURA_SSH_OPTS "$HOST" 'test -x ~/.claude/statusline.sh && command -v jq >/dev/null 2>&1'; then
-  echo "▸ box missing statusline.sh/jq — forcing an env push so the MAXING footer renders…"
-  bash "$HOME/auramaxing/cloud/box-sync-env.sh" && date +%s > "$ENVSYNC_FLAG"
+if [ "${DRY_RUN:-0}" != "1" ]; then
+  if [ ! -f "$ENVSYNC_FLAG" ] || [ "$(( $(date +%s) - $(cat "$ENVSYNC_FLAG" 2>/dev/null || echo 0) ))" -gt "$ENVSYNC_TTL" ]; then
+    bash "$HOME/auramaxing/cloud/box-sync-env.sh" && date +%s > "$ENVSYNC_FLAG"
+  fi
+  # Self-heal: even inside the TTL window, GUARANTEE the MAXING statusline can render on the box.
+  # Without an executable ~/.claude/statusline.sh + jq the footer silently disappears (the exact
+  # symptom this fixes), so force a one-off env push if either is missing — independent of the TTL.
+  if ! ssh $AURA_SSH_OPTS "$HOST" 'test -x ~/.claude/statusline.sh && command -v jq >/dev/null 2>&1'; then
+    echo "▸ box missing statusline.sh/jq — forcing an env push so the MAXING footer renders…"
+    bash "$HOME/auramaxing/cloud/box-sync-env.sh" && date +%s > "$ENVSYNC_FLAG"
+  fi
 fi
 
 ONESHOT=""; PROJ="$PWD"
@@ -50,6 +52,16 @@ case "$PROJ" in
   "$HOME"|"/"|"$HOME/Desktop"|"$HOME/Documents"|"$HOME/Downloads"|"$HOME/Library")
     REMOTE="acode/home"; SKIP_SYNC=1 ;;
 esac
+
+# DRY_RUN=1 → print the resolved plan (mode/workdir) and exit BEFORE any sync/launch side effect.
+if [ "${DRY_RUN:-0}" = "1" ]; then
+  if [ "$SKIP_SYNC" = "1" ]; then _mode="clean-home(no-sync)"
+  elif [ -n "$ONESHOT" ]; then _mode="oneshot"
+  elif [ -x "$HOME/.local/bin/mutagen" ] || command -v mutagen >/dev/null 2>&1; then _mode="live-mirror"
+  else _mode="rsync"; fi
+  echo "[dry-run] acode: PROJ=$PROJ REMOTE=$REMOTE ONESHOT=${ONESHOT:+set} SKIP_SYNC=$SKIP_SYNC mode=$_mode"
+  exit 0
+fi
 
 sync_up() {
   ssh $AURA_SSH_OPTS "$HOST" "mkdir -p ~/$REMOTE"
