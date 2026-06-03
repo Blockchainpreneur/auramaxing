@@ -5,12 +5,12 @@
 # the 8.6 GB Chrome profile, logs, dead-letters, and session transcripts. Fast/incremental (rsync).
 # Called by acode (TTL-gated). Safe to run standalone:  bash box-sync-env.sh
 set -uo pipefail
+. "$HOME/auramaxing/cloud/lib.sh"
 HOST="${AURA_FLEET_HOST:?set AURA_FLEET_HOST=root@<box-ip>}"
-SSH_OPTS="-o StrictHostKeyChecking=accept-new -o BatchMode=yes -o ConnectTimeout=10 -o ControlMaster=auto -o ControlPath=$HOME/.ssh/cm-%r@%h:%p -o ControlPersist=600"
-R() { rsync -az -e "ssh $SSH_OPTS" "$@" 2>/dev/null; }
+R() { rsync -az -e "ssh $AURA_SSH_OPTS" "$@" 2>/dev/null; }
 
 echo "▸ syncing AURAMAXING env → box (autopilot + memory; one-time-ish, then incremental)…"
-ssh $SSH_OPTS "$HOST" 'mkdir -p ~/.claude/helpers ~/.claude/skills ~/.auramaxing ~/.claude/projects'
+ssh $AURA_SSH_OPTS "$HOST" 'mkdir -p ~/.claude/helpers ~/.claude/skills ~/.auramaxing ~/.claude/projects'
 
 # 1) The repo: fixed helpers/scripts/skills/docs (minus heavy/local/build artifacts)
 R --delete \
@@ -36,21 +36,21 @@ done
 
 # 4) Native project auto-memory (MEMORY.md + project_*.md) — keep the Mac slug so the index travels.
 if [ -d "$HOME/.claude/projects/-Users-macbook/memory" ]; then
-  ssh $SSH_OPTS "$HOST" 'mkdir -p ~/.claude/projects/-Users-macbook/memory'
+  ssh $AURA_SSH_OPTS "$HOST" 'mkdir -p ~/.claude/projects/-Users-macbook/memory'
   R "$HOME/.claude/projects/-Users-macbook/memory/" "$HOST:~/.claude/projects/-Users-macbook/memory/"
 fi
 
 # 5) NotebookLM auth (Google session storage_state) so NLM deep-recall works 1:1 on the box.
 #    Sensitive — rsync only, NEVER committed to git.
 if [ -d "$HOME/.notebooklm" ]; then
-  ssh $SSH_OPTS "$HOST" 'mkdir -p ~/.notebooklm'
+  ssh $AURA_SSH_OPTS "$HOST" 'mkdir -p ~/.notebooklm'
   R "$HOME/.notebooklm/" "$HOST:~/.notebooklm/"
 fi
 
 # 6) Ensure the box has the memory-stack Python deps (LightRAG semantic search via
 #    sentence-transformers + NotebookLM via notebooklm-py) so memory is 1:1 with the Mac.
 #    Idempotent: installs ONLY if missing (e.g. after a fresh box reprovision). One-time ~few min.
-ssh $SSH_OPTS "$HOST" 'python3 -c "import sentence_transformers, notebooklm" 2>/dev/null || { \
+ssh $AURA_SSH_OPTS "$HOST" 'python3 -c "import sentence_transformers, notebooklm" 2>/dev/null || { \
   command -v pip3 >/dev/null 2>&1 || { apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq python3-pip python3-numpy; } >/dev/null 2>&1; \
   python3 -m pip install --user --break-system-packages -q sentence-transformers notebooklm-py==0.3.4 >/dev/null 2>&1; \
   python3 -c "import sentence_transformers" 2>/dev/null && echo "  [box-env] memory deps installed" || echo "  [box-env] WARN: memory deps install failed"; }'
