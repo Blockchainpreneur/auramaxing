@@ -52,12 +52,35 @@ sync_back() {
     "${AURA_RSYNC_EXCLUDES[@]}" "$HOST:~/$REMOTE/" "$PROJ"/ 2>/dev/null || true
 }
 
+# Decide the box working dir + how files get there, per mode.
+#  - $HOME launch  → clean box workspace, no sync.
+#  - one-shot      → one-shot rsync (batch; live mirror is overkill).
+#  - interactive   → mutagen LIVE bidirectional mirror: the box operates on your project files in
+#    REAL TIME (edits flow both ways instantly; full source incl. .git; node_modules/build excluded
+#    as regenerable). Falls back to one-shot rsync if mutagen isn't installed.
+LIVE=0; MNAME=""
 if [ "$SKIP_SYNC" = "1" ]; then
-  echo "▸ launched from \$HOME — opening a CLEAN box session in ~/$REMOTE (no home sync)."
-  echo "  → for a specific project: cd into it first, or run  acode /path/to/project"
+  WORKDIR="~/$REMOTE"
+  echo "▸ launched from \$HOME — CLEAN box session in $WORKDIR (no sync). cd into a project for a live mirror."
   ssh $AURA_SSH_OPTS "$HOST" "mkdir -p ~/$REMOTE"
+elif [ -n "$ONESHOT" ]; then
+  WORKDIR="~/$REMOTE"
+  echo "▸ acode: syncing $NAME → box"; sync_up
+elif [ -x "$HOME/.local/bin/mutagen" ] || command -v mutagen >/dev/null 2>&1; then
+  export PATH="$HOME/.local/bin:$PATH"
+  WORKDIR="/root/acode-live/$NAME"; LIVE=1
+  # mutagen session names allow only [A-Za-z0-9-] (NO _ or .) — derive a safe one from a hash.
+  MNAME="acode-$(printf '%s' "$PROJ" | cksum | cut -d' ' -f1)"
+  echo "▸ live mirror: $NAME ↔ box in real time (your files — full source + .git — operated from the box)…"
+  mutagen daemon start >/dev/null 2>&1 || true
+  ssh $AURA_SSH_OPTS "$HOST" "mkdir -p $WORKDIR"
+  mutagen sync list "$MNAME" >/dev/null 2>&1 || mutagen sync create --name="$MNAME" \
+    --ignore=node_modules --ignore=dist --ignore=.next --ignore=target --ignore=.venv --ignore=__pycache__ \
+    "$PROJ" "$HOST:$WORKDIR" >/dev/null 2>&1
+  mutagen sync flush "$MNAME" >/dev/null 2>&1 || true   # block until the initial sync completes before launch
 else
-  echo "▸ acode: syncing $NAME → box ($HOST)"; sync_up
+  WORKDIR="~/$REMOTE"
+  echo "▸ acode: syncing $NAME → box (mutagen not found → one-shot rsync)"; sync_up
 fi
 
 # Box-side env: exploit the full 16 GB heap; OAuth token already set on the box.
@@ -68,25 +91,28 @@ if [ -n "$ONESHOT" ]; then
   printf '%s\n' "$AURA_EMPTY_MCP" | ssh $AURA_SSH_OPTS "$HOST" 'cat > ~/.swarm-empty-mcp.json'
   # base64 the prompt so its content can never break out of the remote shell (command injection).
   B64="$(printf '%s' "$ONESHOT" | base64 | tr -d '\n')"
-  ssh $AURA_SESSION_SSH "$HOST" "$REMOTE_ENV; cd ~/$REMOTE && claude -p \"\$(printf %s '$B64' | base64 -d)\" --strict-mcp-config --mcp-config ~/.swarm-empty-mcp.json --dangerously-skip-permissions"
+  ssh $AURA_SESSION_SSH "$HOST" "$REMOTE_ENV; cd $WORKDIR && claude -p \"\$(printf %s '$B64' | base64 -d)\" --strict-mcp-config --mcp-config ~/.swarm-empty-mcp.json --dangerously-skip-permissions"
   echo "▸ syncing results back"; sync_back
 else
-  echo "▸ opening Claude Code ON the box (resilient: runs in tmux, survives SSH drops). Exit to sync back."
+  echo "▸ opening Claude Code ON the box (resilient tmux session; files live-mirrored). Exit to sync back."
   # Ensure the browser MCP config exists on the box, else `claude --mcp-config` errors at startup.
   printf '%s\n' "$AURA_BROWSER_MCP" | ssh $AURA_SSH_OPTS "$HOST" 'cat > ~/.acode-mcp.json'
   TMUX_SESSION="aura-$NAME"
-  # RESILIENCE: claude runs inside tmux ON THE BOX, so a dropped/reset SSH ("Connection reset by
-  # peer"/"Broken pipe") never kills the session — it keeps running. Auto-reconnect: if ssh ends
-  # while the tmux session still lives (= a network drop), re-attach with NO work lost; exit only
-  # when the user actually quits claude (tmux session then gone). Keepalives (lib.sh) prevent most
-  # drops in the first place.
+  # RESILIENCE: claude runs inside tmux ON THE BOX, so a dropped/reset SSH never kills the session.
+  # Auto-reconnect: if ssh ends while the tmux session still lives (= a network drop), re-attach with
+  # NO work lost; exit only when the user actually quits claude. Keepalives (lib.sh) prevent most drops.
   while :; do
     TUN="$TUNNEL"; aura_box_has_mac_chrome "$HOST" && TUN=""   # reuse a live tunnel, else open -R
     ssh -t $AURA_SESSION_SSH $TUN "$HOST" \
-      "$REMOTE_ENV; tmux new-session -A -s '$TMUX_SESSION' 'cd ~/$REMOTE && claude --mcp-config ~/.acode-mcp.json'" || true
+      "$REMOTE_ENV; tmux new-session -A -s '$TMUX_SESSION' 'cd $WORKDIR && claude --mcp-config ~/.acode-mcp.json'" || true
     ssh $AURA_SSH_OPTS "$HOST" "tmux has-session -t '$TMUX_SESSION' 2>/dev/null" || break
     echo "▸ connection dropped — re-attaching to your live box session (no work lost)…"; sleep 1
   done
-  echo "▸ session ended — syncing results back"; sync_back
+  if [ "$LIVE" = "1" ]; then
+    mutagen sync flush "$MNAME" >/dev/null 2>&1 || true
+    echo "▸ session ended — files stay live-mirrored (mutagen keeps watching; re-launch is instant)."
+  else
+    echo "▸ session ended — syncing results back"; sync_back
+  fi
 fi
 echo "▸ done."
