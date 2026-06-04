@@ -61,6 +61,33 @@ export AURA_FLEET_HOST="ubuntu@<PUBLIC_IP>"          # add to ~/.zshrc
 Your local repo is the source of truth; `fleet.sh` rsyncs it up, runs N agents on the box, brings
 diffs back. No GitHub remote required (works for local-only projects like polymaxxing/econ-funnel).
 
+**Option C — `acode`: a full Claude Code session ON the box** (Path A — box-resident orchestration).
+The Mac stays a thin client; the box runs the whole session (hooks + MCP + subagents/Workflows) in its
+RAM, files live-mirrored, resilient tmux (survives SSH drops). `acode` / `acode <proj>` / `acode -p "…"`.
+
+**Option D — `orchestra.sh`: role-based research/analysis fleet** (Path B — fan-out → judges → synthesis):
+```bash
+export AURA_FLEET_HOST="root@<ip>"
+~/auramaxing/cloud/orchestra.sh "What's the best X for Y? Be skeptical, cite sources."   # 5-role preset + 3 judges
+~/auramaxing/cloud/orchestra.sh "Redesign the dashboard" cloud/roles/frontend.roles      # curated role panel
+# → ~/orchestra-results/<run>/SYNTHESIS.md  (+ role-*.txt, judge-*.txt, findings.md, critiques.md)
+```
+N specialists (each a `Role :: angle`) investigate in parallel → J adversarial judges refute/rank →
+1 synthesizer merges into a decision-ready report. Concurrency AUTO-scales to the box's free RAM (never
+thrashes). Knobs: `ORCH_JUDGES=3 ORCH_LIGHT=1 ORCH_TIMEOUT=900 ORCH_N=<auto>`. Presets: `cloud/roles/`
+(`research` · `frontend` = impeccable/ui-ux-pro-max lenses · `code` = investigate/cso/perf).
+
+**Option E — `swarm.sh`: drain a backlog of up to ~200 tasks** through a bounded, mem-capped worker pool
+(`swarm.sh <project> <tasks-file>`; `SWARM_N=4 SWARM_MEM=3G`). Best for many independent code tasks.
+
+### Lean workers (why the fleets are fast + never OOM) — load-bearing detail
+Every fleet worker (`fleet`/`swarm`/`orchestra`) runs `claude` with the AURAMAXING **autopilot hooks OFF**
+via `--settings '{"hooks":{}}'`. The full hook stack (prompt-engine + LightRAG embeddings ~1-2GB +
+daemons) otherwise adds ~70s/agent and OOM-kills mem-capped workers. `--bare` also disables hooks but
+**breaks OAuth** — `--settings` is the one that keeps Max auth. Result: ~0.5GB/lean agent, so a 16GB box
+fits ~10 light agents; upsize (32-64GB) only for heavy agents that each load MCP/browser. RAM is governed
+by **concurrency**, not a hard cgroup cap (the cap caused SIGKILL under pressure). Verified end-to-end.
+
 ## Notes
 - **Sync:** rsync per dispatch (excludes node_modules/.git/build dirs). For live bidirectional sync,
   install `mutagen` later (optional upgrade).

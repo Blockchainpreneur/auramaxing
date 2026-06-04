@@ -44,6 +44,10 @@ rsync -az -e "ssh $AURA_SESSION_SSH" /tmp/.swarm-tasks.$$ "$HOST:~/$REMOTE/tasks
 
 # write a CLEAN empty-MCP json on the box (single-quoted → no escaping corruption)
 printf '%s\n' "$AURA_EMPTY_MCP" | ssh $AURA_SESSION_SSH "$HOST" 'cat > ~/.swarm-empty-mcp.json'
+# Disable the AURAMAXING autopilot hooks for workers. Without this, each task's hook subprocess tree
+# (UserPromptSubmit prompt-engine + LightRAG sentence-transformers ~1-2GB + daemons) blows the
+# MemoryMax cgroup cap → OOM SIGKILL, and adds ~70s/task. Written from local → guaranteed valid JSON.
+printf '%s' '{"hooks":{}}' | ssh $AURA_SESSION_SSH "$HOST" 'cat > ~/.fleet-nohooks.json'
 
 # remote driver: one fresh, capped, MCP-disabled claude -p per task; reap orphans; joblog
 ssh $AURA_SESSION_SSH "$HOST" "bash -lc '
@@ -59,7 +63,7 @@ run_one() {
   rm -rf \"\$d\" \"\$M\"; cp -r ~/$REMOTE/base \"\$d\"; mkdir -p \"\$M\"; cd \"\$d\"
   git init -q 2>/dev/null && git add -A && git commit -qm base 2>/dev/null || true
   systemd-run --scope -p MemoryMax=$MEM --quiet timeout $TO \
-    \"\$CLAUDE\" -p \"\$task\" --strict-mcp-config --mcp-config \"\$EMPTY_MCP\" --dangerously-skip-permissions \
+    \"\$CLAUDE\" -p \"\$task\" --settings \$HOME/.fleet-nohooks.json --strict-mcp-config --mcp-config \"\$EMPTY_MCP\" --dangerously-skip-permissions \
     > \"\$M/_result.txt\" 2> \"\$M/_err.log\" || echo \"FAIL idx=\$idx rc=\$?\" >> \"\$M/_err.log\"
   git add -A && git diff --cached > \"\$M/_agent.diff\" 2>/dev/null || true
   pkill -f \"mcp-server-|chrome-headless-shell\" 2>/dev/null || true

@@ -1,0 +1,8 @@
+# AURAMAXING orchestra — code / engineering role panel. Each specialist applies a gstack discipline.
+# Usage: orchestra.sh "Audit/plan <component>" cloud/roles/code.roles   (run from the project, ORCH_LIGHT=0 for tools)
+# Format: RoleName :: angle / instructions
+Architecture :: Map the design, data flow, module boundaries, and the MINIMAL change set. Flag coupling, tech debt, and altitude problems.
+Investigate :: Apply /investigate discipline — root-cause analysis, full dependency chain, enumerate edge cases. No symptom patches.
+Security :: Apply /cso — OWASP Top 10, secrets, injection, authz, supply chain, and LLM-trust-boundary violations.
+Performance :: Hot paths, N+1 queries, memory, bundle size, query efficiency, and the scalability ceiling.
+Tests :: Coverage gaps, regression risks, and what a WEAK suite would let through (think mutation/property testing).

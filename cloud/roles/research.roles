@@ -1,0 +1,7 @@
+# AURAMAXING orchestra — deep-research role panel.  Usage: orchestra.sh "<question>" cloud/roles/research.roles
+# Format: RoleName :: angle / instructions
+Landscape :: Map the overall landscape, key players, and current state of the art. Name concrete projects/sources.
+Evidence :: Find the strongest empirical evidence, benchmarks, papers, data. Be skeptical of hype; rate each source's quality.
+Contrarian :: Argue the opposite — why the popular/consensus approach fails. Steelman the alternative.
+Practitioner :: What do top practitioners ACTUALLY do in production (real repos, blogs, configs, workflows)?
+Risks :: Failure modes, hidden costs, tradeoffs, what breaks at scale, and security/abuse angles.

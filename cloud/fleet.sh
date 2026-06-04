@@ -44,6 +44,9 @@ rsync -az --delete -e "ssh $AURA_SESSION_SSH" "${AURA_RSYNC_EXCLUDES[@]}" \
 
 # Each agent uses its OWN connection (AURA_SESSION_SSH, no ControlMaster) — multiplexing would
 # serialize the parallel agents over one socket. FLEET_N caps concurrency (sshd MaxStartups).
+# Disable the AURAMAXING autopilot hooks for workers — else each agent's hook subprocess tree
+# (LightRAG ~1-2GB + prompt-engine + daemons) adds ~70s and can thrash the box. Local-written → valid JSON.
+printf '%s' '{"hooks":{}}' | ssh $AURA_SESSION_SSH "$HOST" 'cat > ~/.fleet-nohooks.json'
 echo "▸ dispatching ${#TASKS[@]} parallel agents on the cloud box (max $FLEET_N concurrent)"
 i=0
 for task in "${TASKS[@]}"; do
@@ -56,7 +59,7 @@ for task in "${TASKS[@]}"; do
     rm -rf ~/$REMOTE_BASE/agent-$i && cp -r ~/$REMOTE_BASE/base ~/$REMOTE_BASE/agent-$i
     cd ~/$REMOTE_BASE/agent-$i
     git init -q 2>/dev/null && git add -A && git commit -qm baseline 2>/dev/null || true
-    claude -p \"\$(printf %s '$B64' | base64 -d)\" --dangerously-skip-permissions > _agent.log 2>&1 || true
+    claude -p \"\$(printf %s '$B64' | base64 -d)\" --settings ~/.fleet-nohooks.json --dangerously-skip-permissions > _agent.log 2>&1 || true
     git add -A && git diff --cached > _agent.diff 2>/dev/null || true
   " &
   # bash 3.2-safe concurrency throttle (macOS /bin/bash has no 'wait -n')

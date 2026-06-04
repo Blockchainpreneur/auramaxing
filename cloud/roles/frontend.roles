@@ -1,0 +1,8 @@
+# AURAMAXING orchestra — front-end / UX role panel. Each specialist applies a specific design skill.
+# Usage: orchestra.sh "Review/redesign <target>" cloud/roles/frontend.roles   (run with ORCH_LIGHT=0 for full skills)
+# Format: RoleName :: angle / instructions
+Visual :: Apply the high-end-visual-design + impeccable lens. Critique/propose visual hierarchy, typography, color, spacing, composition. Anti-slop: reject raw Inter/Roboto/system as the distinctive font, purple→blue-on-white gradients, and timid palettes.
+UX-Flow :: Apply ui-ux-pro-max + emil-design-eng. Evaluate information architecture, cognitive load, the primary user flow, and the empty/error/loading/overflow states.
+Accessibility :: WCAG 2.1 audit — contrast, focus/hover/active/disabled states, keyboard nav, semantics, reduced-motion. Flag anything axe would rate serious/critical.
+Anti-Slop-Critic :: Apply impeccable + the hallmark 65-gate as an ADVERSARIAL reviewer. Hunt for templated / AI-slop tells, missing states, and bare empty states. Be ruthless and specific.
+Motion-Polish :: Apply frontend-design + emil-design-eng. Propose tasteful motion, skeletons (never spinners), and the invisible micro-details that make an interface feel premium.
