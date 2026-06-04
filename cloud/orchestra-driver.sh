@@ -16,6 +16,13 @@ SETTINGS="--settings $HOME/.fleet-nohooks.json"
 MCP=""; [ "${LIGHT:-0}" = "1" ] && MCP="--strict-mcp-config --mcp-config $HOME/.orchestra-empty-mcp.json"
 export CLAUDE GOAL SETTINGS MCP TO
 
+# Detect a Claude Max quota / session-limit message in agent outputs, so a quota wall doesn't
+# masquerade as a real result. Sets out/LIMIT_HIT and warns. The expensive stages are checkpointed
+# (findings.md / critiques.md), so a re-run with ORCH_RESUME=1 reuses them and only redoes what's missing.
+check_limit() { if grep -qiE 'hit your.*limit|session limit|usage limit|resets [0-9]' "$@" 2>/dev/null; then
+  echo "⚠️  CLAUDE MAX LIMIT HIT — completed stages are saved; re-run with ORCH_RESUME=1 after the quota resets."
+  : > out/LIMIT_HIT; fi; }
+
 run_role() {
   local line="$1" idx="${2// /}"
   local name="${line%% ::*}" angle="${line#*:: }"
@@ -30,17 +37,21 @@ Investigate deeply; use any skills/tools available to you. Produce a focused, ev
 }
 export -f run_role
 
-echo "== stage 1: fan-out $(wc -l < roles.txt) specialists, ${N}-wide =="
-nl -ba roles.txt | parallel --colsep '\t' -j "$N" run_role {2} {1}
-
-: > out/findings.md; i=0
-while IFS= read -r l; do
-  i=$((i+1)); nm="${l%% ::*}"
-  printf '## %s\n' "$nm" >> out/findings.md
-  cat "out/role-$i.txt" 2>/dev/null >> out/findings.md
-  printf '\n\n' >> out/findings.md
-done < roles.txt
-echo "  stage 1 done: findings.md = $(wc -c < out/findings.md) bytes"
+if [ "${RESUME:-0}" = "1" ] && [ -s out/findings.md ]; then
+  echo "== stage 1: RESUME — reusing existing findings.md ($(wc -c < out/findings.md) bytes) =="
+else
+  echo "== stage 1: fan-out $(wc -l < roles.txt) specialists, ${N}-wide =="
+  nl -ba roles.txt | parallel --colsep '\t' -j "$N" run_role {2} {1}
+  : > out/findings.md; i=0
+  while IFS= read -r l; do
+    i=$((i+1)); nm="${l%% ::*}"
+    printf '## %s\n' "$nm" >> out/findings.md
+    cat "out/role-$i.txt" 2>/dev/null >> out/findings.md
+    printf '\n\n' >> out/findings.md
+  done < roles.txt
+  check_limit out/role-*.txt
+  echo "  stage 1 done: findings.md = $(wc -c < out/findings.md) bytes"
+fi
 
 echo "== stage 2: ${JUDGES} adversarial judges =="
 run_judge() {
@@ -52,14 +63,18 @@ Read the file out/findings.md in your working directory. Critically evaluate it:
     > "out/judge-$j.txt" 2> "out/judge-$j.err" || echo "judge $j rc=$?" >> "out/judge-$j.err"
 }
 export -f run_judge
-seq 1 "$JUDGES" | parallel -j "$N" run_judge {}
-
-: > out/critiques.md
-for j in $(seq 1 "$JUDGES"); do
-  printf '## Judge %s\n' "$j" >> out/critiques.md
-  cat "out/judge-$j.txt" 2>/dev/null >> out/critiques.md
-  printf '\n\n' >> out/critiques.md
-done
+if [ "${RESUME:-0}" = "1" ] && [ -s out/critiques.md ]; then
+  echo "  stage 2: RESUME — reusing existing critiques.md ($(wc -c < out/critiques.md) bytes)"
+else
+  seq 1 "$JUDGES" | parallel -j "$N" run_judge {}
+  : > out/critiques.md
+  for j in $(seq 1 "$JUDGES"); do
+    printf '## Judge %s\n' "$j" >> out/critiques.md
+    cat "out/judge-$j.txt" 2>/dev/null >> out/critiques.md
+    printf '\n\n' >> out/critiques.md
+  done
+  check_limit out/judge-*.txt
+fi
 
 echo "== stage 3: synthesis =="
 timeout "$TO" "$CLAUDE" -p "You are the lead synthesizer. GOAL:
@@ -67,6 +82,6 @@ ${GOAL}
 
 Read out/findings.md (specialist briefs) and out/critiques.md (judge critiques) in your working directory. Merge them into ONE prioritized, decision-ready report: rank ideas by impact x effort, SEPARATE solid-evidence from experimental/promising, explicitly mark hype the judges refuted, and end with concrete next actions." $SETTINGS $MCP --dangerously-skip-permissions \
   > out/SYNTHESIS.md 2> out/synth.err || echo "synth rc=$?" >> out/synth.err
-
+check_limit out/SYNTHESIS.md
 pkill -f "mcp-server-|chrome-headless-shell" 2>/dev/null || true
 echo "BOX_DONE: SYNTHESIS.md = $(wc -c < out/SYNTHESIS.md) bytes"
