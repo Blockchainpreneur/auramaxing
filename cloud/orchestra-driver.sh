@@ -14,7 +14,11 @@ GOAL="$(cat GOAL.txt)"
 # (they add ~70s/agent + a heavy subprocess tree). Box OAuth auth stays intact (unlike --bare).
 SETTINGS="--settings $HOME/.fleet-nohooks.json"
 MCP=""; [ "${LIGHT:-0}" = "1" ] && MCP="--strict-mcp-config --mcp-config $HOME/.orchestra-empty-mcp.json"
-export CLAUDE GOAL SETTINGS MCP TO
+# Model tiering (saves the binding constraint = Max quota): ORCH_MODEL runs the many specialists +
+# judges on a cheaper/faster model (e.g. claude-haiku-4-5 / claude-sonnet-4-6); the synthesizer keeps
+# the strong default (unset = inherit). Empty MODEL → all agents inherit the box default.
+ROLE_MODEL=""; [ -n "${MODEL:-}" ] && ROLE_MODEL="--model $MODEL"
+export CLAUDE GOAL SETTINGS MCP TO ROLE_MODEL
 
 # Detect a Claude Max quota / session-limit message in agent outputs, so a quota wall doesn't
 # masquerade as a real result. Sets out/LIMIT_HIT and warns. The expensive stages are checkpointed
@@ -31,7 +35,7 @@ ${GOAL}
 
 Your angle: ${angle}
 
-Investigate deeply; use any skills/tools available to you. Produce a focused, evidence-backed findings brief for YOUR angle only. Be concrete, name real repos/sources, and explicitly flag uncertainty vs. solid evidence." $SETTINGS $MCP --dangerously-skip-permissions \
+Investigate deeply; use any skills/tools available to you. Produce a focused, evidence-backed findings brief for YOUR angle only. Be concrete, name real repos/sources, and explicitly flag uncertainty vs. solid evidence." $ROLE_MODEL $SETTINGS $MCP --dangerously-skip-permissions \
     > "out/role-$idx.txt" 2> "out/role-$idx.err" || echo "role $idx rc=$?" >> "out/role-$idx.err"
   pkill -f "mcp-server-|chrome-headless-shell" 2>/dev/null || true
 }
@@ -59,7 +63,7 @@ run_judge() {
   timeout "$TO" "$CLAUDE" -p "You are judge #$j on a skeptical review panel. GOAL:
 ${GOAL}
 
-Read the file out/findings.md in your working directory. Critically evaluate it: which claims are well-supported, which are hype/unsupported, what is MISSING, and rank the strongest actionable ideas. Be adversarial — actively try to refute weak claims. Output your critique + ranking." $SETTINGS $MCP --dangerously-skip-permissions \
+Read the file out/findings.md in your working directory. Critically evaluate it: which claims are well-supported, which are hype/unsupported, what is MISSING, and rank the strongest actionable ideas. Be adversarial — actively try to refute weak claims. Output your critique + ranking." $ROLE_MODEL $SETTINGS $MCP --dangerously-skip-permissions \
     > "out/judge-$j.txt" 2> "out/judge-$j.err" || echo "judge $j rc=$?" >> "out/judge-$j.err"
 }
 export -f run_judge

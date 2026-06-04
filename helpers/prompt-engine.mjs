@@ -268,7 +268,7 @@ try {
     'For EVERY phase, run the SAME opening sequence — no phase skips a step:',
     '  a. AUDIT — inspect the current real state of what this phase touches.',
     '  b. INVESTIGATE — read every relevant file completely; verify APIs/behaviors via context7/codegraph/serena/deepwiki/WebSearch; gather real reference EXAMPLES / proven implementations; never guess.',
-    '  c. PLAN — state the full approach for the phase before writing any code.',
+    '  c. PLAN (ultrathink) — run INVESTIGATE + PLAN under EXTENDED THINKING (ultrathink): reason through 2-3 candidate approaches and pick the best WITH explicit reasons; state the full phase approach. CLARITY GATE: do NOT write a single line of code until the strategy is airtight and you can explain WHY it is correct.',
     '  d. SELECT THE BEST — actively SEARCH and COMPARE candidate tools, repos and skills (ToolSearch + ~/auramaxing/docs/CAPABILITIES.md registry + WebSearch for best-in-class); pick the BEST fit, not merely an available one; install FREE skills/MCP on a capability gap. gstack skills are always in scope.',
     '  e. EXECUTE — build the COMPLETE thing: states, errors, edge cases, tests. ROOT-CAUSE fixes only — never a symptom patch, never a vague/temporary workaround. No placeholders, no partials.',
     'After EACH phase: TEST + VERIFY + REVIEW WITH EVIDENCE — actually RUN the tests/build/typecheck/lint (or /qa + /review + /cso) and QUOTE the output; state the root cause with file:line; add a regression test. Then ADVERSARIALLY VERIFY: a separate skeptic pass tries to BREAK the result (self-rating is too generous); default to "not done" if uncertain. SCORE 0–100 HONESTLY against that evidence.',

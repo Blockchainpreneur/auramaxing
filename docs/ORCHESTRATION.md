@@ -29,7 +29,10 @@ exit bar is met.**
    cases. Never guess an API/signature — verify via context7, WebSearch/WebFetch, `/browse`,
    `firecrawl`, or a research subagent. Retrieve prior learnings (`~/.auramaxing/learnings/`,
    NLM, LightRAG) before re-deriving anything.
-2. **PLAN** — State the end-to-end approach before writing a line. For non-trivial work route
+2. **PLAN (ultrathink)** — Run RESEARCH + PLAN under EXTENDED THINKING (ultrathink): reason
+   deeply, compare 2-3 candidate approaches and pick the best WITH explicit reasons, map every
+   edge case. **CLARITY GATE (hard): do not write a single line of code until the strategy is
+   airtight and you can explain WHY it is correct.** State the end-to-end approach before writing a line. For non-trivial work route
    through `/office-hours` → `/plan-eng-review` (+ `/plan-ceo-review`, `/plan-design-review`
    as warranted), or GitHub spec-kit (`/speckit.specify → plan → tasks`). Strong specs
    multiply across a fleet; vague specs propagate errors in N directions.

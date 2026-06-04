@@ -24,6 +24,7 @@ GOAL="${1:?usage: orchestra.sh \"<GOAL>\" [roles-file]}"
 ROLES_FILE="${2:-}"
 MEM="${ORCH_MEM:-3G}"; TO="${ORCH_TIMEOUT:-900}"; JUDGES="${ORCH_JUDGES:-3}"; LIGHT="${ORCH_LIGHT:-0}"
 RESUME="${ORCH_RESUME:-0}"   # 1 = reuse existing findings.md/critiques.md (e.g. after a Max-quota stop), redo only what's missing
+MODEL="${ORCH_MODEL:-}"      # tier specialists+judges to a cheaper model (e.g. claude-haiku-4-5) to save Max quota; synth keeps the strong default
 aura_require_int ORCH_TIMEOUT "$TO"; aura_require_posint ORCH_JUDGES "$JUDGES"; aura_require_mem ORCH_MEM "$MEM"
 
 # Built-in role preset (generic deep-research) used when no roles-file is given.
@@ -81,7 +82,7 @@ rsync -az -e "ssh $AURA_SESSION_SSH" "$TMP_ROLES" "$HOST:~/$REMOTE/roles.txt"
 # box reading GOAL.txt/roles.txt, so there is NO ssh→bash-lc→parallel nested-quote minefield.
 rsync -az -e "ssh $AURA_SESSION_SSH" \
   "$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)/orchestra-driver.sh" "$HOST:~/$REMOTE/driver.sh"
-ssh $AURA_SESSION_SSH "$HOST" "cd ~/$REMOTE && N=$N TO=$TO JUDGES=$JUDGES LIGHT=$LIGHT RESUME=$RESUME bash driver.sh" \
+ssh $AURA_SESSION_SSH "$HOST" "cd ~/$REMOTE && N=$N TO=$TO JUDGES=$JUDGES LIGHT=$LIGHT RESUME=$RESUME MODEL='$MODEL' bash driver.sh" \
   || echo "▸ driver returned non-zero — pulling whatever exists"
 
 mkdir -p "$HOME/orchestra-results/$RUN"
