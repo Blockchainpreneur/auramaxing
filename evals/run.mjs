@@ -102,6 +102,21 @@ function hooksSuite() {
   const post = run(COMPACT, JSON.stringify({ hook_type: 'PostCompact' }));
   add('compact-auto-resume', post.includes('AUTO-RESUMED') && post.includes('MAXXING-SDR'), 'compact PostCompact missing AUTO-RESUMED marker');
 
+  // nlm-live-recall must early-exit SILENT (no [AURAMAXING NLM-RECALL] block, no work) when NLM is
+  // unavailable — i.e. notebook-id absent OR last health check failed/stale. Forcing a tiny health
+  // TTL makes any real health record "stale", so the hook must emit nothing and never burn its
+  // timeout. Regression guard for TASK#8 (1.5s/prompt burn while NLM is broken).
+  const LIVE_RECALL = join(AURA_H, 'nlm-live-recall.mjs');
+  let lrOut = '';
+  try {
+    lrOut = execSync(`node "${LIVE_RECALL}"`, {
+      input: JSON.stringify({ prompt: 'how does the orchestration loop work across many files and modules' }),
+      encoding: 'utf8', timeout: 6000,
+      env: { ...process.env, AURA_NLM_HEALTH_TTL_MS: '1' },
+    });
+  } catch (e) { lrOut = (e.stdout || '') + (e.stderr || ''); }
+  add('nlm-live-recall-early-exit', !lrOut.includes('NLM-RECALL'), 'nlm-live-recall did not early-exit silent when NLM unavailable (would burn timeout)');
+
   add('drift-router-copies', sameFile(ROUTER, join(AURA_H, 'rational-router-apex.mjs')), 'router copies DRIFTED (.claude vs auramaxing)');
   add('drift-prompt-engine-copies', sameFile(join(CLAUDE_H, 'prompt-engine.mjs'), PROMPT_ENGINE), 'prompt-engine copies DRIFTED');
   add('drift-eval-cases-copies', sameFile(CASES, join(HOME, 'auramaxing', 'evals', 'cases', 'router.jsonl')), 'eval-cases copies DRIFTED');

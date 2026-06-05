@@ -30,6 +30,36 @@ const NLM_BIN = findNlm();
 const IN_TURN_BUDGET_MS = Number(process.env.AURA_NLM_LIVE_BUDGET_MS || 900);
 const CACHE_TTL_MS = 24 * 3600 * 1000;
 const PREFETCH = join(HOME, 'auramaxing', 'helpers', 'nlm-prefetch.mjs');
+const NOTEBOOK_ID_FILE = join(AUR, 'nlm-notebook-id');
+const HEALTH_FILE = join(AUR, 'nlm-health.json');
+const HEALTH_TTL_MS = Number(process.env.AURA_NLM_HEALTH_TTL_MS || 6 * 3600 * 1000);
+
+// Early-exit: never burn the 1500ms hook timeout when NLM is unavailable.
+// Bail immediately (printing nothing) if the notebook-id is absent OR the last
+// health check failed / is stale. Real recall behavior is preserved when NLM is
+// healthy. Override with AURA_NLM_FORCE=1.
+function nlmUnavailable() {
+  if (process.env.AURA_NLM_FORCE === '1') return false;
+  // 1. No notebook configured -> nothing to recall from.
+  if (!existsSync(NOTEBOOK_ID_FILE)) return true;
+  try {
+    const id = readFileSync(NOTEBOOK_ID_FILE, 'utf8').trim();
+    if (!id) return true;
+  } catch { return true; }
+  // 2. Last health check failed, or is stale enough that a long-dead service
+  //    would still burn the timeout on every prompt.
+  try {
+    if (existsSync(HEALTH_FILE)) {
+      const h = JSON.parse(readFileSync(HEALTH_FILE, 'utf8'));
+      if (h && h.ok === false) return true;
+      const ts = h && h.ts ? Date.parse(h.ts) : NaN;
+      if (Number.isFinite(ts) && (Date.now() - ts) > HEALTH_TTL_MS) return true;
+    }
+  } catch { /* unreadable health file -> don't block on this alone */ }
+  return false;
+}
+
+if (nlmUnavailable()) process.exit(0);
 
 mkdirSync(CACHE_DIR, { recursive: true });
 
