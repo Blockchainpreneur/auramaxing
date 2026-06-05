@@ -235,7 +235,7 @@ try {
     { test: /^(deploy|ship|push)\s/i, type: 'deploy-ship', add: 'Pre-deploy: RUN tests + diff review + /cso secrets check (paste results). Post-deploy: /canary. Have a rollback plan.' },
     { test: /^(test|qa|verify)\s/i, type: 'e2e-testing', add: 'Test happy path + error paths + edge cases + mobile. RUN the suite and paste real output — never assert "passes" without the run.' },
     { test: /^(research|find|search)\s/i, type: 'research', add: 'Multiple independent sources. Verify each claim; adversarially check the surprising ones. Note conflicts. Cite every source. No unsourced assertions.' },
-    { test: /^(design|ui|ux)\s/i, type: 'design', add: 'Invoke front-10x. Cinematic anchor, always-on tournament, start from ~/auramaxing/design-kit/. Screenshot + vision-QA loop. Mobile-first, dark mode, all states, WCAG 2.1.' },
+    { test: /\b(design|redesign|ui|ux|dashboard|landing page|interface|dark mode|responsive|css|layout|frontend|front-end|figma|tailwind|shadcn)\b/i, type: 'design', add: 'Invoke front-10x. Cinematic anchor, always-on tournament, start from ~/auramaxing/design-kit/. Screenshot + vision-QA loop. Mobile-first, dark mode, all states, WCAG 2.1.' },
   ];
 
   for (const p of staticPatterns) {
