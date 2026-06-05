@@ -33,6 +33,7 @@ const ROUTER = join(CLAUDE_H, 'rational-router-apex.mjs');         // the LIVE r
 const PROMPT_ENGINE = join(AURA_H, 'prompt-engine.mjs');           // router invokes the auramaxing copy
 const GATEKEEPER = join(CLAUDE_H, 'evidence-gatekeeper.mjs');
 const COMPACT = join(CLAUDE_H, 'compact-hooks.mjs');
+const COMPRESSOR = join(CLAUDE_H, 'output-compressor.mjs');
 const CASES = join(HOME, '.auramaxing', 'evals', 'cases', 'router.jsonl');
 const BASELINE = join(HOME, '.auramaxing', 'evals', 'baseline.json');
 const LEARNINGS = join(HOME, '.auramaxing', 'learnings');
@@ -116,6 +117,19 @@ function hooksSuite() {
     });
   } catch (e) { lrOut = (e.stdout || '') + (e.stderr || ''); }
   add('nlm-live-recall-early-exit', !lrOut.includes('NLM-RECALL'), 'nlm-live-recall did not early-exit silent when NLM unavailable (would burn timeout)');
+
+  // output-compressor (TASK#12): must NOT compress model-requested read tools. A >50KB Read is
+  // explicitly asked for — compressing it to a 600-char head/tail fragment is real degradation that
+  // breaks edit accuracy. Only UNSOLICITED Bash output gets capped. The hook replies via stdout:
+  // a compressed result includes "OUTPUT-COMPRESSED"; an untouched result yields {"decision":"approve"}.
+  const bigBody = 'x'.repeat(60 * 1024); // 60KB > 50KB cap
+  const compRead = run(COMPRESSOR, JSON.stringify({ tool_name: 'Read', tool_result: bigBody }));
+  add('compressor-spares-read', compRead.includes('"approve"') && !compRead.includes('OUTPUT-COMPRESSED'), 'expected large Read to pass through UNCOMPRESSED (model explicitly requested it)');
+  const compGrep = run(COMPRESSOR, JSON.stringify({ tool_name: 'Grep', tool_result: bigBody }));
+  add('compressor-spares-grep', compGrep.includes('"approve"') && !compGrep.includes('OUTPUT-COMPRESSED'), 'expected large Grep to pass through UNCOMPRESSED');
+  const compBash = run(COMPRESSOR, JSON.stringify({ tool_name: 'Bash', tool_result: bigBody }));
+  add('compressor-caps-bash', compBash.includes('OUTPUT-COMPRESSED') && compBash.includes('"modify"'), 'expected large UNSOLICITED Bash output to be compressed (context ceiling)');
+  add('drift-compressor-copies', sameFile(COMPRESSOR, join(AURA_H, 'output-compressor.mjs')), 'output-compressor copies DRIFTED (.claude vs auramaxing)');
 
   add('drift-router-copies', sameFile(ROUTER, join(AURA_H, 'rational-router-apex.mjs')), 'router copies DRIFTED (.claude vs auramaxing)');
   add('drift-prompt-engine-copies', sameFile(join(CLAUDE_H, 'prompt-engine.mjs'), PROMPT_ENGINE), 'prompt-engine copies DRIFTED');

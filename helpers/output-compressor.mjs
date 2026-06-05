@@ -10,7 +10,12 @@
  *   { "decision": "modify", "tool_result": "<compressed>" }  — replace output (if supported)
  *   { "decision": "approve" }                                — unchanged
  *
- * Applies only to read-heavy tools: Read, Grep, Glob, Bash.
+ * Applies ONLY to unsolicited Bash output (the one tool that can dump huge
+ * volumes the model didn't ask for — logs, installs, dumps). Never compresses
+ * model-requested read tools (Read/Grep/Glob/NotebookRead): when the model
+ * explicitly asks to read a >50KB file, returning a 600-char head/tail fragment
+ * is real degradation that breaks edit accuracy (finding #12). Those tools
+ * already have their own caller-controlled limits/offsets.
  * Never compresses Edit/Write results (would break downstream review).
  * Always exits 0. Fail-open on any error.
  */
@@ -74,8 +79,12 @@ async function main() {
       ? payload.tool_result
       : JSON.stringify(payload.tool_result || '');
 
-    // Only compress read-heavy tools
-    if (!['read', 'grep', 'bash', 'glob'].includes(toolName)) {
+    // Only compress UNSOLICITED Bash output. Model-requested read tools
+    // (Read/Grep/Glob/NotebookRead) are explicitly asked for — compressing a
+    // >50KB Read into a 600-char head/tail fragment is real degradation that
+    // breaks edit accuracy (finding #12). Those tools have caller-controlled
+    // limit/offset already; let the model manage its own read budget.
+    if (toolName !== 'bash') {
       console.log('{"decision":"approve"}'); process.exit(0);
     }
     if (!result || result.length <= OUTPUT_MAX_BYTES) {
