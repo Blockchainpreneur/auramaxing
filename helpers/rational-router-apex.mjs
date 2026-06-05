@@ -170,7 +170,7 @@ const RULES = [
   {
     id: 'new-feature',
     patterns: [
-      /\b(build|create|make|implement|add|develop|set up|scaffold|wire up)\b.{0,40}\b(feature|component|page|api|endpoint|module|system|service|function|integration|flow|screen|form|dashboard|auth|login|token|button|hook|route|model|schema|migration|webhook|queue|worker)\b/,
+      /\b(build|create|make|implement|add|develop|set up|scaffold|wire up)\b.{0,40}\b(feature|api|endpoint|module|system|service|function|integration|flow|auth|login|token|hook|route|model|schema|migration|webhook|queue|worker)\b/,
       /\bnew feature\b/,
       // Fallback: leading feature-verb + an object. Prevents silent-drop of the most common
       // feature phrasings ("build a … system", "add oauth login", "implement refresh tokens")
@@ -232,7 +232,12 @@ const RULES = [
 
   {
     id: 'design',
-    patterns: [/\b(design|ui|ux|component|css|layout|figma|tailwind|shadcn|dark mode|theme|dashboard)\b/],
+    patterns: [
+      /\b(design|ui|ux|component|css|layout|figma|tailwind|shadcn|theme|redesign|styling|dashboard|interface|dark mode)\b/,
+      // Second pattern so a strong UI prompt out-hits new-feature on the hits-sorted tiebreak
+      // ("build a dashboard UI … dark mode" was losing to new-feature at 1-1; now design scores 2).
+      /\b(dark mode|dashboard|landing page|hero section|navbar|sidebar|modal|responsive|animation|interface|micro-?interaction|design system)\b/,
+    ],
     skill: '/design-consultation → build → /design-review → /qa → /ship',
     label: 'Designing the UI',
     agents: ['coder', 'reviewer'],
