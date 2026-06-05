@@ -37,7 +37,7 @@ const COMPLEXITY = {
   // Dev tasks
   documentation:    5,  retro:      5,   monitor:       10,  memory:   10,
   'web-browse':     15, 'bug-fix':  35,  'code-review': 40,
-  refactor:         45, design:     45,  investigate:   50,
+  refactor:         45, design:     65,  investigate:   50,
   'deploy-ship':    55, performance:60,  planning:      65,
   'new-feature':    70, swarm:      75,  security:      80,  autoplan: 85,
 };
