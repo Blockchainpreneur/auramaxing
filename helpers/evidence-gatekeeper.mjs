@@ -21,7 +21,11 @@ const timeout = setTimeout(ALLOW, Number(process.env.AURA_GK_TIMEOUT_MS) || 1800
 // Source extensions that warrant verification when changed. Docs/config intentionally excluded.
 const SRC = /\.(tsx?|jsx?|mjs|cjs|vue|svelte|py|go|rs|rb|java|kt|swift|c|cc|cpp|h|hpp|php|css|scss|sql)$/i;
 // Bash commands that count as real verification.
-const VERIFY_CMD = /\b(test|vitest|jest|pytest|playwright|tsc|type-?check|typecheck|eslint|lint|build|cargo\s+(test|check|clippy)|go\s+test|ruff|mypy|pyright|node\s+--check|deno\s+(test|check)|rspec|phpunit|dotnet\s+test)\b/i;
+// Match real test/build/lint RUNNERS only. Unambiguous runners match anywhere; the generic verbs
+// (test/build/lint/check) match ONLY at command position (start, or after ; && || |) behind a real
+// runner like npm/yarn/pnpm/bun/make — so `echo test`, `cat tests/x`, `ls test/` no longer pass the
+// gate (the substring-bypass the 10x self-audit found at this line).
+const VERIFY_CMD = /\b(vitest|jest|pytest|playwright|tsc|eslint|ruff|mypy|pyright|rspec|phpunit)\b|\bcargo\s+(test|check|clippy)\b|\bgo\s+test\b|\bdotnet\s+test\b|\bdeno\s+(test|check)\b|\bnode\s+--(check|test)\b|(?:^|[;&|]\s*)(?:npm|yarn|pnpm|bun|make)\s+(?:run\s+)?(?:test|build|lint|type-?check|check)\b/i;
 // gstack/skills that count as verification.
 const VERIFY_SKILL = new Set(['qa', 'qa-only', 'review', 'cso', 'verify', 'investigate', 'design-review', 'benchmark', 'canary']);
 

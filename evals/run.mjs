@@ -85,6 +85,10 @@ function hooksSuite() {
   add('gatekeeper-allows-verified', gatekeeper([...editNoVerify, TOOL('Bash', { command: 'npm test' })], false).trim() === '', 'expected allow when tests ran');
   add('gatekeeper-loop-guard', gatekeeper(editNoVerify, true).trim() === '', 'expected allow when stop_hook_active (no loop)');
   add('gatekeeper-allows-docs', gatekeeper([U('edit readme'), TOOL('Edit', { file_path: '/x/README.md' })], false).trim() === '', 'expected allow for docs-only change');
+  // Regression for the substring-bypass found by the 10x audit: a command merely CONTAINING "test"
+  // (echo test, reading a test file) must NOT clear the gate — only real runners do.
+  add('gatekeeper-blocks-echo-test-bypass', gatekeeper([...editNoVerify, TOOL('Bash', { command: 'echo test' })], false).includes('"block"'), 'expected block: "echo test" is not a real verify command');
+  add('gatekeeper-blocks-cat-testfile-bypass', gatekeeper([...editNoVerify, TOOL('Bash', { command: 'cat tests/README.md' })], false).includes('"block"'), 'expected block: reading a test file is not verification');
 
   // prompt-engine does a slow LightRAG (Python) pass before emitting its block; AURA_PE_FAST skips
   // that non-deterministic I/O so the gate/structuring check is instant + stable (root-cause fix for
