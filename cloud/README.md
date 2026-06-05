@@ -40,6 +40,8 @@ That's it. The box is now an AURAMAXING agent-fleet node.
 
 ---
 
+> **Editing a hook helper?** The hooks execute `~/.claude/helpers/*.mjs` but the source lives in `~/auramaxing/helpers/*.mjs` — separate copies. After any repo-helper edit run `bash ~/auramaxing/cloud/deploy-helpers.sh` to push repo→runtime (only files present in both dirs are touched), then `node ~/auramaxing/evals/run.mjs` to confirm the `drift-*` tests stay green.
+
 ## Using it (from your Mac terminal, projects stay local)
 
 **Option A — just work on the big box** (simplest; solves the RAM ceiling):
