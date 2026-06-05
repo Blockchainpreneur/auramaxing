@@ -89,6 +89,7 @@ function hooksSuite() {
   // (echo test, reading a test file) must NOT clear the gate — only real runners do.
   add('gatekeeper-blocks-echo-test-bypass', gatekeeper([...editNoVerify, TOOL('Bash', { command: 'echo test' })], false).includes('"block"'), 'expected block: "echo test" is not a real verify command');
   add('gatekeeper-blocks-cat-testfile-bypass', gatekeeper([...editNoVerify, TOOL('Bash', { command: 'cat tests/README.md' })], false).includes('"block"'), 'expected block: reading a test file is not verification');
+  add('gatekeeper-allows-eval-harness', gatekeeper([...editNoVerify, TOOL('Bash', { command: 'node ~/auramaxing/evals/run.mjs' })], false).trim() === '', 'expected allow: the project eval harness IS verification');
 
   // prompt-engine does a slow LightRAG (Python) pass before emitting its block; AURA_PE_FAST skips
   // that non-deterministic I/O so the gate/structuring check is instant + stable (root-cause fix for
