@@ -1,0 +1,9 @@
+# AURAMAXING 10x self-audit panel. Each auditor READS the real code under /root/auramaxing/ on the box.
+# Usage: orchestra.sh "<audit goal>" cloud/roles/audit-10x.roles
+Autopilot :: Read /root/auramaxing/helpers/rational-router-apex.mjs + prompt-engine.mjs + the hooks. Find the highest-leverage 10x in routing, prompt-enrichment, thinking-depth, and the phased loop. Cite file:line. Flag overhead/noise that adds latency without quality.
+BoxDelegation :: Read /root/auramaxing/cloud/ (acode.sh, fleet.sh, swarm.sh, orchestra.sh, orchestra-driver.sh, lib.sh). How to 10x the box delegation — true parallelism within the Max-quota ceiling, caching, model-tiering, batch, a persistent queue, resilience gaps, and what's missing. Cite file:line.
+Memory :: Read the memory/learnings/NLM/LightRAG wiring (helpers + ~/.auramaxing). 10x recall + reuse: what is actually wired and load-bearing vs theater? Cite file:line.
+EvalsQuality :: Read /root/auramaxing/evals + the gatekeeper / anti-laziness hooks. 10x correctness: are the gates real ground-truth, or Claude-judging-Claude? What would make "done" incorruptible? Cite file:line.
+CostQuota :: The binding constraint is Claude Max quota, NOT hardware. Find the 10x in output-per-quota: prompt caching, model tiering, Batch API, fan-out/recursion caps, dedup of redundant agent work. Concrete, with the math.
+Skeptic :: Adversarial. What in auramaxing is fake / overengineered / redundant / cargo-cult (claude-flow surface, dead hooks, unverified benchmarks, duplicate doctrine)? What should be CUT or simplified to enable a REAL 10x? Be ruthless; cite file:line.
+Design :: Read the design-supremacy pipeline + design skills. 10x the front-end/UX output quality — what's the single change that most raises the floor on every UI the system ships?

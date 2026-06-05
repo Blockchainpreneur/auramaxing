@@ -4,6 +4,7 @@
 # Single layer of shell quoting (no ssh/bash-lc nesting) → prompts are built cleanly here.
 # Stages: 1) fan-out specialists (parallel) → 2) adversarial judges → 3) synthesizer.
 set -uo pipefail
+[ -f run.env ] && { set -a; . ./run.env; set +a; }   # N/TO/JUDGES/LIGHT/RESUME/MODEL — set when launched detached in tmux
 
 . "$HOME/.nvm/nvm.sh" 2>/dev/null || true
 CLAUDE="$(command -v claude)" || { echo "claude not found on box"; exit 1; }

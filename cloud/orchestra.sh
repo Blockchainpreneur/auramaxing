@@ -82,8 +82,20 @@ rsync -az -e "ssh $AURA_SESSION_SSH" "$TMP_ROLES" "$HOST:~/$REMOTE/roles.txt"
 # box reading GOAL.txt/roles.txt, so there is NO ssh→bash-lc→parallel nested-quote minefield.
 rsync -az -e "ssh $AURA_SESSION_SSH" \
   "$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)/orchestra-driver.sh" "$HOST:~/$REMOTE/driver.sh"
-ssh $AURA_SESSION_SSH "$HOST" "cd ~/$REMOTE && N=$N TO=$TO JUDGES=$JUDGES LIGHT=$LIGHT RESUME=$RESUME MODEL='$MODEL' bash driver.sh" \
-  || echo "▸ driver returned non-zero — pulling whatever exists"
+# Params via a clean env file (no nested-quote hell) — the driver sources run.env.
+printf 'N=%s\nTO=%s\nJUDGES=%s\nLIGHT=%s\nRESUME=%s\nMODEL=%s\n' "$N" "$TO" "$JUDGES" "$LIGHT" "$RESUME" "$MODEL" \
+  | ssh $AURA_SESSION_SSH "$HOST" "cat > ~/$REMOTE/run.env"
+# RESILIENCE: a big fleet run can outlive one SSH — run the driver DETACHED in tmux so a dropped/reset
+# connection never kills it (the lesson from acode). Poll the sentinel over the warm multiplexed conn.
+TMUX_S="orch-$(printf %s "$RUN" | tr '.' '-')"
+ssh $AURA_SESSION_SSH "$HOST" "cd ~/$REMOTE && rm -f out/.DONE && tmux new-session -d -s '$TMUX_S' 'cd ~/$REMOTE && bash driver.sh > driver.log 2>&1; touch out/.DONE'"
+echo "▸ fleet running detached in tmux ($TMUX_S) — resilient to SSH drops; polling…"
+while :; do
+  ssh $AURA_SSH_OPTS "$HOST" "test -f ~/$REMOTE/out/.DONE" 2>/dev/null && break
+  ssh $AURA_SSH_OPTS "$HOST" "tmux has-session -t '$TMUX_S' 2>/dev/null" || { ssh $AURA_SSH_OPTS "$HOST" "test -f ~/$REMOTE/out/.DONE" 2>/dev/null || echo "▸ tmux ended without sentinel — pulling whatever exists"; break; }
+  sleep 12
+done
+ssh $AURA_SSH_OPTS "$HOST" "tail -4 ~/$REMOTE/driver.log 2>/dev/null" || true
 
 mkdir -p "$HOME/orchestra-results/$RUN"
 rsync -az -e "ssh $AURA_SESSION_SSH" "$HOST:~/$REMOTE/out/" "$HOME/orchestra-results/$RUN/" 2>/dev/null || true
