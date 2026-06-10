@@ -1,20 +1,20 @@
 {"id": "design-dashboard", "prompt": "build a dashboard UI with charts and dark mode", "expect_task": "design", "must_include": ["MUST-SKILLS", "front-10x", "PHASED EXCELLENCE LOOP"], "must_not": ["mcp__figma__", "mcp__github__"]}
 {"id": "design-landing", "prompt": "design a landing page hero section", "expect_task": "design", "must_include": ["MUST-SKILLS", "hallmark"], "must_not": ["mcp__figma__"]}
-{"id": "feature-auth", "prompt": "build a full authentication system with oauth", "expect_task": "new-feature", "must_include": ["serena", "PHASED EXCELLENCE LOOP"], "must_not": ["mcp__supabase__", "mcp__github__"]}
-{"id": "bugfix-login", "prompt": "fix the broken login 500 error", "expect_task": "bug-fix", "must_include": ["serena", "investigate"], "must_not": ["mcp__sentry__"]}
+{"id": "feature-auth", "prompt": "build a full authentication system with oauth", "expect_task": "new-feature", "must_include": ["Explore", "PHASED EXCELLENCE LOOP"], "must_not": ["mcp__supabase__", "mcp__github__"]}
+{"id": "bugfix-login", "prompt": "fix the broken login 500 error", "expect_task": "bug-fix", "must_include": ["Explore", "investigate"], "must_not": ["mcp__sentry__"]}
 {"id": "security-audit", "prompt": "run a security audit for owasp vulnerabilities", "expect_task": "security", "must_include": ["cso"], "must_not": ["mcp__supabase__"]}
 {"id": "deploy", "prompt": "deploy and ship to production", "expect_task": "deploy-ship", "must_include": ["ship", "gh CLI"], "must_not": ["mcp__github__"]}
 {"id": "research", "prompt": "research the best vector database options", "expect_task": "research", "must_include": ["deepwiki"], "must_not": ["mcp__firecrawl__"]}
 {"id": "refactor", "prompt": "refactor and clean up the auth module", "expect_task": "refactor", "must_include": ["review"], "must_not": []}
 {"id": "marketing", "prompt": "write landing page copy and seo content", "expect_task": "write-content", "must_include": ["MARKETING SKILLS", "copywriting"], "must_not": []}
-{"id": "investigate", "prompt": "why does the checkout fail intermittently", "expect_task": "bug-fix", "must_include": ["serena"], "must_not": ["mcp__sentry__"]}
+{"id": "investigate", "prompt": "why does the checkout fail intermittently", "expect_task": "bug-fix", "must_include": ["Explore"], "must_not": ["mcp__sentry__"]}
 {"id": "trivial-greeting", "prompt": "hi", "expect_task": "", "must_include": [], "must_not": ["ORCHESTRATE", "EXECUTE"]}
 {"id": "plan", "prompt": "plan the sprint roadmap and architecture", "expect_task": "planning", "must_include": ["plan-eng-review"], "must_not": ["mcp__n8n__"]}
 {"id": "design-cinematic-hero", "prompt": "design a cinematic landing page hero with motion", "expect_task": "design", "must_include": ["CINEMATIC", "front-10x", "TOURNAMENT IS ALWAYS ON"], "must_not": ["mcp__figma__", "mcp__github__"]}
 {"id": "design-homepage-hero", "prompt": "design a hero section for our homepage", "expect_task": "design", "must_include": ["front-10x", "hallmark", "design-kit"], "must_not": ["mcp__figma__"]}
 {"id": "design-saas-dashboard", "prompt": "build a SaaS dashboard interface with dark mode", "expect_task": "design", "must_include": ["CINEMATIC", "MUST-SKILLS", "PHASED EXCELLENCE LOOP"], "must_not": ["mcp__figma__"]}
 {"id": "feature-notifications", "prompt": "build a full notification system with email and push", "expect_task": "new-feature", "must_include": ["PHASED EXCELLENCE LOOP", "WITH EVIDENCE"], "must_not": ["mcp__supabase__", "mcp__github__"]}
-{"id": "bugfix-nullptr", "prompt": "fix the null pointer error in the checkout handler", "expect_task": "bug-fix", "must_include": ["serena", "investigate", "PHASED EXCELLENCE LOOP"], "must_not": ["mcp__sentry__"]}
+{"id": "bugfix-nullptr", "prompt": "fix the null pointer error in the checkout handler", "expect_task": "bug-fix", "must_include": ["Explore", "investigate", "PHASED EXCELLENCE LOOP"], "must_not": ["mcp__sentry__"]}
 {"id": "bugfix-memleak", "prompt": "fix the memory leak in the websocket connection", "expect_task": "bug-fix", "must_include": ["investigate", "WITH EVIDENCE"], "must_not": ["mcp__sentry__"]}
 {"id": "security-authflow", "prompt": "run a security audit on our authentication flow", "expect_task": "security", "must_include": ["cso", "PHASED EXCELLENCE LOOP"], "must_not": ["mcp__github__"]}
 {"id": "deploy-prod-monitor", "prompt": "deploy the app to production and monitor it", "expect_task": "deploy-ship", "must_include": ["canary", "cso"], "must_not": ["mcp__github__"]}

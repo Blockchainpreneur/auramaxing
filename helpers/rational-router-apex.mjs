@@ -162,7 +162,7 @@ const RULES = [
       /\b(write.{0,10}test|run.{0,10}test|add.{0,10}test|spec\.ts|\.spec\.)\b/i,
       /\b(click.{0,20}button|fill.{0,20}form|screenshot|visual check)\b/i,
     ],
-    skill: 'npx playwright test → agent-browser for long flows',
+    skill: 'npx playwright test → browser-tab.mjs (CDP) for long flows',
     label: 'Testing with Playwright',
     agents: ['tester', 'coder', 'reviewer'],
   },
@@ -406,18 +406,18 @@ const ENRICHMENTS = {
 const TOOL_RECS = {
   'new-feature': [
     'gstack: /office-hours → /plan-eng-review → build → /review → /qa → /cso → /ship',
-    'serena (MCP): find_symbol/find_references/atomic edits before hand-editing',
-    'codegraph (MCP): token-cheap repo queries on large codebases (codegraph init first)',
+    'Grep/Glob + the Explore agent: trace symbols/references across the codebase before hand-editing',
+    'the Explore agent: token-cheap fan-out search over large codebases (returns conclusions, not file dumps)',
     'deepwiki (MCP): understand any external/OSS dependency without cloning',
     'spec-kit: `specify init` then /speckit.specify→plan→tasks for non-trivial scope',
     'playwright CLI: npx playwright test for E2E tests',
     'mcp__shadcn__: UI component library (check registry first)',
     'mcp__context7__: latest framework docs before coding',
-    'sequential-thinking: plan complex architecture step-by-step',
+    'ultrathink (native extended thinking): plan complex architecture step-by-step — no tool needed',
   ],
   'bug-fix': [
     'gstack: /investigate → fix → /review → /qa',
-    'serena (MCP): trace symbol references to find the real root cause',
+    'Grep + the Explore agent: trace symbol references to find the real root cause',
     'deepwiki (MCP): check an external library’s behavior without cloning it',
     'playwright CLI: npx playwright test to reproduce in real browser',
     'mcp__context7__: check if it is a known framework issue',
@@ -442,13 +442,13 @@ const TOOL_RECS = {
   ],
   'e2e-testing': [
     'playwright CLI: npx playwright test for all browser testing',
-    'agent-browser: for long automation chains (10+ steps, 5.7x token savings)',
+    'browser-tab.mjs (CDP): node ~/auramaxing/scripts/browser-tab.mjs for the user\'s real Chrome session on :9222',
     'gstack: /qa for full QA workflow with bug fixes',
   ],
   security: [
     'gstack: /cso for OWASP Top 10 + STRIDE audit',
-    'serena (MCP): trace auth/trust-boundary code paths',
-    'sequential-thinking: systematic threat model analysis',
+    'Grep + the Explore agent: trace auth/trust-boundary code paths',
+    'ultrathink: systematic threat-model analysis — native extended thinking',
   ],
   performance: [
     'gstack: /benchmark for baseline measurement',
@@ -463,19 +463,19 @@ const TOOL_RECS = {
     'gstack: /review → /qa after refactoring',
     'playwright CLI: npx playwright test for regression verification',
     'mcp__context7__: check framework best practices',
-    'sequential-thinking: plan refactoring steps to avoid breakage',
+    'ultrathink: plan refactoring steps to avoid breakage — native extended thinking',
   ],
   investigate: [
     'gstack: /investigate for systematic root-cause debugging',
-    'serena (MCP): trace symbol references to the real root cause',
+    'Grep + the Explore agent: trace symbol references to the real root cause',
     'deepwiki (MCP): understand an external/OSS library you depend on (no clone needed)',
     'playwright CLI: npx playwright test to reproduce if UI-related',
     'mcp__context7__: check framework docs for known issues',
-    'sequential-thinking: structured reasoning for complex bugs',
+    'ultrathink: structured reasoning for complex bugs — native extended thinking',
   ],
   'web-browse': [
     'gstack: /browse for fast web research',
-    'agent-browser: for interactive browsing with low token cost',
+    'browser-tab.mjs (CDP): interactive browsing in the user\'s real Chrome (:9222), low token cost',
     'firecrawl CLI: extract clean data from any URL (CLI-first, not MCP)',
   ],
   'write-content': [
@@ -485,7 +485,7 @@ const TOOL_RECS = {
   ],
   'brain-dump': [
     'gstack: extract decisions → prioritize → structure',
-    'sequential-thinking: organize thoughts step-by-step',
+    'ultrathink: organize thoughts step-by-step — native extended thinking',
   ],
   strategy: [
     'gstack: /office-hours for strategic review',
@@ -506,7 +506,7 @@ const TOOL_RECS = {
   planning: [
     'gstack: /office-hours → /plan-ceo-review → /plan-eng-review',
     'spec-kit: `specify` for spec-driven decomposition into tasks',
-    'sequential-thinking: structured planning with revision',
+    'ultrathink: structured planning with revision — native extended thinking',
   ],
 };
 
@@ -740,12 +740,12 @@ async function main() {
     // Deep thinking mode: delegate complex reasoning to structured approach
     if (complexity >= 50) {
       directives.push(`THINK (ultrathink): This is a ${complexity}% complexity task — engage EXTENDED THINKING (ultrathink) NOW, before any edit/write/bash-that-changes-state. Reason deeply through: 1) Read every relevant file completely 2) Map the full dependency chain 3) Enumerate every edge case + failure mode 4) Compare 2-3 candidate approaches and pick the best WITH explicit reasons 5) State the minimal change set. CLARITY GATE — do NOT write a single line of code until you can explain the full end-to-end approach and WHY it is correct. Absolute clarity + a hardened strategy FIRST; code second.`);
-      directives.push(`RETRIEVE-FIRST + DELEGATE (token-efficient orchestration): Before any edit, RETRIEVE the minimal high-signal context (codegraph_context / serena / memory recall) — never grep-and-read whole files when the index answers it. DELEGATION (apply the \`aura-delegate\` skill — the full strict Fable→Sonnet protocol): YOU own the decision boundaries — plan, spec, accept/reject, fuse, and the few CRUCIAL edits (stay token-efficient). Push BULK labor (drafts, broad research, exploration, mechanical edits) to cheaper Sonnet workers (Task tool / box fleet) under a STRICT harness: one atomic fully-specified sub-task each, shipped WITH its acceptance test; REJECT any worker output unless a deterministic gate passes (verify OUTCOMES not utterances). Never trust a Sonnet return as-is — gate it, or re-spec and re-run it.`);
+      directives.push(`RETRIEVE-FIRST + DELEGATE (token-efficient orchestration): Before any edit, RETRIEVE the minimal high-signal context (Grep/Glob/Explore + memory recall) — never grep-and-read whole files when the index answers it. DELEGATION (apply the \`aura-delegate\` skill — the full strict Fable→Sonnet protocol): YOU own the decision boundaries — plan, spec, accept/reject, fuse, and the few CRUCIAL edits (stay token-efficient). Push BULK labor (drafts, broad research, exploration, mechanical edits) to cheaper Sonnet workers (Task tool / box fleet) under a STRICT harness: one atomic fully-specified sub-task each, shipped WITH its acceptance test; REJECT any worker output unless a deterministic gate passes (verify OUTCOMES not utterances). Never trust a Sonnet return as-is — gate it, or re-spec and re-run it.`);
     }
   } else {
     directives.push(`task:${primary.id} model:${tier} → ${primary.skill}`);
     if (complexity >= 30) directives.push(`THINK (think hard): before editing, think hard — read the relevant files, CONFIRM the root cause / API shape (never guess), weigh the options, and state the change set. Reach clarity before code.`);
-    if (complexity >= 30) directives.push(`RETRIEVE-FIRST: before editing, pull the minimal relevant context via codegraph_context / serena / memory recall — don't grep+read whole files when the index answers it.`);
+    if (complexity >= 30) directives.push(`RETRIEVE-FIRST: before editing, pull the minimal relevant context via Grep/Glob/Explore + memory recall — don't grep+read whole files when the index answers it.`);
   }
   // AUTO-LEDGER: intercept EVERY substantial action task (complexity ≥30) and build the non-stop loop.
   // Session-scoped completion ledger → the evidence-gatekeeper Gate 2 refuses to end the turn until the
@@ -762,6 +762,11 @@ async function main() {
       }, null, 2));
     }
   } catch { /* non-blocking */ }
+  // GOAL LOOP (visible) — turn EVERY action task into a /goal-focused loop the user can watch.
+  // The ledger (above) is the durable Gate-2 tracker; the native task list is the VISIBLE step tracker.
+  if (complexity >= 30 && ACTION_VERBS.test(prompt)) {
+    directives.push('GOAL LOOP (VISIBLE, MANDATORY): treat this prompt as a /goal. FIRST tool call of the turn = TaskCreate with one task per step of the loop (audit · investigate · plan · execute · verify · …), so the user SEES the step list. As you work: set exactly one task in_progress, mark it completed with its evidence the moment its gate passes, then advance. Keep the list live (add steps as the loop discovers them); never finish with a step still in_progress. This visible list + the durable ledger are the two trackers — the turn ends only when every step is completed AND the ledger deliverable is marked done.');
+  }
   if (enrichLine) directives.push(enrichLine);
   if (toolsLine)  directives.push(toolsLine);
 
@@ -770,7 +775,7 @@ async function main() {
   // scaled to complexity, and loop to the exit bar. Doctrines carry the full detail.
   if (complexity >= 50) {
     directives.push('PHASED EXCELLENCE LOOP (MANDATORY; gstack IMPLICIT): decompose into PHASES (TaskCreate), auto-injecting tool/repo/skill SEARCH + research + EXAMPLES sub-tasks. ' +
-      'Each phase: AUDIT → INVESTIGATE (read all files, verify APIs via context7/codegraph/serena/deepwiki, never guess) → PLAN → SELECT THE BEST (compare candidates via ToolSearch + CAPABILITIES.md + WebSearch; install FREE on a gap) — all under EXTENDED THINKING (ultrathink). CLARITY GATE (hard): no code until you can explain the full end-to-end approach and WHY it is correct. Then EXECUTE the complete thing — ROOT-CAUSE only, no placeholders. ' +
+      'Each phase: AUDIT → INVESTIGATE (read all files, verify APIs via context7/deepwiki + Grep/Explore, never guess) → PLAN → SELECT THE BEST (compare candidates via ToolSearch + CAPABILITIES.md + WebSearch; install FREE on a gap) — all under EXTENDED THINKING (ultrathink). CLARITY GATE (hard): no code until you can explain the full end-to-end approach and WHY it is correct. Then EXECUTE the complete thing — ROOT-CAUSE only, no placeholders. ' +
       'After each phase AND after all phases: TEST + VERIFY + REVIEW WITH EVIDENCE — RUN tests/build/typecheck/lint (or /qa + /review + /cso), QUOTE output, root-cause file:line, add regression test, then ADVERSARIALLY verify (skeptic pass; default NOT-done if unsure); SCORE 0–100, LOOP until 100/100 before advancing. ' +
       'NEVER stop before proven greatness. BANNED: "should work"/"I think"/done-without-running/TODO — a claim without evidence is FALSE. Compose per phase: gstack + MCP + parallel subagents/Agent Teams (cap 3-5) or a Workflow with adversarial verify. Full doctrine: ~/auramaxing/docs/ORCHESTRATION.md');
   } else if (complexity >= 30) {

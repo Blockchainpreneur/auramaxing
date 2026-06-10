@@ -5,6 +5,13 @@ All notable changes to Auramaxing are documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.6.0 — 2026-06-10
+
+- **Visible goal-loop on every action prompt** — router now turns every action task (complexity ≥30) into a `/goal`-focused loop: the first tool call must be a TaskCreate step-list (audit·investigate·plan·execute·verify), one step in_progress at a time, each marked complete with evidence as its gate passes. The visible task list + the durable ledger (Gate 2) are the two trackers; the turn ends only when every step is done.
+- **Context lean ceiling 35%→55% + suppression flipped** — `context-threshold-monitor` ceiling raised to 55% (soft 45%); the old "do NOT recommend /clear, wait for native auto-compact (~95%)" rule — the actual reason context never stayed lean — is replaced with a one-line safe `/clear` recommendation at 55% (work is staged + auto-resumes). A hook cannot press the button; this makes the user/native-compact trigger fire at the lean ceiling instead of ~95%.
+- **Phantom-tool purge** — router recommended 4 uninstalled tools on a large fraction of prompts: `serena` (5×), `codegraph` (4×), `agent-browser` (2×), `sequential-thinking` (6×). All 17 references replaced with real, always-available equivalents (Grep/Glob + Explore agent for code/symbol nav, browser-tab.mjs CDP for browsing, native ultrathink for sequential reasoning). Eval cases that hard-coded the ghost names updated to assert the real tools.
+- **evals 48/48**, runtime copies synced.
+
 ## v1.5.0 — 2026-06-10
 
 - **Nightly Engine** — autonomous overnight improvement loop on the box (02:00–08:00 America/Cancun, systemd `aura-nightly.timer` @ 07:00 UTC, `Persistent=true`): per project — fresh clone → AUDIT (Sonnet, hooks OFF) → FIX (≤3/round, ≤4 rounds) → deterministic test gate (fail ⇒ revert) → commit → push to `aura/nightly-<date>` (never main). Zero Mac involvement.

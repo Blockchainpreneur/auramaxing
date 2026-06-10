@@ -19,8 +19,8 @@ const HANDOFF_PATH = join(AUR, 'pending-handoff.json');
 const SDR_PATH = join(AUR, 'sdr-active.md');
 const NB_ID_FILE = join(AUR, 'nlm-notebook-id');
 const FLAG_PATH = `/tmp/auramaxing-handoff-${process.ppid}.flag`;
-const THRESHOLD_USED_PCT = Number(process.env.AURA_CTX_THRESHOLD_PCT || 35);
-const SOFT_THRESHOLD_PCT = Number(process.env.AURA_CTX_SOFT_THRESHOLD_PCT || 28);
+const THRESHOLD_USED_PCT = Number(process.env.AURA_CTX_THRESHOLD_PCT || 55);
+const SOFT_THRESHOLD_PCT = Number(process.env.AURA_CTX_SOFT_THRESHOLD_PCT || 45);
 
 // Model→window map for human-readable token counts in advisories.
 // Calibration itself is runtime-driven (statusline reads
@@ -282,7 +282,7 @@ async function main() {
 
   process.stdout.write([
     '[CONTEXT-AUTO-REFRESH]',
-    `Context at ${handoff.contextUsedPct}% (${fmtTokenSummary(handoff.contextUsedPct, detectedModel)}) — AURAMAXING ${THRESHOLD_USED_PCT}% threshold. The refresh is AUTOMATIC (native auto-compact). NOTHING depends on the user.`, '',
+    `Context at ${handoff.contextUsedPct}% (${fmtTokenSummary(handoff.contextUsedPct, detectedModel)}) — AURAMAXING ${THRESHOLD_USED_PCT}% LEAN CEILING reached. Everything below is already staged, so a clear here is SAFE and resumes automatically.`, '',
     `✅ Handoff bundle staged → ~/.auramaxing/pending-handoff.json`,
     `✅ SDR staged → ~/.auramaxing/sdr-active.md`,
     `✅ ${prdNote}`,
@@ -292,7 +292,7 @@ async function main() {
     `  2. WRITE/REFRESH a checkpoint doc with a self-contained resume plan + explicit "FIRST NEXT ACTION"${checkpointDoc ? ` (found ${checkpointDoc} — refresh it)` : ' (none found — create docs/CHECKPOINT.md)'}.`,
     '  3. UPDATE persistent memory (~/.claude/projects/.../memory/) with this session\'s decisions/learnings.',
     '  4. BACKFILL the next action: write your one-line first-next-action to ~/.auramaxing/next-action.txt.',
-    'Do NOT recommend, suggest, or wait for /clear or /compact — the harness auto-compacts on its own. When it fires, PreCompact folds this bundle + the anticipated next task into the post-compact context and AUTO-RESUMES the work. The user is never the trigger.',
+    'KEEP CONTEXT LEAN — at this 55% ceiling, after the 4 checkpoint steps above, tell the user in ONE line: "Context at ' + handoff.contextUsedPct + '% — run /clear to stay lean; your work is checkpointed and auto-resumes." A hook cannot press the button, so the user (or native auto-compact) is the trigger; but everything is staged, so clearing NOW is safe and is the only way to actually hold context under 55%. PreCompact/PostCompact also fold this same bundle in on native compaction and AUTO-RESUME. Do not block on it — surface the one-liner, finish the current sub-task, keep working.',
     'The handoff preserves: last prompt, PRD, git state, edited files, checkpoint-doc pointer, next-action, anticipated next task, recent decisions.',
     '[/CONTEXT-AUTO-REFRESH]',
   ].join('\n') + '\n');
