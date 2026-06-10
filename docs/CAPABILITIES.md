@@ -3,7 +3,7 @@
 > Single source of truth of every element the Aura autopilot can combine. The router
 > (`rational-router-apex.mjs`) points here; the doctrines (`ORCHESTRATION.md`,
 > `DESIGN-SUPREMACY.md`) govern HOW to combine them. Goal: intelligently compose ANY
-> subset, adjusted to the prompt, for a 100x output.
+> subset, adjusted to the prompt, for the best achievable output quality per token.
 >
 > v1.0 · 2026-05-29 · All entries below are FREE (no paid API). Key-gated items live at
 > the bottom, clearly flagged.
@@ -88,5 +88,5 @@ Tailwind v4 + shadcn (Base UI backend) · **Geist/Inter via Fontsource** (`@font
 ---
 ## Key-gated (need user API keys — DO NOT assume; ask first)
 Exa (neural search) · v0 API · Mobbin MCP · E2B/Vercel sandbox ·
-Magic Patterns · Builder.io/Subframe · Paper MCP. When one would 10x the task, name it and ask for the key.
+Magic Patterns · Builder.io/Subframe · Paper MCP. When one would materially improve the task, name it and ask for the key.
 (Figma deliberately excluded — user's call; design-EXTRACT from reference sites + DESIGN.md tokens replace it.)
