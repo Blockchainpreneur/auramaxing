@@ -20,6 +20,7 @@ set -euo pipefail
 REPO_DIR="$HOME/auramaxing"
 HELPERS_DIR="$HOME/.claude/helpers"
 CLAUDE_DIR="$HOME/.claude"
+KEEP_CLAUDE_MD=false
 BOLD='\033[1m'; GREEN='\033[0;32m'; CYAN='\033[0;36m'
 YELLOW='\033[1;33m'; RED='\033[0;31m'; RESET='\033[0m'
 
@@ -159,14 +160,25 @@ install_settings() {
 
   if $IS_FRESH; then
     # stdout = pure JSON only (no status messages — captured by apply_settings)
+    # Use rendered template if available; otherwise fall back to inline defaults
     python3 - <<'PYEOF'
-import json, os
+import json, os, sys
+
+tmpl_path = os.environ.get("_CM_RENDERED_TEMPLATE", "")
+if tmpl_path and os.path.exists(tmpl_path):
+    try:
+        with open(tmpl_path) as f:
+            settings = json.load(f)
+        print(json.dumps(settings, indent=2))
+        sys.exit(0)
+    except Exception:
+        pass  # fall through to inline defaults
+
 pii   = os.environ["_CM_PII_CMD"]
 qg    = os.environ["_CM_QG_CMD"]
 rr    = os.environ["_CM_RR_CMD"]
 ss_h  = os.environ["_CM_SS_CMD"]
 ssd   = os.environ["_CM_SSD_CMD"]
-ruflo = os.environ["_CM_RUFLO_CMD"]
 ptu   = os.environ["_CM_PTU_CMD"]
 tc    = os.environ["_CM_TC_CMD"]
 stop  = os.environ["_CM_STOP_CMD"]
@@ -191,13 +203,11 @@ settings = {
     ],
     "Stop": [
       {"hooks": [{"type": "command", "command": tc,   "timeout": 2000}]},
-      {"hooks": [{"type": "command", "command": stop, "timeout": 2000}]},
-      {"hooks": [{"type": "command", "command": defh, "timeout": 3000}]}
+      {"hooks": [{"type": "command", "command": stop, "timeout": 2000}]}
     ],
     "SessionStart": [
       {"hooks": [{"type": "command", "command": ss_h,  "timeout": 3000}]},
-      {"hooks": [{"type": "command", "command": ssd,   "timeout": 2000}]},
-      {"hooks": [{"type": "command", "command": ruflo, "timeout": 5000}]}
+      {"hooks": [{"type": "command", "command": ssd,   "timeout": 2000}]}
     ]
   }
 }
@@ -221,6 +231,8 @@ ptu   = os.environ["_CM_PTU_CMD"]
 tc    = os.environ["_CM_TC_CMD"]
 stop  = os.environ["_CM_STOP_CMD"]
 path  = os.environ["_CM_SETTINGS"]
+home  = os.environ.get("HOME", "")
+ug_cmd = f"export PATH=\"$HOME/.nvm/versions/node/v$(cat $HOME/.nvm/alias/default 2>/dev/null | tr -d '[:space:]' | sed 's/^v//')/bin:/usr/local/bin:/usr/bin:/bin:$PATH\" && node ~/.claude/helpers/update-gate.mjs 2>/dev/null || true"
 
 with open(path) as f:
     settings = json.load(f)
@@ -255,6 +267,10 @@ if not has_hook(usp, "rational-router-apex"):
     hooks["UserPromptSubmit"] = [b for b in usp if not any(
         "rational-router" in h.get("command", "") for h in b.get("hooks", []))]
     hooks["UserPromptSubmit"].insert(0, {"hooks": [{"type": "command", "command": rr, "timeout": 3000}]})
+# update-gate — always first in UserPromptSubmit
+usp2 = hooks["UserPromptSubmit"]
+if not has_hook(usp2, "update-gate"):
+    hooks["UserPromptSubmit"].insert(0, {"hooks": [{"type": "command", "command": ug_cmd, "timeout": 2000}]})
 
 # PostToolUse
 ptu_hooks = hooks.setdefault("PostToolUse", [])
@@ -306,14 +322,24 @@ apply_settings() {
   local BAK="$SETTINGS.bak.$(date +%s)"
   # Backup BEFORE any writes
   [ -f "$SETTINGS" ] && cp "$SETTINGS" "$BAK"
+
+  # Render the setup/settings.json template: replace __HOME__ with $HOME
+  local RENDERED_TEMPLATE
+  RENDERED_TEMPLATE=$(mktemp)
+  if [ -f "$REPO_DIR/setup/settings.json" ]; then
+    sed "s|__HOME__|$HOME|g" "$REPO_DIR/setup/settings.json" > "$RENDERED_TEMPLATE"
+    export _CM_RENDERED_TEMPLATE="$RENDERED_TEMPLATE"
+  fi
+
   # Capture output FIRST, then write — avoids truncating the file before Python reads it
   local TMP
   TMP=$(mktemp)
   if install_settings > "$TMP" 2>/dev/null && python3 -c "import json; json.load(open('$TMP'))" 2>/dev/null; then
     mv "$TMP" "$SETTINGS"
+    rm -f "$RENDERED_TEMPLATE"
     ok "settings.json valid"
   else
-    rm -f "$TMP"
+    rm -f "$TMP" "$RENDERED_TEMPLATE"
     if [ -f "$BAK" ]; then
       cp "$BAK" "$SETTINGS"
       warn "settings.json merge failed — restored backup"
@@ -336,9 +362,21 @@ install_claude_md() {
     return
   fi
 
-  [ -f "$DST" ] && cp "$DST" "$DST.bak.$(date +%s)" 2>/dev/null || true
+  # --keep-claude-md: preserve existing file, skip overwrite
+  if $KEEP_CLAUDE_MD && [ -f "$DST" ]; then
+    ok "CLAUDE.md preserved (--keep-claude-md flag set)"
+    return
+  fi
+
+  # Backup any pre-existing different CLAUDE.md before overwriting
+  if [ -f "$DST" ] && ! diff -q "$SRC" "$DST" >/dev/null 2>&1; then
+    local BAK="$DST.bak.$(date +%s)"
+    cp "$DST" "$BAK"
+    info "Previous CLAUDE.md backed up → $BAK"
+  fi
+
   cp "$SRC" "$DST"
-  ok "CLAUDE.md installed globally (from $(basename $SRC))"
+  ok "CLAUDE.md installed globally (from $(basename "$SRC"))"
 }
 
 # ── 7. Ruflo — Enterprise swarm orchestration ─────────────────────────────────
@@ -627,6 +665,14 @@ install_lightrag_index() {
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 main() {
+  # Argument parsing
+  for arg in "$@"; do
+    case "$arg" in
+      --keep-claude-md) KEEP_CLAUDE_MD=true ;;
+      *) warn "Unknown flag: $arg (ignored)" ;;
+    esac
+  done
+
   print_header
 
   step "1/14 Checking OS"

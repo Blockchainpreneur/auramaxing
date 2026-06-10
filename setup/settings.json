@@ -6,16 +6,7 @@
   "permissions": {
     "defaultMode": "bypassPermissions",
     "additionalDirectories": [
-      "/Users/macbook/auramaxing",
-      "/Users/macbook/MAXXING",
-      "/Users/macbook/Claudecode Tune",
-      "/Users/macbook/claudemax",
-      "/Users/macbook/code/actions.xyz",
-      "/Users/macbook/Downloads/econ",
-      "/Users/macbook/Downloads/econ 2",
-      "/Users/macbook/expert",
-      "/Users/macbook/orchids-projects/orchids-sense-charity",
-      "/Users/macbook/orchids-projects/orchids-sense-charity-site"
+      "__HOME__/auramaxing"
     ]
   },
   "statusLine": {
@@ -46,6 +37,15 @@
       }
     ],
     "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "export PATH=\"$HOME/.nvm/versions/node/v$(cat $HOME/.nvm/alias/default 2>/dev/null | tr -d '[:space:]' | sed 's/^v//')/bin:/usr/local/bin:/usr/bin:/bin:$PATH\" && node ~/.claude/helpers/update-gate.mjs 2>/dev/null || true",
+            "timeout": 2000
+          }
+        ]
+      },
       {
         "hooks": [
           {

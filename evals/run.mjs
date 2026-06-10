@@ -124,6 +124,56 @@ function hooksSuite() {
   } catch (e) { lrOut = (e.stdout || '') + (e.stderr || ''); }
   add('nlm-live-recall-early-exit', !lrOut.includes('NLM-RECALL'), 'nlm-live-recall did not early-exit silent when NLM unavailable (would burn timeout)');
 
+  // ── update-gate cases ──────────────────────────────────────────────────
+  // Uses AURA_UPDATE_STATE_FILE to point at /tmp fixtures — no HOME state touched.
+  const UPDATE_GATE = join(AURA_H, 'update-gate.mjs');
+  const gateStateDir = join(TMP, 'update-gate-states');
+  mkdirSync(gateStateDir, { recursive: true });
+
+  function writeGateState(name, local, remote, ageMs = 0) {
+    const p = join(gateStateDir, name + '.json');
+    writeFileSync(p, JSON.stringify({ checkedAt: Date.now() - ageMs, local, remote }));
+    return p;
+  }
+
+  function runGate(stateFilePath, extraEnv = {}) {
+    const missingPath = join(gateStateDir, 'nonexistent-' + Date.now() + '.json');
+    const stateFile = stateFilePath === 'missing' ? missingPath : stateFilePath;
+    const env = { ...process.env, AURA_UPDATE_GATE_OFF: '', AURA_UPDATE_STATE_FILE: stateFile, ...extraEnv };
+    try {
+      execSync(`node "${UPDATE_GATE}"`, { encoding: 'utf8', timeout: 2000, env });
+      return { exitCode: 0, stderr: '' };
+    } catch (e) {
+      return { exitCode: e.status ?? 1, stderr: e.stderr || '' };
+    }
+  }
+
+  // (a) newer remote → blocks (exit 2 + stderr contains remote version)
+  const gateNewerState = writeGateState('newer', '1.0.0', '1.1.0');
+  const gateBlock = runGate(gateNewerState);
+  add('gate-blocks-on-newer-version',
+    gateBlock.exitCode === 2 && gateBlock.stderr.includes('1.1.0'),
+    `expected exit 2 with remote ver in stderr; got exitCode=${gateBlock.exitCode} stderr="${gateBlock.stderr.slice(0, 120)}"`);
+
+  // (b) equal versions → allows (exit 0)
+  const gateEqualState = writeGateState('equal', '1.3.1', '1.3.1');
+  const gateAllow = runGate(gateEqualState);
+  add('gate-allows-current-version',
+    gateAllow.exitCode === 0,
+    `expected exit 0 for equal versions; got ${gateAllow.exitCode}`);
+
+  // (c) missing state file → fail-open (exit 0)
+  const gateMissing = runGate('missing');
+  add('gate-fail-open-missing-state',
+    gateMissing.exitCode === 0,
+    `expected exit 0 (fail-open) when state missing; got ${gateMissing.exitCode}`);
+
+  // (d) kill-switch with newer remote → allows (exit 0)
+  const gateKS = runGate(gateNewerState, { AURA_UPDATE_GATE_OFF: '1' });
+  add('gate-kill-switch',
+    gateKS.exitCode === 0,
+    `expected exit 0 with kill-switch; got ${gateKS.exitCode}`);
+
   // output-compressor (TASK#12): must NOT compress model-requested read tools. A >50KB Read is
   // explicitly asked for — compressing it to a 600-char head/tail fragment is real degradation that
   // breaks edit accuracy. Only UNSOLICITED Bash output gets capped. The hook replies via stdout:

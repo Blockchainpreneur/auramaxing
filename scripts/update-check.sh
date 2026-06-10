@@ -6,6 +6,12 @@
 #   (nothing)                       — up to date, snoozed, or check skipped
 #
 # Called by SessionStart hook and rational-router. Non-blocking.
+#
+# Flags:
+#   --write-state   also write ~/.auramaxing/update-state.json atomically
+#                   (used by update-gate.mjs for the mandatory update gate).
+#                   Stdout contract is UNCHANGED — callers that don't pass
+#                   this flag see identical behavior.
 set -euo pipefail
 
 AX_DIR="${AX_DIR:-$HOME/auramaxing}"
@@ -14,6 +20,28 @@ CACHE_FILE="$STATE_DIR/last-update-check"
 SNOOZE_FILE="$STATE_DIR/update-snoozed"
 VERSION_FILE="$AX_DIR/VERSION"
 REMOTE_URL="https://raw.githubusercontent.com/Blockchainpreneur/AURAMAXING/main/VERSION"
+
+# Parse --write-state flag (does not affect stdout contract)
+WRITE_STATE=0
+for _arg in "$@"; do
+  case "$_arg" in --write-state) WRITE_STATE=1 ;; esac
+done
+
+# ── write_state_file <local> <remote> ─────────────────────────
+# Writes ~/.auramaxing/update-state.json atomically (tmp+mv).
+# Called after the result is known (both slow and cache paths).
+write_state_file() {
+  local _local="$1" _remote="$2"
+  [ "$WRITE_STATE" -eq 0 ] && return 0
+  local _now _tmp _state_file
+  _now="$(date +%s)000"   # epoch_ms (seconds * 1000; no sub-second needed)
+  _state_file="$STATE_DIR/update-state.json"
+  _tmp="$STATE_DIR/update-state.json.tmp.$$"
+  printf '{"checkedAt":%s,"local":"%s","remote":"%s"}\n' \
+    "$_now" "$_local" "$_remote" > "$_tmp" \
+    && mv -f "$_tmp" "$_state_file" \
+    || rm -f "$_tmp" 2>/dev/null || true
+}
 
 mkdir -p "$STATE_DIR"
 
@@ -70,12 +98,16 @@ if [ -f "$CACHE_FILE" ]; then
     case "$CACHED" in
       UP_TO_DATE*)
         CACHED_VER="$(echo "$CACHED" | awk '{print $2}')"
-        [ "$CACHED_VER" = "$LOCAL" ] && exit 0
+        if [ "$CACHED_VER" = "$LOCAL" ]; then
+          write_state_file "$LOCAL" "$LOCAL"
+          exit 0
+        fi
         ;;
       UPGRADE_AVAILABLE*)
         CACHED_OLD="$(echo "$CACHED" | awk '{print $2}')"
         if [ "$CACHED_OLD" = "$LOCAL" ]; then
           CACHED_NEW="$(echo "$CACHED" | awk '{print $3}')"
+          write_state_file "$LOCAL" "$CACHED_NEW"
           check_snooze "$CACHED_NEW" && exit 0
           echo "$CACHED"
           exit 0
@@ -93,14 +125,17 @@ REMOTE="$(echo "$REMOTE" | tr -d '[:space:]')"
 # Validate: must look like a version number
 if ! echo "$REMOTE" | grep -qE '^[0-9]+\.[0-9.]+$'; then
   echo "UP_TO_DATE $LOCAL" > "$CACHE_FILE"
+  write_state_file "$LOCAL" "$LOCAL"
   exit 0
 fi
 
 if [ "$LOCAL" = "$REMOTE" ]; then
   echo "UP_TO_DATE $LOCAL" > "$CACHE_FILE"
+  write_state_file "$LOCAL" "$LOCAL"
   exit 0
 fi
 
 echo "UPGRADE_AVAILABLE $LOCAL $REMOTE" > "$CACHE_FILE"
+write_state_file "$LOCAL" "$REMOTE"
 check_snooze "$REMOTE" && exit 0
 echo "UPGRADE_AVAILABLE $LOCAL $REMOTE"

@@ -37,7 +37,8 @@ try {
   let localVer = '', remoteVer = '';
   try {
     const checkScript = join(HOME, 'auramaxing', 'scripts', 'update-check.sh');
-    const result = execSync(`bash "${checkScript}" 2>/dev/null`, { encoding: 'utf8', timeout: 5000 }).trim();
+    // --write-state populates update-state.json so update-gate.mjs can block prompts
+    const result = execSync(`bash "${checkScript}" --write-state 2>/dev/null`, { encoding: 'utf8', timeout: 5000 }).trim();
     if (result.startsWith('UPGRADE_AVAILABLE')) {
       const parts = result.split(' ');
       localVer = parts[1] || '?';
@@ -197,15 +198,20 @@ try {
   ];
   process.stderr.write(lines.join('\n') + '\n');
 
-  // ── Upgrade banner ────────────────────────────────────────────
+  // ── Upgrade banner (REQUIRED — prompts blocked until updated) ────
   if (upgradeAvail) {
     const pad = (s, w) => s + ' '.repeat(Math.max(0, w - s.length));
     process.stderr.write([
-      '', `${Y}${B}  ┌─ AURAMAXING UPDATE AVAILABLE ${'─'.repeat(22)}┐${R}`,
-      `${Y}  │${R}  You: ${C}${pad(localVer, 40)}${Y}│${R}`,
-      `${Y}  │${R}  New: ${C}${B}${pad(remoteVer, 40)}${Y}│${R}`,
-      `${Y}  │${R}  ${B}cd ~/auramaxing && git pull && bash install.sh${R}  ${Y}│${R}`,
-      `${Y}${B}  └${'─'.repeat(50)}┘${R}`, '',
+      '', `${Y}${B}  ┌─ AURAMAXING UPDATE REQUIRED ${'─'.repeat(23)}┐${R}`,
+      `${Y}  │${R}  Current : ${C}${pad(localVer, 43)}${Y}│${R}`,
+      `${Y}  │${R}  New     : ${C}${B}${pad(remoteVer, 43)}${Y}│${R}`,
+      `${Y}  │${R}                                                        ${Y}│${R}`,
+      `${Y}  │${R}  ${B}⚠  Prompts will be BLOCKED until you update.${R}  ${Y}│${R}`,
+      `${Y}  │${R}                                                        ${Y}│${R}`,
+      `${Y}  │${R}  Run: ${C}${B}bash ~/auramaxing/scripts/update.sh${R}       ${Y}│${R}`,
+      `${Y}  │${R}                                                        ${Y}│${R}`,
+      `${Y}  │${R}  Override (one session): ${C}AURA_UPDATE_GATE_OFF=1 claude${R} ${Y}│${R}`,
+      `${Y}${B}  └${'─'.repeat(52)}┘${R}`, '',
     ].join('\n') + '\n');
   }
 

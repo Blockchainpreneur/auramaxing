@@ -5,6 +5,15 @@ All notable changes to Auramaxing are documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.4.0 — 2026-06-10
+
+- **install: global-by-default** — installer now always installs the AURAMAXING CLAUDE.md as the user's global `~/.claude/CLAUDE.md` (timestamped backup of any pre-existing file; opt out with `--keep-claude-md`).
+- **install: portable for all users** — purged all machine-specific values from `setup/` (personal `additionalDirectories` removed); `setup/settings.json` now uses a `__HOME__` placeholder rendered at install time, so the global setup works natively on any machine.
+- **mandatory update gate** — new `helpers/update-gate.mjs` UserPromptSubmit hook: when a newer version is published, prompts are blocked until `bash ~/auramaxing/scripts/update.sh` is run. Blocks via stdout `{"decision":"block"}` (wrapper-safe) AND exit 2 (raw wiring). Fail-open on missing/stale state or any error (<300ms, no inline network; offline users are never bricked); kill-switch `AURA_UPDATE_GATE_OFF=1`.
+- **scripts/update.sh** — one-command updater: `git pull --ff-only` + idempotent `install.sh` re-run + state reset.
+- **scripts/update-check.sh `--write-state`** — atomically persists version state to `~/.auramaxing/update-state.json` for the gate; session-start uses it and escalates the banner to UPDATE REQUIRED.
+- **evals: 48/48** — 4 new gate regression cases (block-on-newer, allow-current, fail-open-missing-state, kill-switch); runtime eval copy re-synced with repo (fixes 41-case drift).
+
 ## [1.3.1] - 2026-06-10
 
 ### Docs
