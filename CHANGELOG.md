@@ -5,6 +5,23 @@ All notable changes to Auramaxing are documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-06-10
+
+### Added
+- **Task ledger** (`helpers/ledger.mjs` + `~/.auramaxing/ledger.json`) — external memory of open work; the gatekeeper refuses turn-end while same-session items remain open (long-horizon anti-laziness).
+- Router `RETRIEVE-FIRST + DELEGATE` directive — retrieve minimal context before edits; orchestrate bulk labor to cheaper workers under strict gates while the lead model keeps the decision boundaries.
+- 3 gatekeeper regression evals (failing-test, passing-result, agent-review-bypass) → suite now 44/44.
+
+### Changed
+- Default model → `claude-fable-5` (1M ctx) across settings, templates, statusline + context-window tables.
+- `effortLevel: ultracode` pinned in the installed settings.
+- code-quality-gate hook matcher narrowed to `Write|Edit|MultiEdit` (removes overhead on Read/Grep/Glob/Bash).
+
+### Security / Fixed
+- **Gatekeeper v2** — verifies OUTCOMES not utterances: a *failing* test no longer satisfies the gate; closed the `echo test` and agent-prompt-"review" bypasses. Still fail-open (blocks ≤1/turn, kill-switch intact).
+- **pii-redactor hardened** — added AWS, GitHub (`ghp_`/`github_pat_`), Stripe `sk_live_`, Google, GitLab, Slack, and PEM private-key detection.
+- Fixed memory self-poisoning that injected `?: ? (confidence: ?)` into the session memory block.
+
 ## [1.0.0] - 2026-04-12
 
 Initial release. Repolished from CLAUDEMAX with full rebrand to Auramaxing.

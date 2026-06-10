@@ -67,6 +67,8 @@ function routerSuite() {
 // ── Suite 2: hooks (coded behavior checks) ──────────────────────────────────
 const U = (txt) => JSON.stringify({ type: 'user', message: { role: 'user', content: txt } });
 const TOOL = (name, input) => JSON.stringify({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', name, input }] } });
+const TOOLID = (id, name, input) => JSON.stringify({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', id, name, input }] } });
+const RESULT = (id, txt) => JSON.stringify({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: txt }] } });
 function gatekeeper(transcriptLines, stopActive) {
   mkdirSync(TMP, { recursive: true });
   const tp = join(TMP, `t-${Math.abs(transcriptLines.join('').length)}-${stopActive}.jsonl`);
@@ -91,6 +93,10 @@ function hooksSuite() {
   add('gatekeeper-blocks-echo-test-bypass', gatekeeper([...editNoVerify, TOOL('Bash', { command: 'echo test' })], false).includes('"block"'), 'expected block: "echo test" is not a real verify command');
   add('gatekeeper-blocks-cat-testfile-bypass', gatekeeper([...editNoVerify, TOOL('Bash', { command: 'cat tests/README.md' })], false).includes('"block"'), 'expected block: reading a test file is not verification');
   add('gatekeeper-allows-eval-harness', gatekeeper([...editNoVerify, TOOL('Bash', { command: 'node ~/auramaxing/evals/run.mjs' })], false).trim() === '', 'expected allow: the project eval harness IS verification');
+  // v2 regression (10x audit #1 — verify OUTCOMES not utterances):
+  add('gatekeeper-blocks-failing-test', gatekeeper([...editNoVerify, TOOLID('v1', 'Bash', { command: 'npm test' }), RESULT('v1', 'Tests: 1 passed, 2 failed')], false).includes('"block"'), 'expected block: a FAILING verify must not clear the gate');
+  add('gatekeeper-allows-passing-test-result', gatekeeper([...editNoVerify, TOOLID('v1', 'Bash', { command: 'npm test' }), RESULT('v1', 'Tests: 5 passed, 0 failed')], false).trim() === '', 'expected allow: a PASSING verify result clears the gate');
+  add('gatekeeper-blocks-agent-review-bypass', gatekeeper([...editNoVerify, TOOL('Agent', { prompt: 'please review the code' })], false).includes('"block"'), 'expected block: spawning an agent whose prompt says "review" is not an outcome');
 
   // prompt-engine does a slow LightRAG (Python) pass before emitting its block; AURA_PE_FAST skips
   // that non-deterministic I/O so the gate/structuring check is instant + stable (root-cause fix for

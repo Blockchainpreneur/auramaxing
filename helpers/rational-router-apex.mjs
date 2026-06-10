@@ -740,10 +740,12 @@ async function main() {
     // Deep thinking mode: delegate complex reasoning to structured approach
     if (complexity >= 50) {
       directives.push(`THINK (ultrathink): This is a ${complexity}% complexity task — engage EXTENDED THINKING (ultrathink) NOW, before any edit/write/bash-that-changes-state. Reason deeply through: 1) Read every relevant file completely 2) Map the full dependency chain 3) Enumerate every edge case + failure mode 4) Compare 2-3 candidate approaches and pick the best WITH explicit reasons 5) State the minimal change set. CLARITY GATE — do NOT write a single line of code until you can explain the full end-to-end approach and WHY it is correct. Absolute clarity + a hardened strategy FIRST; code second.`);
+      directives.push(`RETRIEVE-FIRST + DELEGATE (token-efficient orchestration): Before any edit, RETRIEVE the minimal high-signal context (codegraph_context / serena / memory recall) — never grep-and-read whole files when the index answers it. DELEGATION: YOU own the decision boundaries — plan, spec, accept/reject, fuse, and the few CRUCIAL edits (stay token-efficient). Push BULK labor (drafts, broad research, exploration, mechanical edits) to cheaper Sonnet workers (Task tool / box fleet) under a STRICT harness: one atomic fully-specified sub-task each, shipped WITH its acceptance test; REJECT any worker output unless a deterministic gate passes (verify OUTCOMES not utterances). Never trust a Sonnet return as-is — gate it, or re-spec and re-run it.`);
     }
   } else {
     directives.push(`task:${primary.id} model:${tier} → ${primary.skill}`);
     if (complexity >= 30) directives.push(`THINK (think hard): before editing, think hard — read the relevant files, CONFIRM the root cause / API shape (never guess), weigh the options, and state the change set. Reach clarity before code.`);
+    if (complexity >= 30) directives.push(`RETRIEVE-FIRST: before editing, pull the minimal relevant context via codegraph_context / serena / memory recall — don't grep+read whole files when the index answers it.`);
   }
   if (enrichLine) directives.push(enrichLine);
   if (toolsLine)  directives.push(toolsLine);

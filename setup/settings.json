@@ -232,5 +232,5 @@
   "fastMode": false,
   "skipDangerousModePermissionPrompt": true,
   "effortLevel": "ultracode",
-  "model": "claude-opus-4-8"
+  "model": "claude-fable-5"
 }

@@ -22,9 +22,16 @@ const MAX_LOG  = 100;
 
 // HIGH severity — block the tool call outright
 const HIGH_RULES = [
-  { name: 'JWT Token',   pattern: /\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g,     placeholder: '[REDACTED:JWT]' },
-  { name: 'API Key',     pattern: /\b(sk-ant-|sk-|pk_live_|rk_live_|Bearer\s)[A-Za-z0-9_-]{20,}\b/g, placeholder: '[REDACTED:API_KEY]' },
-  { name: 'Eth Address', pattern: /\b0x[0-9a-fA-F]{40}\b/g,                                        placeholder: '[REDACTED:WALLET_ADDR]' },
+  { name: 'JWT Token',      pattern: /\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g,         placeholder: '[REDACTED:JWT]' },
+  // Service keys with dash OR underscore prefixes (sk_live_ = Stripe SECRET key slipped past the old sk- dash rule).
+  { name: 'API Key',        pattern: /\b(sk-ant-|sk-|pk_live_|sk_live_|rk_live_|Bearer\s)[A-Za-z0-9_-]{20,}\b/g, placeholder: '[REDACTED:API_KEY]' },
+  { name: 'AWS Access Key', pattern: /\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/g,                                  placeholder: '[REDACTED:AWS_KEY]' },
+  { name: 'GitHub Token',   pattern: /\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{36}\b|\bgithub_pat_[A-Za-z0-9_]{60,}\b/g, placeholder: '[REDACTED:GH_TOKEN]' },
+  { name: 'Google API Key', pattern: /\bAIza[0-9A-Za-z_-]{35}\b/g,                                      placeholder: '[REDACTED:GOOGLE_KEY]' },
+  { name: 'GitLab Token',   pattern: /\bglpat-[A-Za-z0-9_-]{20}\b/g,                                    placeholder: '[REDACTED:GITLAB_TOKEN]' },
+  { name: 'Slack Token',    pattern: /\bxox[baprs]-[A-Za-z0-9-]{10,}\b/g,                               placeholder: '[REDACTED:SLACK_TOKEN]' },
+  { name: 'Private Key',    pattern: /-----BEGIN (?:[A-Z]+ )?PRIVATE KEY-----/g,                        placeholder: '[REDACTED:PRIVATE_KEY]' },
+  { name: 'Eth Address',    pattern: /\b0x[0-9a-fA-F]{40}\b/g,                                          placeholder: '[REDACTED:WALLET_ADDR]' },
 ];
 
 // MODIFY severity — redact value but allow tool to run

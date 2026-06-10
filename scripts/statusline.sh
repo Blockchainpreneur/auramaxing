@@ -9,7 +9,7 @@ MODEL=$(echo "$input" | jq -r '.model.display_name // "?"' 2>/dev/null | sed 's/
 # 1M-window models (e.g. Opus 4.7) because its model catalog hasn't caught up.
 # We override with our own map and recompute from current_usage tokens.
 case "$MODEL_ID" in
-  claude-opus-4-7|claude-opus-4-6|claude-sonnet-4-6) REAL_WINDOW=1000000 ;;
+  claude-fable-5|claude-mythos-5|claude-opus-4-8|claude-opus-4-7|claude-opus-4-6|claude-sonnet-4-6) REAL_WINDOW=1000000 ;;
   claude-haiku-4-5*|claude-sonnet-4-5*|claude-opus-4-5*|claude-opus-4-1*) REAL_WINDOW=200000 ;;
   *) REAL_WINDOW=$(echo "$input" | jq -r '.context_window.context_window_size // 200000' 2>/dev/null) ;;
 esac

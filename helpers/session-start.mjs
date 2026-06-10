@@ -282,10 +282,18 @@ try {
       memoryBlock.push('Learned patterns (synthesized):');
       memoryBlock.push(synthesizedLearnings.slice(0, 300));
     } else if (learningItems.length > 0) {
-      memoryBlock.push('Learned patterns:');
-      for (const l of learningItems.slice(-5)) {
-        memoryBlock.push(`- ${l.pattern || l.key || '?'}: ${l.strategy || l.insight || l.result || '?'} (confidence: ${l.confidence || '?'})`);
+      // Robust render: flatten array-form learning files, richer field fallbacks (tool as key,
+      // error as value), SKIP entries with no real content, cap length, show confidence only when
+      // present — kills the "?: ? (confidence: ?)" self-poisoning the 10x audit found.
+      const lines = [];
+      for (const l of learningItems.flat().filter(Boolean).slice(-5)) {
+        const key = l.pattern || l.key || l.tool;
+        const raw = l.strategy || l.insight || l.result || l.error;
+        if (!key || !raw) continue;
+        const val = String(typeof raw === 'string' ? raw : JSON.stringify(raw)).replace(/\s+/g, ' ').slice(0, 100);
+        lines.push(`- ${key}: ${val}${l.confidence ? ` (confidence: ${l.confidence})` : ''}`);
       }
+      if (lines.length) { memoryBlock.push('Learned patterns:'); lines.forEach(x => memoryBlock.push(x)); }
     }
 
     // Load session prediction if available

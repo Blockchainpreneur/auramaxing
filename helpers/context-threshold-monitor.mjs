@@ -28,6 +28,9 @@ const SOFT_THRESHOLD_PCT = Number(process.env.AURA_CTX_SOFT_THRESHOLD_PCT || 28)
 // the active model's actual window), so this map is informational only.
 // Source: https://platform.claude.com/docs/en/docs/about-claude/models
 const MODEL_WINDOWS = {
+  'claude-fable-5': 1_000_000,
+  'claude-mythos-5': 1_000_000,
+  'claude-opus-4-8': 1_000_000,
   'claude-opus-4-7': 1_000_000,
   'claude-opus-4-6': 1_000_000,
   'claude-sonnet-4-6': 1_000_000,
