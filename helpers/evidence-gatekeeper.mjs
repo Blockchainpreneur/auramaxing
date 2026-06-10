@@ -98,7 +98,7 @@ function openLedger(sessionId) {
     if (!existsSync(p)) return null;
     const l = JSON.parse(readFileSync(p, 'utf8'));
     if (!l || !Array.isArray(l.items)) return null;
-    if (sessionId && l.sessionId && l.sessionId !== sessionId) return null;     // different session → ignore
+    if (!sessionId || l.sessionId !== sessionId) return null;                   // STRICTLY session-scoped: Gate 2 fires only when THIS session's id matches the ledger's (no id / different id → skip; keeps eval + other sessions immune)
     if (l.ts && (Math.floor(Date.now() / 1000) - l.ts) > 6 * 3600) return null; // stale → ignore
     const open = l.items.filter(x => x && !x.done);
     return open.length ? open : null;

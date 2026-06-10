@@ -5,6 +5,14 @@ All notable changes to Auramaxing are documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-06-10
+
+### Added — automatic non-stop loop (orchestration engine, phase 1)
+- The router now **auto-opens the completion ledger** on complex ACTION tasks (`complexity≥50` + action verb): writes a session-scoped `~/.auramaxing/ledger.json` deliverable. The evidence-gatekeeper's Gate 2 then **structurally refuses to end the turn** until the deliverable is marked done (`ledger.mjs done <id>`) — which only happens after the full verified + audited loop. "Don't stop until 100/100" is now enforced by code, not exhortation, with zero manual step. Grounded in orchestrator-worker + Reflexion + harness-engineering research (external-gate verification, durable cross-context state).
+
+### Fixed
+- Gatekeeper Gate 2 is now **strictly session-scoped**: it fires only when the Stop payload's `session_id` matches the ledger's. Previously a session-less invocation (e.g. the eval harness) could be blocked by an unrelated open ledger. Keeps the eval + other sessions immune; no cross-session contamination.
+
 ## [1.1.1] - 2026-06-10
 
 ### Security
