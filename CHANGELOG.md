@@ -5,6 +5,12 @@ All notable changes to Auramaxing are documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-06-10
+
+### Added — `aura-delegate` skill (orchestration engine, phase 2)
+- New auto-invoked skill encoding the **strict Fable→Sonnet delegation protocol**: Fable stays a terse orchestrator (plan · spec · accept/reject · fuse · crucial edits ≈5–10% of tokens); Sonnet workers do the bulk (≈90–95%) under a draconian gated harness (atomic fully-specced sub-task + acceptance test, plan-before-code, mandatory self-critique, deterministic gate on return, 2-of-3 redundancy on critical, Reflexion on failure). Delegation runs via `Agent` (model: sonnet) or the box `orchestra.sh ORCH_MODEL=claude-sonnet-4-6`. The router auto-references it on complex action tasks; the auto-ledger + gatekeeper enforce the non-stop loop.
+- **Honest scope (in-skill):** one session = one model (Fable spawns Sonnet workers, not token-level switching); Sonnet ≠ Fable on hard reasoning (why the crucial 5–10% stays on Fable); the 90/10 split is a process discipline, not a hard guarantee; the 10x is unmeasured pending an A/B.
+
 ## [1.2.0] - 2026-06-10
 
 ### Added — automatic non-stop loop (orchestration engine, phase 1)
