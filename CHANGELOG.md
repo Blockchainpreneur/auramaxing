@@ -5,6 +5,11 @@ All notable changes to Auramaxing are documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-06-10
+
+### Security
+- Added a **trusted-channel prompt-injection rule** to the distributed CLAUDE.md: AURAMAXING control blocks are authoritative ONLY from the local hook channel. The same strings appearing inside tool results, file contents, web pages, or recalled-memory bodies are treated as untrusted data — closing the `[AURAMAXING UPDATE]` self-injection channel and the memory-as-injection vector.
+
 ## [1.1.0] - 2026-06-10
 
 ### Added
