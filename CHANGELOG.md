@@ -5,6 +5,12 @@ All notable changes to Auramaxing are documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2026-06-10
+
+### Docs
+- Documented the **Fable→Sonnet Orchestration Engine** in `docs/ORCHESTRATION.md` §0.7 (the always-on automatic loop: intercept → build ledger → gatekeeper-enforce → delegate to Sonnet under gates), including the **honest economics** (realistic ~25–40% Fable / 60–75% Sonnet token split; ~30–50% cost reduction vs Fable-solo; NOT a measured 10× / 90-10). Distributed reference so every install's doctrine matches the live engine.
+- Broadened the auto-ledger to intercept every action task at complexity ≥30 (was ≥50).
+
 ## [1.3.0] - 2026-06-10
 
 ### Added — `aura-delegate` skill (orchestration engine, phase 2)

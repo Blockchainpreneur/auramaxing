@@ -143,6 +143,20 @@ hard rules make the loop bite:
 
 ---
 
+## 0.7 The Fable→Sonnet Orchestration Engine (ALWAYS ON, automatic)
+
+Default model is **Fable 5** (`claude-fable-5`): the orchestrator + reviewer. **Sonnet 4.6** does the bulk under strict gates. Fully automatic — no manual tool/skill/model calls; the autopilot wires the loop from every prompt.
+
+**The loop, per prompt:**
+1. **Intercept** — `rational-router-apex.mjs` (UserPromptSubmit) runs on EVERY prompt.
+2. **Build the loop** — on any action task (complexity ≥30) it auto-opens a session-scoped completion ledger (`~/.auramaxing/ledger.json`).
+3. **Enforce** — `evidence-gatekeeper.mjs` (Stop hook) refuses to end the turn until **Gate 1** (every source change has a *passing* verification — verify OUTCOMES not utterances; a failing test does NOT count) and **Gate 2** (the ledger deliverable is marked done via `ledger.mjs done <id>`, only after the full verified + globally-audited loop). Loop to 100/100 with evidence.
+4. **Delegate** — the **`aura-delegate`** skill: Fable stays terse (plan · spec · accept/reject · fuse · crucial edits); Sonnet workers (`Agent model:sonnet`, or box `orchestra.sh ORCH_MODEL=claude-sonnet-4-6`) do the bulk under a draconian gated harness (atomic spec + acceptance test, plan-before-code, mandatory self-critique, deterministic gate on return, 2-of-3 redundancy on critical, Reflexion on failure). Sonnet output is never trusted raw — it passes a deterministic gate or gets re-specced.
+
+**Honest economics (no inflated claims):** realistic token split is **~25–40% Fable / 60–75% Sonnet**; the 5–10% Fable ideal is not reachable on complex/novel work (the orchestrator's plan + diff-review + accept/reject + fuse is irreducible). By cost Fable stays **~55–60%** (it is ~3.3× pricier/token). Real win: **Fable-level orchestration quality at ~30–50% lower cost than Fable-solo** — NOT a measured 10×, NOT 90/10. One session = one model (Fable spawns Sonnet workers, not token-level switching). Sonnet ≠ Fable on hard reasoning — that is why the crucial 5–10% stays on Fable. Grounded in orchestrator-worker + Reflexion + harness-engineering research (external-gate verification, durable cross-context state).
+
+---
+
 ## 1. Orchestration ladder — pick the smallest tool that fits
 
 | Scope signal | Tool | Notes |
