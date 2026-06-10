@@ -5,6 +5,14 @@ All notable changes to Auramaxing are documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.5.0 — 2026-06-10
+
+- **Nightly Engine** — autonomous overnight improvement loop on the box (02:00–08:00 America/Cancun, systemd `aura-nightly.timer` @ 07:00 UTC, `Persistent=true`): per project — fresh clone → AUDIT (Sonnet, hooks OFF) → FIX (≤3/round, ≤4 rounds) → deterministic test gate (fail ⇒ revert) → commit → push to `aura/nightly-<date>` (never main). Zero Mac involvement.
+- `cloud/nightly.sh` (box driver) + `cloud/nightly-projects.conf` (repo list + per-repo test command) + `cloud/nightly-install.sh` (idempotent deploy, `--gh-token`) + `cloud/nightly-report.sh` (fetch morning report).
+- Fix: nightly.sh now sources `/root/nightly/.nightly-env` explicitly — systemd timer runs don't inherit sshd's PermitUserEnvironment, so the GH token never reached scheduled runs.
+- Box provisioned: node v18.19.1 + npm 9.2.0 for test gates; GH PAT installed for private repos (4 active projects).
+- Verified: 2 end-to-end smoke runs on the box (audit found 10 real issues; gate executed the real suite and correctly reverted failing fixes; report + log written).
+
 ## v1.4.0 — 2026-06-10
 
 - **install: global-by-default** — installer now always installs the AURAMAXING CLAUDE.md as the user's global `~/.claude/CLAUDE.md` (timestamped backup of any pre-existing file; opt out with `--keep-claude-md`).
