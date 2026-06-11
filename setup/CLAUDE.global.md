@@ -120,6 +120,13 @@ The PII redactor hook is the safety net — it blocks secrets before they hit di
 Aura is the AURAMAXING autopilot. It runs on every prompt, routes through gstack,
 and enriches requests with production context the user didn't explicitly ask for.
 
+**ULTRAMAX mode (keyword override):** if the user types **`ultramax`** anywhere in a prompt, that
+task runs on **Fable 5 EXCLUSIVELY** — zero delegation (no Sonnet/Haiku workers, no `model:` on
+Agent/Task spawns, no box fleet). Full structure stays (visible goal-loop, phased-excellence,
+anti-laziness, evidence gates); Fable does every part itself. The router suppresses aura-delegate +
+emits a dominant ULTRAMAX directive; the `ultramax-guard` PreToolUse hook hard-blocks any non-Fable
+spawn. Per-task (a plain prompt clears it); kill-switch `AURA_ULTRAMAX_OFF=1`.
+
 - **Aura router** — UserPromptSubmit: auto-detects task, enriches prompt, outputs IMPERATIVE directive
   - Trivial (<3%): silent (greetings only)
   - Medium (3-49%): `[AURAMAXING] task:X model:Y → /skill` + `ENRICH:` context
