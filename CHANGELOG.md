@@ -5,6 +5,12 @@ All notable changes to Auramaxing are documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.9.0 — 2026-06-11
+
+- **Zero-Tolerance loop embedded in EVERY Sonnet delegation** — per the user's directive, every delegated sub-task now carries the 8 Zero-Tolerance Rules + the Tier-2 micro-loop (scope+20x hypothesis → build → /qa → /review+/cso → improve → Absolute Greatness Gate) as a forcing frame, so the cheaper worker model is driven to its ceiling. Wired into both the router's DELEGATE directive and the `aura-delegate` skill harness (new rule 8); a worker return missing the loop evidence is rejected on sight. (CLAUDE.md's aspirational framing is intentional semantic priming — left as-is by design.)
+- **self-heal.mjs wired live (was 100% dead code)** — all 5 exports were unreferenced; `post-tool-use-apex.mjs` reimplemented a weaker tool-only inline version. Now the hook dynamically imports self-heal's `getBestStrategy` (read) + `recordSuccess` (write), keyed by the router's task classification (`task-tool`), so logged strategies actually inform behavior on the next failure. Dynamic import + optional-chaining = cannot crash the hot path. Verified: read-half surfaces a seeded strategy, write-half records under the task+tool key.
+- **evals 55/55** stable (router 25 · hooks 30); transient dips this session were machine-thrash flakiness (swap), confirmed by paired clean reruns.
+
 ## v1.8.0 — 2026-06-10
 
 - **THE ABSOLUTE PERFECTION LOOP** — the user's 12-phase / 3-tier production loop is now the authoritative doctrine (`docs/ORCHESTRATION.md` §0.0), emitted on every action task by the router (normal + ULTRAMAX), with the 8 Zero-Tolerance Rules as the constitution.

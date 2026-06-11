@@ -38,6 +38,13 @@ try {
   const response = event.tool_response || event.tool_result || '';
   const responseStr = typeof response === 'string' ? response : JSON.stringify(response);
 
+  // self-heal.mjs read/write half (task+tool-keyed learned strategies). Dynamic import so a
+  // bad module load can never crash this hot-path hook; healTask = the router's task classification.
+  let selfHeal = null;
+  try { selfHeal = await import('./self-heal.mjs'); } catch {}
+  let healTask = 'general';
+  try { healTask = JSON.parse(readFileSync(join(DIR, 'current-task.json'), 'utf8')).id || 'general'; } catch {}
+
   // ── 1. Log tool event ─────────────────────────────────────────
   const entry = { tool: toolName, ts: Date.now() };
   if (input.file_path) entry.file = input.file_path;
@@ -78,6 +85,12 @@ try {
       type: 'failure',
     });
     writeFileSync(failFile, JSON.stringify(failures.slice(-5), null, 2));
+
+    // Read-half (now LIVE): the richest learned strategy for THIS task+tool, if one was recorded.
+    try {
+      const learned = selfHeal?.getBestStrategy?.(healTask, toolName);
+      if (learned?.strategy) process.stdout.write(`[AURAMAXING SELF-HEAL] learned strategy for ${healTask}/${toolName} (confidence ${learned.confidence}): ${learned.strategy}\n`);
+    } catch {}
 
     // Output self-healing suggestion to stdout (Claude reads this)
     const successFile = join(LEARNINGS_DIR, `${key}-success.json`);
@@ -121,6 +134,8 @@ try {
         confidence: 7,
         type: 'success',
       }, null, 2));
+      // Write-half (now LIVE): record the recovery under the task+tool key getBestStrategy reads.
+      try { selfHeal?.recordSuccess?.({ task: healTask, tool: toolName, strategy: `Use ${toolName} with: ${JSON.stringify(input).slice(0, 100)}` }); } catch {}
     }
   }
 
