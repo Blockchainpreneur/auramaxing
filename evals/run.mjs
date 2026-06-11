@@ -69,11 +69,11 @@ const U = (txt) => JSON.stringify({ type: 'user', message: { role: 'user', conte
 const TOOL = (name, input) => JSON.stringify({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', name, input }] } });
 const TOOLID = (id, name, input) => JSON.stringify({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', id, name, input }] } });
 const RESULT = (id, txt) => JSON.stringify({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: txt }] } });
-function gatekeeper(transcriptLines, stopActive) {
+function gatekeeper(transcriptLines, stopActive, sessionId = '') {
   mkdirSync(TMP, { recursive: true });
-  const tp = join(TMP, `t-${Math.abs(transcriptLines.join('').length)}-${stopActive}.jsonl`);
+  const tp = join(TMP, `t-${Math.abs(transcriptLines.join('').length)}-${stopActive}-${sessionId}.jsonl`);
   writeFileSync(tp, transcriptLines.join('\n') + '\n');
-  return run(GATEKEEPER, JSON.stringify({ transcript_path: tp, stop_hook_active: stopActive }));
+  return run(GATEKEEPER, JSON.stringify({ transcript_path: tp, stop_hook_active: stopActive, session_id: sessionId }));
 }
 
 function hooksSuite() {
@@ -97,6 +97,51 @@ function hooksSuite() {
   add('gatekeeper-blocks-failing-test', gatekeeper([...editNoVerify, TOOLID('v1', 'Bash', { command: 'npm test' }), RESULT('v1', 'Tests: 1 passed, 2 failed')], false).includes('"block"'), 'expected block: a FAILING verify must not clear the gate');
   add('gatekeeper-allows-passing-test-result', gatekeeper([...editNoVerify, TOOLID('v1', 'Bash', { command: 'npm test' }), RESULT('v1', 'Tests: 5 passed, 0 failed')], false).trim() === '', 'expected allow: a PASSING verify result clears the gate');
   add('gatekeeper-blocks-agent-review-bypass', gatekeeper([...editNoVerify, TOOL('Agent', { prompt: 'please review the code' })], false).includes('"block"'), 'expected block: spawning an agent whose prompt says "review" is not an outcome');
+
+  // Gate 3 — ABSOLUTE GREATNESS GATE (Phase 08). Uses a temp ledger via AURA_LEDGER_FILE so the
+  // real session ledger is never touched. okV = mutated source + a PASSING verify (clears Gate 1).
+  mkdirSync(TMP, { recursive: true });
+  const g3Ledger = join(TMP, 'g3-ledger.json');
+  const okV = [...editNoVerify, TOOLID('g3', 'Bash', { command: 'npm test' }), RESULT('g3', 'Tests: 5 passed, 0 failed')];
+  const stamp = () => Math.floor(Date.now() / 1000);
+  process.env.AURA_LEDGER_FILE = g3Ledger;
+  writeFileSync(g3Ledger, JSON.stringify({ sessionId: 'GK3', ts: stamp(), items: [{ id: 1, desc: 'd', done: true }] }));
+  add('gatekeeper-greatness-blocks-done-without-pass', gatekeeper(okV, false, 'GK3').includes('ABSOLUTE GREATNESS GATE'), 'expected block: deliverable done WITHOUT a recorded greatness pass');
+  writeFileSync(g3Ledger, JSON.stringify({ sessionId: 'GK3', ts: stamp(), items: [{ id: 1, desc: 'd', done: true, greatness: { passed: true, evidence: 'e' } }] }));
+  add('gatekeeper-greatness-allows-recorded-pass', gatekeeper(okV, false, 'GK3').trim() === '', 'expected allow: greatness pass recorded');
+  add('gatekeeper-greatness-skips-on-no-mutation', gatekeeper([U('x'), TOOL('Edit', { file_path: '/x/README.md' }), TOOLID('g3', 'Bash', { command: 'npm test' }), RESULT('g3', '5 passed, 0 failed')], false, 'GK3').trim() === '', 'expected allow: docs-only change never triggers the greatness gate');
+  // ledger.mjs `great` records the pass AND marks done.
+  const greatLedger = join(TMP, 'great-ledger.json');
+  writeFileSync(greatLedger, JSON.stringify({ sessionId: 'X', ts: stamp(), items: [{ id: 1, desc: 'd', done: false }] }));
+  execSync(`AURA_LEDGER_FILE='${greatLedger}' node "${join(CLAUDE_H, 'ledger.mjs')}" great 1 "tested"`, { encoding: 'utf8' });
+  const gl = JSON.parse(readFileSync(greatLedger, 'utf8'));
+  add('ledger-great-records-pass-and-done', gl.items[0].done === true && gl.items[0].greatness && gl.items[0].greatness.passed === true, 'expected great to set done + greatness.passed');
+  delete process.env.AURA_LEDGER_FILE;
+
+  // taste.mjs — 5%/week decay (0.95^weeks). Fresh reject must outweigh a 10-week-old approve on the same tag.
+  const tasteDir = join(HOME, '.auramaxing', 'taste');
+  mkdirSync(tasteDir, { recursive: true });
+  const tasteKey = `evaltaste-${process.pid}`;
+  const tasteFile = join(tasteDir, `${tasteKey}.json`);
+  writeFileSync(tasteFile, JSON.stringify({ project: tasteKey, decisions: [
+    { ts: stamp() - 10 * 7 * 24 * 3600, verdict: 'approve', tags: ['X'], note: 'old' },
+    { ts: stamp(), verdict: 'reject', tags: ['X'], note: 'fresh' },
+  ] }));
+  // Run taste from a cwd whose basename resolves to tasteKey (no git → basename). Use a temp dir.
+  const tasteCwd = join(TMP, tasteKey);
+  mkdirSync(tasteCwd, { recursive: true });
+  // Move the fixture to match the temp cwd's project key.
+  writeFileSync(join(tasteDir, `${tasteKey}.json`), readFileSync(tasteFile, 'utf8'));
+  let tasteNetX = null;
+  try {
+    const out = execSync(`cd "${tasteCwd}" && node "${join(CLAUDE_H, 'taste.mjs')}" profile --json`, { encoding: 'utf8' });
+    const prof = JSON.parse(out);
+    const x = [...(prof.liked || []), ...(prof.disliked || [])].find(t => t.tag === 'X');
+    tasteNetX = x ? x.net : null;
+  } catch {}
+  // 0.95^10 - 1.0 ≈ -0.401 → X must land in disliked (net < 0).
+  add('taste-decay-5pct-per-week', tasteNetX !== null && tasteNetX < 0 && Math.abs(tasteNetX - (Math.pow(0.95, 10) - 1)) < 0.01, `expected decayed net≈-0.401 for X, got ${tasteNetX}`);
+  try { rmSync(tasteFile, { force: true }); } catch {}
 
   // prompt-engine does a slow LightRAG (Python) pass before emitting its block; AURA_PE_FAST skips
   // that non-deterministic I/O so the gate/structuring check is instant + stable (root-cause fix for

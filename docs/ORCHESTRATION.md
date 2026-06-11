@@ -4,7 +4,114 @@
 > categorically 10x any other global Claude Code setup. Loaded on demand by the router;
 > the always-on summary lives in `~/.claude/CLAUDE.md` → "Perpetual Perfection Loop".
 
-Version 1.0 · 2026-05-29 · Model floor: Opus 4.8 · `effortLevel: ultracode`
+Version 2.0 · 2026-06-10 · Model floor: Fable 5 · `effortLevel: ultracode`
+
+---
+
+## 0.0 THE ABSOLUTE PERFECTION LOOP (the constitution — supersedes everything below)
+
+> *"Don't be half-invested. Boil the whole lake."* — Ship nothing that hasn't survived this
+> loop. Every phase is anchored to a gstack command. No phase is optional. No gate is decorative.
+> The loop runs **∞ until greatness** — depth scales with the task, the discipline never relaxes.
+> The §0–§0.7 material below is the *mechanics* of how each phase is executed; this §0.0 is the
+> spine. Applies in BOTH normal and ULTRAMAX mode.
+
+### ⛔ ZERO-TOLERANCE RULES — these 8 behaviours BREAK the loop (non-negotiable)
+1. Ship with **Critical or High** severity bugs unresolved.
+2. **Skip a gate** because "it looks fine."
+3. **Merge without `/review` passing clean.**
+4. **Advance a phase without verifying the previous one** (evidence, not belief).
+5. Call something **"done" without a passing `/qa` run** (or the real test/build/typecheck).
+6. **Repeat research on a moat already logged** — query memory first; intelligence compounds or it's wasted.
+7. **Build before `/plan-eng-review` clears architecture.**
+8. **Deploy before `/ship` confirms test coverage ≥ 35%.**
+
+A violation is not a style nit — it voids the result. `"should work"` / `"I think"` /
+done-without-running / `TODO` / placeholder are all Rule-4/Rule-5 violations: **a claim without
+evidence is FALSE.**
+
+### The 12 phases, three tiers
+
+**TIER 1 — FOUNDATION (Phases 00–02). Nothing moves without these passing.**
+- **00 · Ultra-think + gstack intelligence load** → `/office-hours` (6 founder-level forcing
+  questions answered with conviction) · deep intent parse (state assumptions, decide
+  autonomously, **never stall on a clarifying question** you can resolve) · `/plan-ceo-review`
+  (adversarial scope: Expand / Hold / Reduce) · stack + architecture decision (one-sentence
+  decision + one-sentence reason, stored in memory). **HARD-STOP GATE.**
+- **01 · Moat research + competitive intelligence + 10x differentiator detection** → name every
+  competitor's structural moat (network effects / data flywheel / switching costs / speed /
+  brand / supply-side scale) · find where best-in-class is objectively weak · write ≥3 concrete
+  "we can be 10x better at X because Y" hypotheses **with mechanisms** · store all of it in
+  memory + the Design Doc. **CHECKPOINT GATE.**
+- **02 · Engineering architecture lock + audit of existing work** → `/plan-eng-review` (data
+  model, API contracts, edge cases, perf boundaries, test plan, dependency risk — a written,
+  locked architecture, not a conversation) · audit every existing file vs the locked
+  architecture + moat constraints, grade gaps Critical/High/Medium/Low (no Critical/High moves
+  to build) · numbered sequential execution plan. **HARD-STOP GATE — build does not start until CLEARED.**
+
+**TIER 2 — THE MICRO DETAIL LOOP (Phases 03–08). Runs once per ATOMIC detail, repeats until greatness.**
+- **03 · Super-specific detail scoping + per-detail moat research** → one atomic unit (one
+  button, one endpoint, one animation), one-sentence scope · 3 best-in-class references with
+  *specific* quality analysis · a **20x hypothesis** ("best does X; we do X + [differentiator]
+  → 20x better because [mechanism]") that becomes the success criterion. **CHECKPOINT.**
+- **04 · Implementation (autopilot, moat-informed)** → install deps/config/env automatically
+  (escalate only for a specific external secret) · build **against the 20x hypothesis**, not
+  just requirements · tests written *alongside* the build, **≥35% coverage** · auto-start dev
+  server + emit the localhost URL.
+- **05 · Test (real browser, real behaviour)** → `/qa` full test-fix-verify (zero open
+  Critical/High) · `/browse` real-browser screenshots as evidence (happy + error + edge +
+  responsive) · `/codex` cross-model second opinion on moat-critical logic (discrepancies = High
+  by default). **HARD-STOP GATE — `/qa` must pass before audit.**
+- **06 · Audit for improvement** → `/review` (adversarial staff-eng production-risk audit; "CLEARED"
+  or graded findings) · `/cso` (OWASP Top-10 + STRIDE on anything touching auth/data/money/identity —
+  **mitigate now, "later" doesn't exist**) · apply moat intel to THIS detail, quantify the gap
+  ("180ms vs Stripe's 80ms", never "feels slow") · write a graded **Improvement Directive**
+  (severity → finding → exact fix → success criterion). **CHECKPOINT.**
+- **07 · Implement improvements + re-test + verify** → implement *every* directive item to its
+  criterion (no cherry-picking) · re-run `/qa` from scratch (catch regressions) · **20x
+  hypothesis: binary PASS/FAIL** — NO ⇒ return to Phase 06. **VERIFY GATE.**
+- **08 · Final audit of the detail — ABSOLUTE GREATNESS GATE** → final `/review` (a verification
+  run; new Critical/High here means Phase 07 was incomplete) + `/codex`, then the **three binary
+  questions, all must be YES with evidence:**
+  - **Q1** — Does it meet/exceed the 20x hypothesis (measurable evidence)?
+  - **Q2** — Would the 3 best-in-class references consider this competitive or better?
+  - **Q3** — Is it production-ready *right now* (not "needs polish", not "good for an MVP")?
+  Any NO ⇒ write a new Improvement Directive and **return to Phase 06**. No shortcut, no
+  exception, "close enough" is not an accepted answer. All YES ⇒ log to memory, mark done,
+  advance to the next detail. **Record the pass: `node ~/.claude/helpers/ledger.mjs great <id> "<evidence>"`.**
+
+**TIER 3 — SHIP + FINAL AUDIT (Phases 09–11).**
+- **09 · Whole-app review + release prep** → system-level `/review` (does Feature A break B?) ·
+  `/ship` (full suite, coverage ≥35%, PR, changelog, README) · full-app `/cso` (every
+  Critical/High blocks release) · `/docs` post-ship sync. **SHIP GATE — all four pass or it doesn't ship.**
+- **10 · Complete-app final audit** → end-to-end `/qa` over *every* flow + screenshots · moat
+  hypothesis final check (ACHIEVED / PARTIAL / FAILED — anything not ACHIEVED triggers a final
+  03–08 micro-loop) · re-run `/office-hours` (would you still build this?).
+- **11 · Retro + memory** → `/retro` (commit-analysis retrospective) · extract reusable patterns
+  to LightRAG/project memory (so future loops query, never re-derive) · update the relevant
+  `SKILL.md` so the loop improves itself every sprint.
+
+### What is MECHANICALLY enforced (vs. doctrine the agent self-applies)
+- **Gate 1 (evidence)** — the evidence-gatekeeper Stop hook blocks turn-end if source changed
+  without a *passing* verification. Enforces Zero-Tolerance #4/#5.
+- **Gate 2 (completion ledger)** — blocks turn-end while the session ledger has open deliverables.
+- **Gate 3 (Absolute Greatness)** — blocks turn-end once when code changed and the deliverable
+  was marked done *without* a recorded greatness pass; clears via `ledger.mjs great <id> "<evidence>"`.
+  Enforces Phase 08 / Zero-Tolerance #1/#2.
+- The rest (phase ordering, moat research, 20x hypotheses, `/qa`+`/review`+`/cso` per detail) is
+  doctrine the router injects and the agent must self-apply — the gates are the backstop, not the whole loop.
+
+### Design-taste learning (front-end details)
+Per-project taste profile at `~/.auramaxing/taste/` records approvals/rejections, **decays 5%/week**
+(`0.95^weeks`), and feeds future variant generation. Query before generating design variants
+(`node ~/.claude/helpers/taste.mjs profile`), record the verdict after (`taste.mjs record approve|reject "<tags>" "<note>"`).
+Never regenerate a look the profile already rejected.
+
+### Final app audit checklist (binary release gate — every box or it doesn't ship)
+`/office-hours` 6Q · `/plan-ceo-review` scope · `/plan-eng-review` CLEARED · all moat hypotheses
+ACHIEVED w/ evidence · every detail passed the Greatness Gate · `/qa` CLEARED + screenshots ·
+`/review` CLEARED at system level · `/cso` no Critical/High · `/ship` tests ≥35% + PR + changelog ·
+`/docs` matches code · `/retro` patterns stored · 3 Greatness questions YES for the whole app.
 
 ---
 

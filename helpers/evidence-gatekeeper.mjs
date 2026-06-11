@@ -94,7 +94,7 @@ function analyzeTurn(transcriptPath) {
 
 function openLedger(sessionId) {
   try {
-    const p = join(homedir(), '.auramaxing', 'ledger.json');
+    const p = process.env.AURA_LEDGER_FILE || join(homedir(), '.auramaxing', 'ledger.json');
     if (!existsSync(p)) return null;
     const l = JSON.parse(readFileSync(p, 'utf8'));
     if (!l || !Array.isArray(l.items)) return null;
@@ -103,6 +103,20 @@ function openLedger(sessionId) {
     const open = l.items.filter(x => x && !x.done);
     return open.length ? open : null;
   } catch { return null; }
+}
+
+// Gate 3 helper — returns done items that lack a recorded Absolute-Greatness pass, for THIS
+// session, fresh. Same fail-open contract as openLedger (missing / wrong session / stale → []).
+function greatnessPending(sessionId) {
+  try {
+    const p = process.env.AURA_LEDGER_FILE || join(homedir(), '.auramaxing', 'ledger.json');
+    if (!existsSync(p)) return [];
+    const l = JSON.parse(readFileSync(p, 'utf8'));
+    if (!l || !Array.isArray(l.items)) return [];
+    if (!sessionId || l.sessionId !== sessionId) return [];
+    if (l.ts && (Math.floor(Date.now() / 1000) - l.ts) > 6 * 3600) return [];
+    return l.items.filter(x => x && x.done && !(x.greatness && x.greatness.passed));
+  } catch { return []; }
 }
 
 function block(reason) { clearTimeout(timeout); process.stdout.write(JSON.stringify({ decision: 'block', reason })); process.exit(0); }
@@ -141,6 +155,25 @@ async function main() {
         '  node ~/.claude/helpers/ledger.mjs done <id>',
         'The gate clears when all items are done. Never stop with open work — the ledger is what context forgets.',
         'Kill-switch: AURA_GATEKEEPER_OFF=1.'].join('\n'));
+    }
+
+    // Gate 3 — ABSOLUTE GREATNESS GATE (Phase 08). Fires once when source changed this turn
+    // AND the deliverable was marked done WITHOUT a recorded greatness pass. Clears via
+    // `ledger.mjs great <id> "<evidence>"`. Fail-open (no ledger / wrong session / stale → skip);
+    // stop_hook_active→ALLOW above guarantees ≤1 block/turn so it can never wedge.
+    if (mutated.length > 0) {
+      const pending = greatnessPending(input.session_id);
+      if (pending.length) {
+        const items = pending.slice(0, 8).map(x => `  [${x.id}] ${x.desc}`).join('\n');
+        block(['ABSOLUTE GREATNESS GATE — do NOT stop. You changed code and marked the deliverable done WITHOUT clearing the greatness gate (Phase 08):',
+          items, '',
+          'Answer all THREE, each YES with EVIDENCE (any NO ⇒ return to Phase 06 / improve, do not stop):',
+          '  Q1. Does it meet/exceed the 20x hypothesis (measurable evidence)?',
+          '  Q2. Would the 3 best-in-class references consider this competitive or better?',
+          '  Q3. Is it production-ready RIGHT NOW (not "needs polish", not "MVP-fine")?',
+          'Then record the pass:  node ~/.claude/helpers/ledger.mjs great <id> "<one-line evidence>"',
+          'Kill-switch: AURA_GATEKEEPER_OFF=1.'].join('\n'));
+      }
     }
 
     ALLOW();

@@ -792,7 +792,7 @@ async function main() {
       writeFileSync(join(ledgerDir, 'ledger.json'), JSON.stringify({
         sessionId,
         ts: Math.floor(Date.now() / 1000),
-        items: [{ id: 1, desc: `Deliver to 100/100 WITH evidence (RUN + paste output) + global audit: ${deliverable}`, done: false }],
+        items: [{ id: 1, desc: `Deliver to 100/100 WITH evidence (RUN + paste output) + global audit + ABSOLUTE GREATNESS GATE (3× YES) → close with \`ledger.mjs great 1 "<evidence>"\`: ${deliverable}`, done: false }],
       }, null, 2));
     }
   } catch { /* non-blocking */ }
@@ -800,6 +800,7 @@ async function main() {
   // The ledger (above) is the durable Gate-2 tracker; the native task list is the VISIBLE step tracker.
   if (complexity >= 30 && ACTION_VERBS.test(prompt)) {
     directives.push('GOAL LOOP (VISIBLE, MANDATORY): treat this prompt as a /goal. FIRST tool call of the turn = TaskCreate with one task per step of the loop (audit · investigate · plan · execute · verify · …), so the user SEES the step list. As you work: set exactly one task in_progress, mark it completed with its evidence the moment its gate passes, then advance. Keep the list live (add steps as the loop discovers them); never finish with a step still in_progress. This visible list + the durable ledger are the two trackers — the turn ends only when every step is completed AND the ledger deliverable is marked done.');
+    directives.push('ABSOLUTE PERFECTION LOOP (the constitution — full text: ~/auramaxing/docs/ORCHESTRATION.md §0.0): "boil the whole lake," loop ∞ until greatness. ⛔ ZERO-TOLERANCE (a violation VOIDS the result): (1) ship Critical/High bugs, (2) skip a gate because "looks fine", (3) merge without /review clean, (4) advance a phase unverified, (5) "done" without a passing /qa, (6) re-research a logged moat (query memory), (7) build before /plan-eng-review clears architecture, (8) deploy before /ship confirms coverage ≥35%. TIER 1 Foundation (00 /office-hours 6Q + /plan-ceo-review scope · 01 moat research + ≥3 "10x because Y" hypotheses · 02 /plan-eng-review architecture LOCK) → TIER 2 per ATOMIC detail (03 scope + 3 best-in-class refs + 20x hypothesis · 04 build to the hypothesis + tests ≥35% · 05 /qa + /browse screenshots + /codex · 06 /review + /cso + quantified moat gap → Improvement Directive · 07 implement all + re-/qa + 20x binary PASS/FAIL · 08 ABSOLUTE GREATNESS GATE) → TIER 3 (09 system /review + /ship + full /cso + /docs · 10 e2e /qa + moat final check · 11 /retro + memory). ABSOLUTE GREATNESS GATE = three binary YES-with-evidence: Q1 meets/exceeds the 20x hypothesis? Q2 competitive vs the 3 best-in-class refs? Q3 production-ready RIGHT NOW (not "needs polish"/"MVP-fine")? Any NO ⇒ return to Phase 06. All YES ⇒ record `node ~/.claude/helpers/ledger.mjs great <id> "<evidence>"` (Gate 3 blocks turn-end until you do). Depth scales with the task; the gates never relax.');
   }
   if (enrichLine) directives.push(enrichLine);
   if (toolsLine)  directives.push(toolsLine);

@@ -5,6 +5,15 @@ All notable changes to Auramaxing are documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.8.0 — 2026-06-10
+
+- **THE ABSOLUTE PERFECTION LOOP** — the user's 12-phase / 3-tier production loop is now the authoritative doctrine (`docs/ORCHESTRATION.md` §0.0), emitted on every action task by the router (normal + ULTRAMAX), with the 8 Zero-Tolerance Rules as the constitution.
+  - **Tier 1 Foundation** (00 /office-hours 6Q + /plan-ceo-review · 01 moat research + ≥3 "10x because Y" hypotheses · 02 /plan-eng-review architecture lock) → **Tier 2 micro detail loop** per atomic detail (03 scope+3 refs+20x hypothesis · 04 build+tests ≥35% · 05 /qa+/browse+/codex · 06 /review+/cso+quantified moat gap · 07 improve+re-/qa+20x binary · 08 Absolute Greatness Gate) → **Tier 3 ship** (09 /review+/ship+/cso+/docs · 10 e2e /qa+moat check · 11 /retro+memory).
+- **Gate 3 — Absolute Greatness Gate (mechanically enforced)** — `evidence-gatekeeper.mjs` now blocks turn-end once when code changed AND the deliverable was marked done WITHOUT a recorded greatness pass (the 3 binary YES questions). Clears via the new `ledger.mjs great <id> "<evidence>"`. Fail-open, session-scoped, ≤1 block/turn (cannot wedge). Verified 8/8 offline + live runtime block→allow cycle.
+- **Design-taste learning** — new `taste.mjs`: per-project approval/rejection profile that decays 5%/week (`0.95^weeks`, verified exact) and feeds future variant generation; query before generating, record the verdict after.
+- **Router**: every action task emits the Perfection-Loop reference + 8 Zero-Tolerance Rules + the 3 greatness questions + the `ledger great` close instruction.
+- **evals 55/55** (+5: 3 Gate-3, ledger-great, taste-decay), baseline re-locked. `AURA_LEDGER_FILE` override added for isolated testing.
+
 ## v1.7.0 — 2026-06-10
 
 - **ULTRAMAX mode** — type `ultramax` anywhere in a prompt and the ENTIRE task runs on Fable 5 exclusively: zero delegation (no Sonnet/Haiku workers, no `model:` downgrade on any Agent/Task spawn, no box fleet), full AURAMAXING structure preserved (visible goal-loop, phased-excellence, anti-laziness, evidence gates) — Fable does every part itself.

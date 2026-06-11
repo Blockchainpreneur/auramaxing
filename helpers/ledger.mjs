@@ -20,7 +20,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { homedir } from 'os';
 import { join, dirname } from 'path';
 
-const LP = join(homedir(), '.auramaxing', 'ledger.json');
+const LP = process.env.AURA_LEDGER_FILE || join(homedir(), '.auramaxing', 'ledger.json');
 const now = () => Math.floor(Date.now() / 1000);
 
 function load() { try { return JSON.parse(readFileSync(LP, 'utf8')); } catch { return null; } }
@@ -43,6 +43,12 @@ switch (cmd) {
   }
   case 'add':   { l.items.push({ id: nextId(), desc: args.join(' '), done: false }); l.ts = now(); save(l); break; }
   case 'done':  { const it = l.items.find(x => x.id === Number(args[0])); if (it) it.done = true; l.ts = now(); save(l); break; }
+  // ABSOLUTE GREATNESS GATE (Phase 08) — records the 3-YES pass + evidence and marks done.
+  // This is the ONLY honest way to close a substantial code deliverable: Gate 3 in the
+  // gatekeeper blocks turn-end while a done item lacks a `greatness` record.
+  case 'great': { const it = l.items.find(x => x.id === Number(args[0]));
+                  if (it) { it.greatness = { passed: true, evidence: args.slice(1).join(' ') || '(no evidence given)', ts: now() }; it.done = true; }
+                  l.ts = now(); save(l); break; }
   case 'clear': { l = { sessionId: l.sessionId, ts: now(), items: [] }; save(l); break; }
   case 'status': default: break;
 }
