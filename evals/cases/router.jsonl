@@ -21,3 +21,5 @@
 {"id": "research-vectordb", "prompt": "research the best vector database for our use case", "expect_task": "research", "must_include": ["PHASED EXCELLENCE LOOP"], "must_not": ["mcp__github__"]}
 {"id": "antislop-design-deadmcp", "prompt": "design a pricing page", "expect_task": "design", "must_include": ["front-10x"], "must_not": ["mcp__figma__", "mcp__github__", "mcp__supabase__", "mcp__sentry__"]}
 {"id": "trivial-thanks", "prompt": "thanks that works great", "expect_task": "", "must_include": [], "must_not": ["EXECUTE", "PHASED EXCELLENCE LOOP", "SPAWN"]}
+{"id": "ultramax-locks-fable", "prompt": "ultramax build a new auth feature", "expect_task": "new-feature", "must_include": ["ULTRAMAX MODE — FABLE 5 EXCLUSIVE", "FABLE 5 · ULTRAMAX"], "must_not": ["Push BULK labor"]}
+{"id": "ultramax-keeps-structure", "prompt": "ultramax refactor the payment module", "expect_task": "refactor", "must_include": ["ULTRAMAX MODE", "PHASED EXCELLENCE LOOP", "GOAL LOOP"], "must_not": ["Push BULK labor"]}

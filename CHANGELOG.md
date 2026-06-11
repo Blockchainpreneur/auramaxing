@@ -5,6 +5,13 @@ All notable changes to Auramaxing are documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.7.0 — 2026-06-10
+
+- **ULTRAMAX mode** — type `ultramax` anywhere in a prompt and the ENTIRE task runs on Fable 5 exclusively: zero delegation (no Sonnet/Haiku workers, no `model:` downgrade on any Agent/Task spawn, no box fleet), full AURAMAXING structure preserved (visible goal-loop, phased-excellence, anti-laziness, evidence gates) — Fable does every part itself.
+  - Router (`rational-router-apex.mjs`): detects the keyword, forces complexity→85 (full phased-excellence + ultrathink), shows `FABLE 5 · ULTRAMAX` in the display, suppresses the aura-delegate directive, and unshifts a dominant ULTRAMAX directive. Per-task (not sticky): a plain prompt clears the session flag.
+  - Enforcement (`ultramax-guard.mjs`, new PreToolUse hook on Agent|Task): hard-blocks any non-Fable spawn while ULTRAMAX is active for the session — instructions alone aren't enforcement. Fail-open (missing/stale/mismatched flag, parse error, or `AURA_ULTRAMAX_OFF=1` → approve); session-scoped + 2h freshness so it never wedges a later session.
+  - Verified: 9/9 guard behavior matrix (block sonnet/opus, allow no-model/fable/other-session/stale/kill-switch/non-agent) + 2 router regression cases. evals 50/50.
+
 ## v1.6.0 — 2026-06-10
 
 - **Visible goal-loop on every action prompt** — router now turns every action task (complexity ≥30) into a `/goal`-focused loop: the first tool call must be a TaskCreate step-list (audit·investigate·plan·execute·verify), one step in_progress at a time, each marked complete with evidence as its gate passes. The visible task list + the durable ledger (Gate 2) are the two trackers; the turn ends only when every step is done.

@@ -17,7 +17,7 @@
  */
 
 import { spawn, execSync } from 'child_process';
-import { writeFileSync, readFileSync, existsSync, mkdirSync, statSync } from 'fs';
+import { writeFileSync, readFileSync, existsSync, mkdirSync, statSync, unlinkSync } from 'fs';
 import { join, dirname } from 'path';
 import { homedir } from 'os';
 
@@ -597,7 +597,35 @@ async function main() {
 
   if (complexity < 3) process.exit(0);  // only truly empty tasks skip — Aura routes everything
 
-  const tier           = complexity < 30 ? 'HAIKU' : complexity < 65 ? 'SONNET' : 'OPUS';
+  // ── ULTRAMAX MODE ─────────────────────────────────────────────────────────
+  // The user types `ultramax` anywhere in the prompt → the ENTIRE task runs on
+  // Fable 5 EXCLUSIVELY: no Sonnet/Haiku delegation, no box fleet, no model downgrade.
+  // Same full AURAMAXING structure (visible goal-loop, phased excellence, anti-laziness,
+  // evidence gates) — Fable does every part itself. Enforced by the ultramax-guard
+  // PreToolUse hook, which hard-blocks any non-Fable Agent/Task spawn while active.
+  // It is PER-TASK: a prompt without the keyword clears the flag for this session.
+  const ultramax = /\bultramax\b/i.test(promptText);
+  const AUR_DIR = join(homedir(), '.auramaxing');
+  if (ultramax) {
+    complexity = Math.max(complexity, 85);  // full phased-excellence + ultrathink always engages
+    try {
+      mkdirSync(AUR_DIR, { recursive: true });
+      writeFileSync(join(AUR_DIR, 'ultramax.json'), JSON.stringify({
+        sessionId, ts: Math.floor(Date.now() / 1000), prompt: promptText.slice(0, 200),
+      }));
+    } catch {}
+  } else {
+    // ultramax is per-task, not sticky — clear this session's flag on the next plain prompt.
+    try {
+      const f = join(AUR_DIR, 'ultramax.json');
+      if (existsSync(f)) {
+        const j = JSON.parse(readFileSync(f, 'utf8'));
+        if (j.sessionId === sessionId) unlinkSync(f);
+      }
+    } catch {}
+  }
+
+  const tier           = ultramax ? 'FABLE 5 · ULTRAMAX' : complexity < 30 ? 'HAIKU' : complexity < 65 ? 'SONNET' : 'OPUS';
   const isEntrepreneur = ENTREPRENEUR_TASKS.has(primary.id);
 
   // Gap 1: write current-task.json for completion diagram ──────────────────
@@ -740,12 +768,18 @@ async function main() {
     // Deep thinking mode: delegate complex reasoning to structured approach
     if (complexity >= 50) {
       directives.push(`THINK (ultrathink): This is a ${complexity}% complexity task — engage EXTENDED THINKING (ultrathink) NOW, before any edit/write/bash-that-changes-state. Reason deeply through: 1) Read every relevant file completely 2) Map the full dependency chain 3) Enumerate every edge case + failure mode 4) Compare 2-3 candidate approaches and pick the best WITH explicit reasons 5) State the minimal change set. CLARITY GATE — do NOT write a single line of code until you can explain the full end-to-end approach and WHY it is correct. Absolute clarity + a hardened strategy FIRST; code second.`);
-      directives.push(`RETRIEVE-FIRST + DELEGATE (token-efficient orchestration): Before any edit, RETRIEVE the minimal high-signal context (Grep/Glob/Explore + memory recall) — never grep-and-read whole files when the index answers it. DELEGATION (apply the \`aura-delegate\` skill — the full strict Fable→Sonnet protocol): YOU own the decision boundaries — plan, spec, accept/reject, fuse, and the few CRUCIAL edits (stay token-efficient). Push BULK labor (drafts, broad research, exploration, mechanical edits) to cheaper Sonnet workers (Task tool / box fleet) under a STRICT harness: one atomic fully-specified sub-task each, shipped WITH its acceptance test; REJECT any worker output unless a deterministic gate passes (verify OUTCOMES not utterances). Never trust a Sonnet return as-is — gate it, or re-spec and re-run it.`);
+      if (!ultramax) {
+        directives.push(`RETRIEVE-FIRST + DELEGATE (token-efficient orchestration): Before any edit, RETRIEVE the minimal high-signal context (Grep/Glob/Explore + memory recall) — never grep-and-read whole files when the index answers it. DELEGATION (apply the \`aura-delegate\` skill — the full strict Fable→Sonnet protocol): YOU own the decision boundaries — plan, spec, accept/reject, fuse, and the few CRUCIAL edits (stay token-efficient). Push BULK labor (drafts, broad research, exploration, mechanical edits) to cheaper Sonnet workers (Task tool / box fleet) under a STRICT harness: one atomic fully-specified sub-task each, shipped WITH its acceptance test; REJECT any worker output unless a deterministic gate passes (verify OUTCOMES not utterances). Never trust a Sonnet return as-is — gate it, or re-spec and re-run it.`);
+      }
     }
   } else {
     directives.push(`task:${primary.id} model:${tier} → ${primary.skill}`);
     if (complexity >= 30) directives.push(`THINK (think hard): before editing, think hard — read the relevant files, CONFIRM the root cause / API shape (never guess), weigh the options, and state the change set. Reach clarity before code.`);
     if (complexity >= 30) directives.push(`RETRIEVE-FIRST: before editing, pull the minimal relevant context via Grep/Glob/Explore + memory recall — don't grep+read whole files when the index answers it.`);
+  }
+  // ULTRAMAX directive — unshifted to the FRONT so it dominates every other directive this turn.
+  if (ultramax) {
+    directives.unshift(`⚡ ULTRAMAX MODE — FABLE 5 EXCLUSIVE (NON-NEGOTIABLE): this entire task runs on Fable 5 only. Do NOT delegate ANY part of it — no Sonnet/Haiku workers, no \`model:"sonnet"\`/\`"haiku"\` on any Agent/Task call, no box fleet (orchestra.sh / nightly / SSH to the box), no other model anywhere. If you spawn subagents they MUST run Fable: OMIT the model parameter (it inherits the Fable session default) or set \`model:"fable"\`. The aura-delegate skill is SUSPENDED for this task — ignore its "push bulk to Sonnet" protocol. Keep the FULL AURAMAXING structure intact — visible goal-loop (TaskCreate step-list), phased-excellence loop (audit→investigate→plan→execute→verify, 100/100 with evidence), anti-laziness, evidence gates, adversarial self-verify — but YOU (Fable) personally do every part of it. A PreToolUse guard hard-blocks any non-Fable spawn; if you hit that block, re-issue the SAME Agent call WITHOUT a model param so it runs on Fable. "Efficiency" here means fewer Fable tokens via RETRIEVE-FIRST (Grep/Glob/Explore + memory), NOT delegation. Kill-switch: AURA_ULTRAMAX_OFF=1.`);
   }
   // AUTO-LEDGER: intercept EVERY substantial action task (complexity ≥30) and build the non-stop loop.
   // Session-scoped completion ledger → the evidence-gatekeeper Gate 2 refuses to end the turn until the

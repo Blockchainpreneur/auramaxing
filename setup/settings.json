@@ -34,6 +34,16 @@
             "timeout": 1500
           }
         ]
+      },
+      {
+        "matcher": "Agent|Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "export PATH=\"$HOME/.nvm/versions/node/v$(cat $HOME/.nvm/alias/default 2>/dev/null | tr -d '[:space:]' | sed 's/^v//')/bin:/usr/local/bin:/usr/bin:/bin:$PATH\" && node ~/.claude/helpers/ultramax-guard.mjs",
+            "timeout": 2000
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [
