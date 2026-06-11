@@ -155,7 +155,7 @@ for i in "${!PROJECTS[@]}"; do
   # ── clone / pull ────────────────────────────────────────────────────────────
   CLONE_URL="https://github.com/$SLUG"
   if [ -n "$GH_TOK" ]; then
-    CLONE_URL="https://x-token:${GH_TOK}@github.com/$SLUG"
+    CLONE_URL="https://x-access-token:${GH_TOK}@github.com/$SLUG"
   fi
 
   if [ -d "$WORK_DIR/.git" ]; then
