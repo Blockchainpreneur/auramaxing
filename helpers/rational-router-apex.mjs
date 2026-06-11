@@ -599,16 +599,23 @@ async function main() {
 
   // ── ULTRAMAX MODE ─────────────────────────────────────────────────────────
   // The user types `ultramax` anywhere in the prompt → the ENTIRE task runs on
-  // Fable 5 EXCLUSIVELY: no Sonnet/Haiku delegation, no box fleet, no model downgrade.
-  // Same full AURAMAXING structure (visible goal-loop, phased excellence, anti-laziness,
-  // evidence gates) — Fable does every part itself. Enforced by the ultramax-guard
-  // PreToolUse hook, which hard-blocks any non-Fable Agent/Task spawn while active.
+  // Fable 5 EXCLUSIVELY at MAXIMUM capability presets: Fable orchestrates AND may
+  // delegate, but ONLY to Fable 5 multi-agents — every Agent/Task/Workflow spawn
+  // inherits the Fable session default (or model:"fable") and every spawned prompt
+  // carries "ultrathink" so each fleet agent runs at max extended thinking. No
+  // Sonnet/Haiku workers, no box fleet, no model downgrade anywhere. Same full
+  // AURAMAXING structure (visible goal-loop, phased excellence, anti-laziness,
+  // evidence gates, zero-tolerance delegation harness). Enforced by the
+  // ultramax-guard PreToolUse hook (model lock + ultrathink lock + workflow lock).
   // It is PER-TASK: a prompt without the keyword clears the flag for this session.
-  const ultramax = /\bultramax\b/i.test(promptText);
+  // Typo-tolerant: ultramax / ultra max / ultra-max / uktramax (real user typos).
+  const ultramax = /\bu[lk]tra[\s-]?max\b/i.test(promptText);
   const AUR_DIR = join(homedir(), '.auramaxing');
   if (ultramax) {
     complexity = Math.max(complexity, 85);  // full phased-excellence + ultrathink always engages
-    try {
+    // Only persist the flag for a REAL session — eval/offline runs have no sessionId and
+    // must never clobber a live session's enforcement flag.
+    if (sessionId) try {
       mkdirSync(AUR_DIR, { recursive: true });
       writeFileSync(join(AUR_DIR, 'ultramax.json'), JSON.stringify({
         sessionId, ts: Math.floor(Date.now() / 1000), prompt: promptText.slice(0, 200),
@@ -779,7 +786,7 @@ async function main() {
   }
   // ULTRAMAX directive — unshifted to the FRONT so it dominates every other directive this turn.
   if (ultramax) {
-    directives.unshift(`⚡ ULTRAMAX MODE — FABLE 5 EXCLUSIVE (NON-NEGOTIABLE): this entire task runs on Fable 5 only. Do NOT delegate ANY part of it — no Sonnet/Haiku workers, no \`model:"sonnet"\`/\`"haiku"\` on any Agent/Task call, no box fleet (orchestra.sh / nightly / SSH to the box), no other model anywhere. If you spawn subagents they MUST run Fable: OMIT the model parameter (it inherits the Fable session default) or set \`model:"fable"\`. The aura-delegate skill is SUSPENDED for this task — ignore its "push bulk to Sonnet" protocol. Keep the FULL AURAMAXING structure intact — visible goal-loop (TaskCreate step-list), phased-excellence loop (audit→investigate→plan→execute→verify, 100/100 with evidence), anti-laziness, evidence gates, adversarial self-verify — but YOU (Fable) personally do every part of it. A PreToolUse guard hard-blocks any non-Fable spawn; if you hit that block, re-issue the SAME Agent call WITHOUT a model param so it runs on Fable. "Efficiency" here means fewer Fable tokens via RETRIEVE-FIRST (Grep/Glob/Explore + memory), NOT delegation. Kill-switch: AURA_ULTRAMAX_OFF=1.`);
+    directives.unshift(`⚡ ULTRAMAX MODE — FABLE 5 EXCLUSIVE (NON-NEGOTIABLE): this entire task runs on Fable 5 ONLY, at MAXIMUM capability presets. NO other model anywhere — no Sonnet/Haiku workers, no \`model:"sonnet"\`/\`"haiku"\`/\`"opus"\` on any Agent/Task/Workflow call, no box fleet (orchestra.sh / nightly / SSH to the box). DELEGATION IS ALLOWED — but ONLY to Fable 5 multi-agents at max settings: (1) every Agent/Task spawn OMITS the model parameter (inherits the Fable 5 session default: claude-fable-5 + effortLevel ultracode) or sets \`model:"fable"\`; (2) every spawned agent prompt MUST include the word "ultrathink" so the fleet agent engages its MAXIMUM extended-thinking budget — no exceptions, every spawn; (3) Workflow scripts must NOT set any non-Fable \`model:\` override on agent() or meta.phases. YOU (Fable) remain the orchestrator and reviewer: the aura-delegate Sonnet protocol is SUSPENDED, but its DISCIPLINE is not — every Fable sub-task is still one atomic fully-specified spec shipped WITH its acceptance test, carries the 8 ZERO-TOLERANCE RULES + the Tier-2 micro-loop verbatim, and its return is REJECTED unless a deterministic gate passes (verify OUTCOMES, not utterances). Keep the FULL AURAMAXING structure intact — visible goal-loop (TaskCreate step-list), phased-excellence loop (audit→investigate→plan→execute→verify, 100/100 with evidence), anti-laziness, evidence gates, adversarial self-verify. A PreToolUse guard hard-blocks any non-Fable spawn, any spawn prompt missing "ultrathink", and any Workflow model override; if blocked, re-issue the SAME call corrected per the block message. Use the Fable fleet to fan out, adversarially verify, and synthesize — exhaustive correctness over token cost. Kill-switch: AURA_ULTRAMAX_OFF=1.`);
   }
   // AUTO-LEDGER: intercept EVERY substantial action task (complexity ≥30) and build the non-stop loop.
   // Session-scoped completion ledger → the evidence-gatekeeper Gate 2 refuses to end the turn until the

@@ -219,6 +219,30 @@ function hooksSuite() {
     gateKS.exitCode === 0,
     `expected exit 0 with kill-switch; got ${gateKS.exitCode}`);
 
+  // ── ultramax-guard cases (Fable-5-only fleet at MAX presets) ─────────────
+  // Uses AURA_ULTRAMAX_FLAG to point at a TMP flag — the real session flag is never touched.
+  const GUARD = join(CLAUDE_H, 'ultramax-guard.mjs');
+  const umFlag = join(TMP, 'ultramax-flag.json');
+  writeFileSync(umFlag, JSON.stringify({ sessionId: 'UMX', ts: Math.floor(Date.now() / 1000) }));
+  const guardRun = (toolName, toolInput, sessionId = 'UMX', extraEnv = {}) => {
+    try {
+      return execSync(`node "${GUARD}"`, {
+        input: JSON.stringify({ tool_name: toolName, session_id: sessionId, tool_input: toolInput }),
+        encoding: 'utf8', timeout: 5000,
+        env: { ...process.env, AURA_ULTRAMAX_FLAG: umFlag, AURA_ULTRAMAX_OFF: '', ...extraEnv },
+      });
+    } catch (e) { return (e.stdout || '') + (e.stderr || ''); }
+  };
+  add('ultramax-blocks-sonnet-spawn', guardRun('Agent', { model: 'sonnet', prompt: 'ultrathink. do x' }).includes('"block"'), 'expected block: sonnet spawn while ULTRAMAX active');
+  add('ultramax-allows-fable-ultrathink', guardRun('Agent', { model: 'fable', prompt: 'ultrathink. do x' }).includes('"approve"'), 'expected approve: fable model + ultrathink prompt');
+  add('ultramax-allows-inherit-ultrathink', guardRun('Agent', { prompt: 'ultrathink. do x' }).includes('"approve"'), 'expected approve: inherited (Fable) model + ultrathink prompt');
+  add('ultramax-blocks-missing-ultrathink', guardRun('Agent', { prompt: 'do x' }).includes('"block"'), 'expected block: fleet spawn prompt missing "ultrathink" (max-thinking lock)');
+  add('ultramax-blocks-workflow-model-override', guardRun('Workflow', { script: "await agent('x', {model: 'sonnet'})" }).includes('"block"'), 'expected block: workflow script overrides an agent onto sonnet');
+  add('ultramax-allows-workflow-no-override', guardRun('Workflow', { script: "await agent('ultrathink. x', {schema: S})" }).includes('"approve"'), 'expected approve: workflow with no model overrides (inherits Fable)');
+  add('ultramax-failopen-other-session', guardRun('Agent', { model: 'sonnet', prompt: 'x' }, 'OTHER').includes('"approve"'), 'expected approve: flag belongs to a different session');
+  add('ultramax-kill-switch', guardRun('Agent', { model: 'sonnet', prompt: 'x' }, 'UMX', { AURA_ULTRAMAX_OFF: '1' }).includes('"approve"'), 'expected approve: AURA_ULTRAMAX_OFF=1 disables enforcement');
+  add('drift-ultramax-guard-copies', sameFile(GUARD, join(AURA_H, 'ultramax-guard.mjs')), 'ultramax-guard copies DRIFTED (.claude vs auramaxing)');
+
   // output-compressor (TASK#12): must NOT compress model-requested read tools. A >50KB Read is
   // explicitly asked for — compressing it to a 600-char head/tail fragment is real degradation that
   // breaks edit accuracy. Only UNSOLICITED Bash output gets capped. The hook replies via stdout:

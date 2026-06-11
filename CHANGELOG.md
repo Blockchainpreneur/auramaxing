@@ -5,6 +5,13 @@ All notable changes to Auramaxing are documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.10.0 — 2026-06-11
+
+- **ULTRAMAX v2 — Fable-5 fleet at MAXIMUM presets** — per the user's directive, ULTRAMAX no longer means "zero delegation": it now means delegation is allowed but ONLY to **Fable 5 multi-agents at max capability** — every Agent/Task spawn inherits the Fable session default (claude-fable-5 + effortLevel ultracode) or sets `model:"fable"`, every spawned prompt MUST carry **"ultrathink"** (maximum extended-thinking budget), and Workflow scripts may not override any agent onto a non-Fable model. The aura-delegate Sonnet protocol stays suspended, but its zero-tolerance discipline transfers to the Fable fleet (atomic specs + acceptance tests, returns gated on outcomes).
+- **ultramax-guard v2 (3 locks)** — the PreToolUse guard now enforces: (1) model lock (non-Fable Agent/Task spawn → block), (2) max-thinking lock (spawn prompt missing "ultrathink" → block with re-issue instructions), (3) workflow lock (`model: "sonnet"|"haiku"|"opus"` in a Workflow script → block). Matcher widened `Agent|Task` → `Agent|Task|Workflow` in settings.json. Still fail-open (no flag / other session / stale / kill-switch → approve).
+- **Typo-tolerant trigger** — `ultramax`, `ultra max`, `ultra-max`, `uktramax` all activate the mode (real user typos observed); near-misses (`ultra maximal`, `ultramaximal`) stay silent.
+- **evals 67/67** (+12: 9 ultramax-guard cases incl. drift check, 2 router ULTRAMAX-v2 anchors, 1 typo-tolerance + 1 spaced-keyword case), baseline re-locked.
+
 ## v1.9.0 — 2026-06-11
 
 - **Zero-Tolerance loop embedded in EVERY Sonnet delegation** — per the user's directive, every delegated sub-task now carries the 8 Zero-Tolerance Rules + the Tier-2 micro-loop (scope+20x hypothesis → build → /qa → /review+/cso → improve → Absolute Greatness Gate) as a forcing frame, so the cheaper worker model is driven to its ceiling. Wired into both the router's DELEGATE directive and the `aura-delegate` skill harness (new rule 8); a worker return missing the loop evidence is rejected on sight. (CLAUDE.md's aspirational framing is intentional semantic priming — left as-is by design.)
