@@ -1,6 +1,6 @@
 import { serve } from "bun";
 import { existsSync, mkdirSync, renameSync } from "fs";
-import { join } from "path";
+import { join, resolve } from "path";
 
 const HOME = process.env.HOME || "/Users/macbook";
 const STATE_DIR = join(HOME, ".auramaxing");
@@ -215,7 +215,11 @@ const server = serve({
           const lastSummary = getLastSessionSummary(state, body.cwd);
           await writeContextFile(project, lastSummary);
           // Also write to project's .claude directory
-          const projectContextDir = join(body.cwd, ".claude");
+          const resolvedCwd = resolve(body.cwd);
+          if (!resolvedCwd.startsWith(HOME + "/") && resolvedCwd !== HOME) {
+            return Response.json({ error: "Invalid cwd" }, { status: 400, headers });
+          }
+          const projectContextDir = join(resolvedCwd, ".claude");
           mkdirSync(projectContextDir, { recursive: true });
           const lastSession = lastSummary || "First session — no prior context.";
           await Bun.write(
