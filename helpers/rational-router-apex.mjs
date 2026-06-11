@@ -537,7 +537,14 @@ async function main() {
 
   // Pure questions (no action verb) pass through silently
   const normalized = prompt.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  const ACTION_VERBS = /\b(fix|build|create|implement|refactor|deploy|review|audit|investigate|optimize|add|make|write|run|install|update|delete|remove|research|hire|draft|pitch|brainstorm|decide|strategize)\b/;
+  // ULTRAMAX detection lives BEFORE every early-exit: an ultramax prompt must NEVER
+  // leave the router silently (English-biased rules/scorer used to drop Spanish ones).
+  // Typo-tolerant: ultramax / ultra max / ultra-max / uktramax (real user typos).
+  const ultramax = /\bu[lk]tra[\s-]?max\b/i.test(promptText);
+  // Bilingual EN+ES — the user prompts in Spanish; stems cover conjugations/imperatives
+  // (aplica/aplícalo/aplicar…). English-only here meant Spanish action prompts never
+  // triggered the goal-loop/ledger (found 2026-06-11).
+  const ACTION_VERBS = /\b(fix|build|create|implement|refactor|deploy|review|audit|investigate|optimize|add|make|write|run|install|update|delete|remove|research|hire|draft|pitch|brainstorm|decide|strategize)\b|\b(arregl|corrig|constru|crea|implement|refactoriz|desplieg|despleg|revis|audit|investig|optimiz|agreg|añad|escrib|ejecut|instal|actualiz|borr|elimin|mejor|verific|prueb|aplic|cambi|lanz|termin|integr|configur|automatiz)[a-záéíóúñ]*\b|\b(haz|hacer|pon|usa|corre)\b/i;
   // Entrepreneur questions are action-requests even when phrased as "what/how/should"
   const ENTREPRENEUR_INTENT = /\b(strategy|go.?to.?market|gtm|positioning|competitive|business model|revenue|pricing|fundrais|pitch|investor|market fit|roadmap|prioritize|should (we|i) (build|launch|raise|hire|pivot|focus)|what.s the (best|right) (way|move|approach)|how (do|should) (we|i) (grow|scale|win|differentiate))\b/i;
   const isQuestion =
@@ -566,6 +573,10 @@ async function main() {
     if (inv) matches = [{ ...inv, hits: 1 }];
   }
 
+  if (matches.length === 0 && ultramax) {
+    const nf = RULES.find(r => r.id === 'new-feature');
+    if (nf) matches = [{ ...nf, hits: 1 }];
+  }
   if (matches.length === 0) process.exit(0);
 
   // A PURE (non-investigation) question routes only when it names a concrete problem or build
@@ -573,7 +584,7 @@ async function main() {
   // brush a keyword — "explain how promises work" (→investigate), "who are you" (→research),
   // "should I use React or Vue" (→decide) — stay silent. Investigation phrasings already routed above.
   const ACTIONABLE_AS_QUESTION = new Set(['bug-fix', 'new-feature', 'refactor', 'code-review', 'security', 'deploy-ship', 'e2e-testing', 'performance', 'design']);
-  if (isQuestion && !isInvestigation && !ACTIONABLE_AS_QUESTION.has(matches[0].id)) process.exit(0);
+  if (isQuestion && !ultramax && !isInvestigation && !ACTIONABLE_AS_QUESTION.has(matches[0].id)) process.exit(0);
 
   const primary         = matches[0];
   let   complexity      = matches.reduce((max, m) => Math.max(max, COMPLEXITY[m.id] || 50), 0);
@@ -595,7 +606,7 @@ async function main() {
     }
   } catch {}
 
-  if (complexity < 3) process.exit(0);  // only truly empty tasks skip — Aura routes everything
+  if (complexity < 3 && !ultramax) process.exit(0);  // only truly empty tasks skip — Aura routes everything
 
   // ── ULTRAMAX MODE ─────────────────────────────────────────────────────────
   // The user types `ultramax` anywhere in the prompt → the ENTIRE task runs on
@@ -608,8 +619,6 @@ async function main() {
   // evidence gates, zero-tolerance delegation harness). Enforced by the
   // ultramax-guard PreToolUse hook (model lock + ultrathink lock + workflow lock).
   // It is PER-TASK: a prompt without the keyword clears the flag for this session.
-  // Typo-tolerant: ultramax / ultra max / ultra-max / uktramax (real user typos).
-  const ultramax = /\bu[lk]tra[\s-]?max\b/i.test(promptText);
   const AUR_DIR = join(homedir(), '.auramaxing');
   if (ultramax) {
     complexity = Math.max(complexity, 85);  // full phased-excellence + ultrathink always engages
@@ -786,13 +795,13 @@ async function main() {
   }
   // ULTRAMAX directive — unshifted to the FRONT so it dominates every other directive this turn.
   if (ultramax) {
-    directives.unshift(`⚡ ULTRAMAX MODE — FABLE 5 EXCLUSIVE (NON-NEGOTIABLE): this entire task runs on Fable 5 ONLY, at MAXIMUM capability presets. NO other model anywhere — no Sonnet/Haiku workers, no \`model:"sonnet"\`/\`"haiku"\`/\`"opus"\` on any Agent/Task/Workflow call, no box fleet (orchestra.sh / nightly / SSH to the box). DELEGATION IS ALLOWED — but ONLY to Fable 5 multi-agents at max settings: (1) every Agent/Task spawn OMITS the model parameter (inherits the Fable 5 session default: claude-fable-5 + effortLevel ultracode) or sets \`model:"fable"\`; (2) every spawned agent prompt MUST include the word "ultrathink" so the fleet agent engages its MAXIMUM extended-thinking budget — no exceptions, every spawn; (3) Workflow scripts must NOT set any non-Fable \`model:\` override on agent() or meta.phases. YOU (Fable) remain the orchestrator and reviewer: the aura-delegate Sonnet protocol is SUSPENDED, but its DISCIPLINE is not — every Fable sub-task is still one atomic fully-specified spec shipped WITH its acceptance test, carries the 8 ZERO-TOLERANCE RULES + the Tier-2 micro-loop verbatim, and its return is REJECTED unless a deterministic gate passes (verify OUTCOMES, not utterances). Keep the FULL AURAMAXING structure intact — visible goal-loop (TaskCreate step-list), phased-excellence loop (audit→investigate→plan→execute→verify, 100/100 with evidence), anti-laziness, evidence gates, adversarial self-verify. A PreToolUse guard hard-blocks any non-Fable spawn, any spawn prompt missing "ultrathink", and any Workflow model override; if blocked, re-issue the SAME call corrected per the block message. Use the Fable fleet to fan out, adversarially verify, and synthesize — exhaustive correctness over token cost. Kill-switch: AURA_ULTRAMAX_OFF=1.`);
+    directives.unshift(`⚡ ULTRAMAX MODE — FABLE 5 EXCLUSIVE (NON-NEGOTIABLE): this entire task runs on Fable 5 ONLY, at MAXIMUM capability presets. NO other model anywhere — no Sonnet/Haiku workers, no \`model:"sonnet"\`/\`"haiku"\`/\`"opus"\` on any Agent/Task/Workflow call, no box fleet (orchestra.sh / nightly / SSH to the box). DELEGATION IS ALLOWED — but ONLY to Fable 5 multi-agents at max settings: (1) every Agent/Task spawn OMITS the model parameter (inherits the Fable 5 session default: claude-fable-5 + effortLevel ultracode) or sets \`model:"fable"\`; (2) every spawned agent prompt MUST include the word "ultrathink" so the fleet agent engages its MAXIMUM extended-thinking budget — no exceptions, every spawn; (3) Workflow scripts must NOT set any non-Fable \`model:\` override on agent() or meta.phases; (4) MAXIMUM presets EVERYWHERE, no exceptions — YOU (the main agent) engage extended thinking (ultrathink) on every phase of the loop, and main + every fleet agent run at maximum effort (the ultracode session default — never lower it); (5) ULTRAMAX = maximum scope of capability and work: every applicable phase of the Absolute Perfection Loop becomes a visible /goal task (TaskCreate per phase), closed only with gate evidence. YOU (Fable) remain the orchestrator and reviewer: the aura-delegate Sonnet protocol is SUSPENDED, but its DISCIPLINE is not — every Fable sub-task is still one atomic fully-specified spec shipped WITH its acceptance test, carries the 8 ZERO-TOLERANCE RULES + the Tier-2 micro-loop verbatim, and its return is REJECTED unless a deterministic gate passes (verify OUTCOMES, not utterances). Keep the FULL AURAMAXING structure intact — visible goal-loop (TaskCreate step-list), phased-excellence loop (audit→investigate→plan→execute→verify, 100/100 with evidence), anti-laziness, evidence gates, adversarial self-verify. A PreToolUse guard hard-blocks any non-Fable spawn, any spawn prompt missing "ultrathink", and any Workflow model override; if blocked, re-issue the SAME call corrected per the block message. Use the Fable fleet to fan out, adversarially verify, and synthesize — exhaustive correctness over token cost. Kill-switch: AURA_ULTRAMAX_OFF=1.`);
   }
   // AUTO-LEDGER: intercept EVERY substantial action task (complexity ≥30) and build the non-stop loop.
   // Session-scoped completion ledger → the evidence-gatekeeper Gate 2 refuses to end the turn until the
   // deliverable is marked done (`ledger.mjs done <id>`), only after the full verified + audited loop.
   try {
-    if (sessionId && complexity >= 30 && ACTION_VERBS.test(prompt)) {
+    if (sessionId && complexity >= 30 && (ultramax || ACTION_VERBS.test(prompt))) {
       const ledgerDir = join(homedir(), '.auramaxing');
       mkdirSync(ledgerDir, { recursive: true });
       const deliverable = promptText.replace(/\s+/g, ' ').trim().slice(0, 140);
@@ -805,8 +814,8 @@ async function main() {
   } catch { /* non-blocking */ }
   // GOAL LOOP (visible) — turn EVERY action task into a /goal-focused loop the user can watch.
   // The ledger (above) is the durable Gate-2 tracker; the native task list is the VISIBLE step tracker.
-  if (complexity >= 30 && ACTION_VERBS.test(prompt)) {
-    directives.push('GOAL LOOP (VISIBLE, MANDATORY): treat this prompt as a /goal. FIRST tool call of the turn = TaskCreate with one task per step of the loop (audit · investigate · plan · execute · verify · …), so the user SEES the step list. As you work: set exactly one task in_progress, mark it completed with its evidence the moment its gate passes, then advance. Keep the list live (add steps as the loop discovers them); never finish with a step still in_progress. This visible list + the durable ledger are the two trackers — the turn ends only when every step is completed AND the ledger deliverable is marked done.');
+  if (complexity >= 30 && (ultramax || ACTION_VERBS.test(prompt))) {
+    directives.push('GOAL LOOP (VISIBLE, MANDATORY): treat this prompt as a /goal. FIRST tool call of the turn = TaskCreate with one task per step of the loop (audit · investigate · plan · execute · verify · …)' + (ultramax ? ' — under ULTRAMAX this is PER-PHASE: one task for EVERY phase of the Absolute Perfection Loop that applies to this prompt (Tier 1: 00 foundation · 01 moat · 02 architecture → Tier 2 per atomic detail: 03 scope · 04 build · 05 test · 06 audit · 07 improve · 08 greatness gate → Tier 3: 09 ship review · 10 final audit · 11 retro+memory), each marked completed only with its gate evidence' : '') + ', so the user SEES the step list. As you work: set exactly one task in_progress, mark it completed with its evidence the moment its gate passes, then advance. Keep the list live (add steps as the loop discovers them); never finish with a step still in_progress. This visible list + the durable ledger are the two trackers — the turn ends only when every step is completed AND the ledger deliverable is marked done.');
     directives.push('ABSOLUTE PERFECTION LOOP (the constitution — full text: ~/auramaxing/docs/ORCHESTRATION.md §0.0): "boil the whole lake," loop ∞ until greatness. ⛔ ZERO-TOLERANCE (a violation VOIDS the result): (1) ship Critical/High bugs, (2) skip a gate because "looks fine", (3) merge without /review clean, (4) advance a phase unverified, (5) "done" without a passing /qa, (6) re-research a logged moat (query memory), (7) build before /plan-eng-review clears architecture, (8) deploy before /ship confirms coverage ≥35%. TIER 1 Foundation (00 /office-hours 6Q + /plan-ceo-review scope · 01 moat research + ≥3 "10x because Y" hypotheses · 02 /plan-eng-review architecture LOCK) → TIER 2 per ATOMIC detail (03 scope + 3 best-in-class refs + 20x hypothesis · 04 build to the hypothesis + tests ≥35% · 05 /qa + /browse screenshots + /codex · 06 /review + /cso + quantified moat gap → Improvement Directive · 07 implement all + re-/qa + 20x binary PASS/FAIL · 08 ABSOLUTE GREATNESS GATE) → TIER 3 (09 system /review + /ship + full /cso + /docs · 10 e2e /qa + moat final check · 11 /retro + memory). ABSOLUTE GREATNESS GATE = three binary YES-with-evidence: Q1 meets/exceeds the 20x hypothesis? Q2 competitive vs the 3 best-in-class refs? Q3 production-ready RIGHT NOW (not "needs polish"/"MVP-fine")? Any NO ⇒ return to Phase 06. All YES ⇒ record `node ~/.claude/helpers/ledger.mjs great <id> "<evidence>"` (Gate 3 blocks turn-end until you do). Depth scales with the task; the gates never relax.');
   }
   if (enrichLine) directives.push(enrichLine);

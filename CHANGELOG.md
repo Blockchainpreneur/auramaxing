@@ -5,6 +5,14 @@ All notable changes to Auramaxing are documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.11.0 — 2026-06-11
+
+- **The Perfection Loop now reaches EVERY actionable prompt — including Spanish.** `ACTION_VERBS` was English-only, so Spanish prompts ("verifica", "aplica", "arregla"…) never triggered the goal-loop/ledger/Perfection-Loop directives. Now bilingual with stem matching for conjugations (aplic-, verific-, arregl-, mejor-, termin-, integr-…).
+- **ULTRAMAX can never be silently dropped.** Detection moved BEFORE every router early-exit: a Spanish/short/question-phrased ultramax prompt used to leave the router with NO directive at all (no rule match → silent exit). Now: no-match falls back to the generic build route, questions bypass the question-filter, trivial scores bypass the <3% exit — the ULTRAMAX directive always fires.
+- **ULTRAMAX per-phase /goal binding + max presets, explicit.** The GOAL LOOP directive under ULTRAMAX now mandates one visible task per Perfection-Loop phase (00–11), closed only with gate evidence; directive points (4)(5) pin MAXIMUM presets everywhere (main agent ultrathink every phase; main + fleet at the ultracode session max — per-spawn effort is not yet a platform surface, tracked upstream as anthropics/claude-code#25591).
+- **update-check.sh semver fix (Critical).** Version comparison was string inequality — local 1.10.0 vs remote 1.9.0 produced a blocking "UPDATE REQUIRED → 1.9.0" downgrade banner (lexicographic 1.10.0 < 1.9.0). New numeric per-segment `ver_gt`, applied on the slow path AND re-validating the 720-min cache path; poisoned caches purged.
+- **evals 72/72** (+5: 3 ver_gt regression checks, ultramax-spanish-fallback, spanish-action-gets-loop), baseline re-locked.
+
 ## v1.10.0 — 2026-06-11
 
 - **ULTRAMAX v2 — Fable-5 fleet at MAXIMUM presets** — per the user's directive, ULTRAMAX no longer means "zero delegation": it now means delegation is allowed but ONLY to **Fable 5 multi-agents at max capability** — every Agent/Task spawn inherits the Fable session default (claude-fable-5 + effortLevel ultracode) or sets `model:"fable"`, every spawned prompt MUST carry **"ultrathink"** (maximum extended-thinking budget), and Workflow scripts may not override any agent onto a non-Fable model. The aura-delegate Sonnet protocol stays suspended, but its zero-tolerance discipline transfers to the Fable fleet (atomic specs + acceptance tests, returns gated on outcomes).

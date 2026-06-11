@@ -219,6 +219,17 @@ function hooksSuite() {
     gateKS.exitCode === 0,
     `expected exit 0 with kill-switch; got ${gateKS.exitCode}`);
 
+  // update-check.sh ver_gt — regression: string compare made local 1.10.0 "upgrade" to remote 1.9.0.
+  const verGt = (a, b) => {
+    try {
+      execSync(`bash -c 'eval "$(sed -n "/^ver_gt() {/,/^}/p" "$HOME/auramaxing/scripts/update-check.sh")"; ver_gt ${a} ${b}'`, { encoding: 'utf8', timeout: 5000 });
+      return true;
+    } catch { return false; }
+  };
+  add('vercheck-remote-older-no-upgrade', verGt('1.9.0', '1.10.0') === false, 'expected ver_gt(1.9.0 > 1.10.0)=false — the lexicographic-compare regression');
+  add('vercheck-remote-newer-upgrades', verGt('1.10.0', '1.9.0') === true, 'expected ver_gt(1.10.0 > 1.9.0)=true');
+  add('vercheck-equal-no-upgrade', verGt('1.10.0', '1.10.0') === false, 'expected ver_gt(equal)=false');
+
   // ── ultramax-guard cases (Fable-5-only fleet at MAX presets) ─────────────
   // Uses AURA_ULTRAMAX_FLAG to point at a TMP flag — the real session flag is never touched.
   const GUARD = join(CLAUDE_H, 'ultramax-guard.mjs');

@@ -82,6 +82,25 @@ LOCAL=""
 [ -f "$VERSION_FILE" ] && LOCAL="$(cat "$VERSION_FILE" 2>/dev/null | tr -d '[:space:]')"
 [ -z "$LOCAL" ] && exit 0
 
+# ── ver_gt <a> <b> — true (0) iff version a > b, numeric per-segment ──────
+# String inequality is NOT a version comparison: "1.10.0" != "1.9.0" used to
+# emit UPGRADE_AVAILABLE telling the user to "upgrade" 1.10.0 → 1.9.0
+# (lexicographic 1.10.0 < 1.9.0). Found live 2026-06-11.
+ver_gt() {
+  local IFS=.
+  # shellcheck disable=SC2206
+  local -a a=($1) b=($2)
+  local i av bv
+  for i in 0 1 2 3; do
+    av="${a[i]:-0}"; bv="${b[i]:-0}"
+    case "$av" in *[!0-9]*|'') av=0 ;; esac
+    case "$bv" in *[!0-9]*|'') bv=0 ;; esac
+    if [ "$av" -gt "$bv" ]; then return 0; fi
+    if [ "$av" -lt "$bv" ]; then return 1; fi
+  done
+  return 1
+}
+
 # ── Check cache freshness ────────────────────────────────────
 # UP_TO_DATE: 60 min TTL (detect new releases quickly)
 # UPGRADE_AVAILABLE: 720 min TTL (keep showing banner)
@@ -105,8 +124,10 @@ if [ -f "$CACHE_FILE" ]; then
         ;;
       UPGRADE_AVAILABLE*)
         CACHED_OLD="$(echo "$CACHED" | awk '{print $2}')"
-        if [ "$CACHED_OLD" = "$LOCAL" ]; then
-          CACHED_NEW="$(echo "$CACHED" | awk '{print $3}')"
+        CACHED_NEW="$(echo "$CACHED" | awk '{print $3}')"
+        # Re-validate with ver_gt: a poisoned/legacy cache (remote OLDER than
+        # local) must never re-serve the banner for its 720-min TTL.
+        if [ "$CACHED_OLD" = "$LOCAL" ] && ver_gt "$CACHED_NEW" "$LOCAL"; then
           write_state_file "$LOCAL" "$CACHED_NEW"
           check_snooze "$CACHED_NEW" && exit 0
           echo "$CACHED"
@@ -129,7 +150,9 @@ if ! echo "$REMOTE" | grep -qE '^[0-9]+\.[0-9.]+$'; then
   exit 0
 fi
 
-if [ "$LOCAL" = "$REMOTE" ]; then
+# Upgrade only when remote is STRICTLY NEWER (equal, or local ahead of remote
+# — e.g. a release just pushed from this machine — are both up-to-date).
+if ! ver_gt "$REMOTE" "$LOCAL"; then
   echo "UP_TO_DATE $LOCAL" > "$CACHE_FILE"
   write_state_file "$LOCAL" "$LOCAL"
   exit 0
