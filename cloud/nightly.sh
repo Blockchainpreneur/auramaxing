@@ -58,6 +58,11 @@ if ! flock -n 9; then
 fi
 
 # ── hooks-off settings (prevents AURAMAXING autopilot hooks OOMing the box) ──
+# NOTE: '{"hooks":{}}' alone does NOT clear hooks — --settings MERGES with
+# ~/.claude/settings.json (an empty object removes nothing). The claude calls
+# below also pass --setting-sources project so user-level hooks never load
+# (proven 2026-06-11: with hooks live, the "audit" answered ledger hook noise —
+# "Ledger cleared. All items done." — instead of the audit prompt).
 HOOKS_OFF_SETTINGS="$HOME/.nightly-nohooks.json"
 printf '{"hooks":{}}' > "$HOOKS_OFF_SETTINGS"
 
@@ -251,6 +256,7 @@ AUDIT_EOF
     AUDIT_RESULT="$(cd "$WORK_DIR" && "$CLAUDE_BIN" \
       --model "$NIGHTLY_MODEL" \
       --settings "$HOOKS_OFF_SETTINGS" \
+      --setting-sources project \
       --dangerously-skip-permissions \
       -p "$AUDIT_PROMPT" 2>&1)" || true
     if [ -z "${AUDIT_RESULT//[[:space:]]/}" ]; then
@@ -313,6 +319,7 @@ FIX_EOF
       (cd "$WORK_DIR" && "$CLAUDE_BIN" \
         --model "$NIGHTLY_MODEL" \
         --settings "$HOOKS_OFF_SETTINGS" \
+        --setting-sources project \
         --dangerously-skip-permissions \
         -p "$FIX_PROMPT" 2>&1) || true
       echo "[nightly] fix call returned (exit advisory — test gate decides)"
