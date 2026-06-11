@@ -246,17 +246,18 @@ AUDIT_EOF
 )"
 
     echo "[nightly] running audit pass..."
-    AUDIT_RESULT=""
-    if AUDIT_RESULT="$(cd "$WORK_DIR" && "$CLAUDE_BIN" \
+    # Gate on OUTPUT presence, NOT exit code: claude -p can return valid audit output AND
+    # still exit non-zero (transient warning/refresh). Only an EMPTY result skips the round.
+    AUDIT_RESULT="$(cd "$WORK_DIR" && "$CLAUDE_BIN" \
       --model "$NIGHTLY_MODEL" \
       --settings "$HOOKS_OFF_SETTINGS" \
       --dangerously-skip-permissions \
-      -p "$AUDIT_PROMPT" 2>&1)"; then
-      echo "[nightly] audit done ($(echo "$AUDIT_RESULT" | wc -l) lines)"
-    else
-      echo "[nightly] WARN: audit call failed — skipping round"
+      -p "$AUDIT_PROMPT" 2>&1)" || true
+    if [ -z "${AUDIT_RESULT//[[:space:]]/}" ]; then
+      echo "[nightly] WARN: audit produced NO output — skipping round"
       break
     fi
+    echo "[nightly] audit done ($(echo "$AUDIT_RESULT" | wc -l) lines)"
 
     # write audit to file for log
     echo "$AUDIT_RESULT" > "$AUDIT_OUT"
@@ -306,17 +307,15 @@ RULES (non-negotiable):
 FIX_EOF
 )"
 
-      if (cd "$WORK_DIR" && "$CLAUDE_BIN" \
+      # Run the fix; do NOT gate on exit code — the deterministic TEST GATE below is the only
+      # arbiter. A non-zero exit with a valid change must still reach the gate (which commits on
+      # green, reverts on red). Only the gate decides; claude's exit code is advisory.
+      (cd "$WORK_DIR" && "$CLAUDE_BIN" \
         --model "$NIGHTLY_MODEL" \
         --settings "$HOOKS_OFF_SETTINGS" \
         --dangerously-skip-permissions \
-        -p "$FIX_PROMPT" 2>&1); then
-        echo "[nightly] fix call returned"
-      else
-        echo "[nightly] WARN: fix call failed — reverting"
-        git -C "$WORK_DIR" checkout . 2>&1 || true
-        continue
-      fi
+        -p "$FIX_PROMPT" 2>&1) || true
+      echo "[nightly] fix call returned (exit advisory — test gate decides)"
 
       # ── (c) GATE — deterministic bash test, not claude's word ────────────
       echo "[nightly] running test gate: $TEST_CMD"
