@@ -322,7 +322,7 @@ FIX_EOF
       TEST_OUTPUT="$BASE/tmp-test-${REPO_NAME}-r${round}-f${total_fixes_attempted}.txt"
 
       gate_pass=0
-      if (cd "$WORK_DIR" && eval "$TEST_CMD" > "$TEST_OUTPUT" 2>&1); then
+      if (cd "$WORK_DIR" && bash -c "$TEST_CMD" > "$TEST_OUTPUT" 2>&1); then
         gate_pass=1
       fi
 
