@@ -77,11 +77,28 @@ grep -v '^GH_TOKEN=' /root/.ssh/environment > /root/.ssh/environment.tmp 2>/dev/
 echo 'GH_TOKEN=$GH_TOK_ESCAPED' >> /root/.ssh/environment.tmp
 mv /root/.ssh/environment.tmp /root/.ssh/environment
 chmod 600 /root/.ssh/environment
-echo 'GH_TOKEN=$GH_TOK_ESCAPED' > /root/nightly/.nightly-env
+grep -v '^GH_TOKEN=' /root/nightly/.nightly-env > /root/nightly/.nightly-env.tmp 2>/dev/null || true
+echo 'GH_TOKEN=$GH_TOK_ESCAPED' >> /root/nightly/.nightly-env.tmp
+mv /root/nightly/.nightly-env.tmp /root/nightly/.nightly-env
 chmod 600 /root/nightly/.nightly-env
 echo '  GH_TOKEN written'
 "
 fi
+
+# ── required env for systemd runs (idempotent) ────────────────────────────────
+# IS_SANDBOX=1: claude refuses --dangerously-skip-permissions as root without it.
+# SSH sessions inherit it from /root/.ssh/environment; systemd does NOT — it must
+# be in the EnvironmentFile or every scheduled audit dies in 400ms with exit 1.
+# NIGHTLY_END_HOUR=13 (UTC) = 8am Cancun — the intended 2am-8am window (default 8
+# UTC gave only a 1-hour window).
+echo "▸ ensuring IS_SANDBOX + NIGHTLY_END_HOUR in .nightly-env..."
+ssh $SSH_OPTS "$HOST" "
+touch /root/nightly/.nightly-env
+grep -q '^IS_SANDBOX=' /root/nightly/.nightly-env || echo 'IS_SANDBOX=1' >> /root/nightly/.nightly-env
+grep -q '^NIGHTLY_END_HOUR=' /root/nightly/.nightly-env || echo 'NIGHTLY_END_HOUR=13' >> /root/nightly/.nightly-env
+chmod 600 /root/nightly/.nightly-env
+echo '  env ensured'
+"
 
 # ── install systemd timer (preferred) or crontab fallback ─────────────────────
 echo "▸ installing schedule (02:00 America/Cancun = 08:00 UTC)..."
