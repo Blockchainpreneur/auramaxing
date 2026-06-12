@@ -14,7 +14,7 @@
  *   node notebooklm-bridge.mjs store-knowledge          — store structured knowledge as NLM source (JSON via stdin)
  *   node notebooklm-bridge.mjs query-knowledge "q"      — query all stored session knowledge
  */
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { createHash } from 'crypto';
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync } from 'fs';
 import { join } from 'path';
@@ -35,7 +35,16 @@ const input = process.argv.slice(3).join(' ') || '';
 
 function nlm(cmd) {
   try {
-    return execSync(`${NLM_BIN} ${cmd}`, { encoding: 'utf8', timeout: 30000 }).trim();
+    const args = [];
+    let cur = '', q = '';
+    for (const c of cmd) {
+      if (q) { if (c === q) q = ''; else cur += c; }
+      else if (c === "'" || c === '"') { q = c; }
+      else if (c === ' ') { if (cur) { args.push(cur); cur = ''; } }
+      else cur += c;
+    }
+    if (cur) args.push(cur);
+    return execFileSync(NLM_BIN, args, { encoding: 'utf8', timeout: 30000 }).trim();
   } catch (e) {
     return `[NLM error: ${e.message?.slice(0, 80)}]`;
   }
