@@ -15,7 +15,7 @@
  *   node nlm-writer.mjs stats              # buffer + retry + dead-letter counts
  */
 import { execSync } from 'child_process';
-import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync, unlinkSync, statSync, renameSync } from 'fs';
+import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync, mkdtempSync, unlinkSync, statSync, renameSync } from 'fs';
 import { join, basename } from 'path';
 import { homedir, tmpdir } from 'os';
 import { findNlm, pythonEnv } from './find-bin.mjs';
@@ -101,7 +101,8 @@ function writeEntry(entry) {
       ? entry.payload
       : JSON.stringify(entry.payload, null, 2);
     const title = entry.title || `${entry.type}-${entry.ts.slice(0, 19)}`;
-    const tmpFile = join(tmpdir(), `aura-note-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.md`);
+    const tmpDir = mkdtempSync(join(tmpdir(), 'aura-note-'));
+    const tmpFile = join(tmpDir, 'content.md');
     writeFileSync(tmpFile, content);
     try {
       // note create subcommand varies; try both positional forms gracefully
@@ -116,6 +117,7 @@ function writeEntry(entry) {
       }
     } finally {
       try { unlinkSync(tmpFile); } catch {}
+      try { unlinkSync(tmpDir); } catch {}
     }
     return { ok: true };
   }
