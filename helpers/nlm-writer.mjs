@@ -14,7 +14,7 @@
  *   node nlm-writer.mjs classify           # reads text from stdin, prints type
  *   node nlm-writer.mjs stats              # buffer + retry + dead-letter counts
  */
-import { execSync } from 'child_process';
+import { execSync, execFileSync } from 'child_process';
 import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync, unlinkSync, statSync, renameSync } from 'fs';
 import { join, basename } from 'path';
 import { homedir, tmpdir } from 'os';
@@ -79,7 +79,16 @@ export function bufferWrite(type, payload, ctx = {}) {
 
 function nlm(args, { timeout = 30000 } = {}) {
   if (!NLM_BIN) throw new Error('NLM CLI not available');
-  return execSync(`${NLM_BIN} ${args}`, {
+  const parsed = [];
+  let cur = '', q = '';
+  for (const c of args) {
+    if (q) { if (c === q) q = ''; else cur += c; }
+    else if (c === "'" || c === '"') { q = c; }
+    else if (c === ' ') { if (cur) { parsed.push(cur); cur = ''; } }
+    else cur += c;
+  }
+  if (cur) parsed.push(cur);
+  return execFileSync(NLM_BIN, parsed, {
     encoding: 'utf8',
     timeout,
     env: { ...process.env, PATH: pythonEnv().PATH },
