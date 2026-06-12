@@ -6,9 +6,10 @@
  * See that copy for full documentation.
  */
 import { spawn, execSync } from 'child_process';
-import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync, mkdtempSync } from 'fs';
 import { join } from 'path';
-import { homedir } from 'os';
+import { homedir, tmpdir } from 'os';
+import { randomBytes } from 'crypto';
 import { findNlm } from './find-bin.mjs';
 
 const HOME = homedir();
@@ -18,7 +19,8 @@ const LEARNINGS_DIR = join(AUR, 'learnings');
 const HANDOFF_PATH = join(AUR, 'pending-handoff.json');
 const SDR_PATH = join(AUR, 'sdr-active.md');
 const NB_ID_FILE = join(AUR, 'nlm-notebook-id');
-const FLAG_PATH = `/tmp/auramaxing-handoff-${process.ppid}.flag`;
+const _FLAG_DIR = mkdtempSync(join(tmpdir(), `auramaxing-handoff-${process.ppid}-`));
+const FLAG_PATH = join(_FLAG_DIR, `${randomBytes(8).toString('hex')}.flag`);
 const THRESHOLD_USED_PCT = Number(process.env.AURA_CTX_THRESHOLD_PCT || 55);
 const SOFT_THRESHOLD_PCT = Number(process.env.AURA_CTX_SOFT_THRESHOLD_PCT || 45);
 
