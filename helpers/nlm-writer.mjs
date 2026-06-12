@@ -115,7 +115,10 @@ function writeEntry(entry) {
     try {
       // note create subcommand varies; try both positional forms gracefully
       try {
-        nlm(`note create --title "${title.replace(/"/g, '\\"')}" --file "${tmpFile}"`, { timeout: 20000 });
+        execFileSync(NLM_BIN, ['note', 'create', '--title', title, '--file', tmpFile], {
+          encoding: 'utf8', timeout: 20000,
+          env: { ...process.env, PATH: pythonEnv().PATH },
+        });
       } catch {
         // Some versions: `notebooklm note create "title"` with content on stdin
         execFileSync(NLM_BIN, ['note', 'create', title], {
