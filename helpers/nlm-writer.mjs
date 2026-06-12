@@ -159,7 +159,6 @@ export async function flush({ limit = Infinity } = {}) {
 
   // Snapshot buffer
   const raw = readFileSync(BUFFER, 'utf8');
-  try { writeFileSync(BUFFER, ''); } catch {}
   const lines = raw.split('\n').filter(Boolean);
 
   // Append any existing retry entries to the queue
@@ -167,11 +166,14 @@ export async function flush({ limit = Infinity } = {}) {
   try {
     if (existsSync(RETRY)) {
       retryLines = readFileSync(RETRY, 'utf8').split('\n').filter(Boolean);
-      writeFileSync(RETRY, '');
     }
   } catch {}
 
   const queue = [...lines, ...retryLines].map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+
+  // Clear buffer and retry file only after queue is fully built — prevents data loss on crash
+  try { writeFileSync(BUFFER, ''); } catch {}
+  try { if (existsSync(RETRY)) writeFileSync(RETRY, ''); } catch {}
 
   let written = 0, failed = 0, deadLettered = 0;
   for (const entry of queue.slice(0, limit)) {
