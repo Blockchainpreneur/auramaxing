@@ -128,7 +128,8 @@ function writeEntry(entry) {
       : JSON.stringify(entry.payload, null, 2);
     const date = entry.ts.slice(0, 10);
     const title = entry.title || `${entry.type} ${date} — ${entry.project}`;
-    const tmpFile = join(tmpdir(), `aura-src-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.md`);
+    const tmpDir = mkdtempSync(join(tmpdir(), 'aura-src-'));
+    const tmpFile = join(tmpDir, 'content.md');
     writeFileSync(tmpFile, `# ${title}\n\n${content}`);
     try {
       if (method === 'source-research') {
@@ -143,6 +144,7 @@ function writeEntry(entry) {
       }
     } finally {
       try { unlinkSync(tmpFile); } catch {}
+      try { unlinkSync(tmpDir); } catch {}
     }
     return { ok: true };
   }
