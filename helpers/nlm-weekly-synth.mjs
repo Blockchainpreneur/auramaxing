@@ -40,7 +40,7 @@ function log(...parts) {
 }
 
 function nlm(args, { timeout = 30000 } = {}) {
-  return execSync(`${NLM_BIN} ${args}`, {
+  return execSync(`"${NLM_BIN}" ${args}`, {
     encoding: 'utf8', timeout,
     env: { ...process.env, PATH: pythonEnv().PATH },
   }).trim();
