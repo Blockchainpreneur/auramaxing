@@ -6,7 +6,7 @@
  * See that copy for full documentation.
  */
 import { spawn, execSync } from 'child_process';
-import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync, mkdtempSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync, mkdtempSync, rmSync } from 'fs';
 import { join } from 'path';
 import { homedir, tmpdir } from 'os';
 import { randomBytes } from 'crypto';
@@ -21,6 +21,7 @@ const SDR_PATH = join(AUR, 'sdr-active.md');
 const NB_ID_FILE = join(AUR, 'nlm-notebook-id');
 const _FLAG_DIR = mkdtempSync(join(tmpdir(), `auramaxing-handoff-${process.ppid}-`));
 const FLAG_PATH = join(_FLAG_DIR, `${randomBytes(8).toString('hex')}.flag`);
+process.on('exit', () => { try { rmSync(_FLAG_DIR, { recursive: true, force: true }); } catch {} });
 const THRESHOLD_USED_PCT = Number(process.env.AURA_CTX_THRESHOLD_PCT || 55);
 const SOFT_THRESHOLD_PCT = Number(process.env.AURA_CTX_SOFT_THRESHOLD_PCT || 45);
 
