@@ -149,6 +149,9 @@ exit bar is met.**
    blind spots same-model self-review cannot). UI work also gets the Design Supremacy audit.
 5. **TEST** — Prove it. Real runs, real browser (`npx playwright test` / CDP), type-check,
    lint. For UI: vision-QA loop + axe-core + Lighthouse CI. "I think it's done" is banned.
+   Local gates run FAST→SLOW, stop at first red: lint → typecheck → unit tests → build
+   (TS/Next repos: invoke the `pre-push-gates` skill — `next build` is the ONLY gate
+   that catches server/client import leaks; never push red, CI is the slow safety net).
 6. **SELF-IMPROVE** — Distill a win/loss learning (the ReasoningBank pattern), write it so
    the next similar task retrieves it. Then re-enter the loop if any gate failed.
 
