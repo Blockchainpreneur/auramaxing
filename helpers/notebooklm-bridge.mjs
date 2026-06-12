@@ -83,8 +83,7 @@ switch (command) {
 
   case 'structure': {
     ensureNotebook();
-    const safeInput = input.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$').replace(/"/g, '\\"');
-    const structuredPrompt = nlm(`ask "Structure this prompt for maximum precision. Add requirements a senior engineer would expect. Prevent lazy responses. The prompt is: ${safeInput}"`);
+    const structuredPrompt = (() => { try { return execFileSync(NLM_BIN, ['ask', `Structure this prompt for maximum precision. Add requirements a senior engineer would expect. Prevent lazy responses. The prompt is: ${input}`], { encoding: 'utf8', timeout: 30000 }).trim(); } catch (e) { return `[NLM error: ${e.message?.slice(0, 80)}]`; } })();
     const answer = structuredPrompt.split('Answer:').pop()?.trim() || structuredPrompt;
     console.log(answer);
     break;
