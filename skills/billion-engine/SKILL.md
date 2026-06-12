@@ -101,6 +101,11 @@ evidencia: <output real de runs / archivos / URLs>
 `tarea_completa: true` is only valid when the PARENT gate verified it (ledger `great`
 with evidence; Gates 1-3 enforce mechanically). Persist state BEFORE closing.
 
+**WATCHDOG (mechanical, v1.16.0):** while BILLION is armed and ledger objectives are
+open, every stop attempt is re-BLOCKED with a NUDGE by the gatekeeper (up to
+`AURA_BILLION_NUDGES`=12 per prompt) — continuing is not your choice, it is enforced.
+Respond to a nudge by continuing the top objective, never by arguing with it.
+
 **STICKY + RESILIENT (BILLION does not turn off):** the router keeps the mode armed
 for the whole session (`billion-mode.json`, rolling 24h, refreshed per prompt) — only
 "billion off" / exit conditions clear it. RESUME-FIRST: every prompt while active

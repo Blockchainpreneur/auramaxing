@@ -5,6 +5,11 @@ All notable changes to Auramaxing are documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.16.0 — 2026-06-12
+
+- **BILLION WATCHDOG — mechanical anti-stop (user report: "stopping before achieving the given goals and revenue").** Sticky mode kept the engine ARMED but nothing mechanically forced continuation: the gatekeeper blocked once per turn (anti-wedge) and the model stopped anyway. Now, while the session's BILLION flag is armed AND its ledger has open objectives, EVERY stop attempt is re-blocked with a continuation NUDGE (resume-first → next autonomous objective → schedule continuation), bounded by a nudge budget (`AURA_BILLION_NUDGES`, default 12 per user prompt; router resets the counter each prompt — cap reached/objectives closed/"billion off" → allow, so it can never wedge). This is the doctrine's Parte-7 watchdog, in-harness: continuation is the SYSTEM's property, not the model's whim.
+- **evals 99/99** (+5 watchdog: nudges-on-stop, counter persists, cap respected, closed-objectives allow, other-session immune; normal one-block loop-guard behavior preserved), baseline re-locked.
+
 ## v1.15.0 — 2026-06-12
 
 - **BILLION is now STICKY + RESILIENT (user report: "se está apagando").** Root cause: the mode was per-task — any follow-up prompt without the keyword cleared the flag and killed the engine. Now the keyword arms a session-scoped sticky flag (`billion-mode.json`, rolling 24h refreshed per prompt); every subsequent prompt of the session keeps BILLION+ULTRAMAX+guard active. Only `billion off`/`apaga billion`, the 4 exit conditions, or 24h idle clear it. Live state machine 5/5: arm → persist on plain prompt → other-session isolation → explicit off → stays off.

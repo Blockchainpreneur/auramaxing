@@ -154,8 +154,12 @@ continuidad es propiedad del SISTEMA, no de la voluntad del modelo.
 
 ## PARTE 7 · RESILIENCIA (nunca parar)
 
-Heartbeat+cron (beats autocontenidos) · watchdog independiente (NUDGE al turno
-silencioso; GREEN/YELLOW/RED; nunca toca un agente activo) · estado externalizado
+Heartbeat+cron (beats autocontenidos) · **watchdog con NUDGE — IMPLEMENTADO v1.16.0**:
+el evidence-gatekeeper re-bloquea cada intento de parada mientras BILLION esté armado
+y haya objetivos abiertos en el ledger, inyectando el NUDGE de continuación (resume-first
+→ siguiente objetivo autónomo → agendar continuación), acotado por presupuesto
+(`AURA_BILLION_NUDGES`, default 12 por prompt, contador reseteado por el router) para
+no quemar infinito · estado externalizado
 (checkpoint en cada transición) · auto-retry+auto-fix (backoff, ruta alternativa;
 escalar solo el item bloqueado) · failover activo-pasivo del orquestador · memoria
 auto-mantenida (heartbeat scan + wrap-up; LightRAG antes de re-investigar).

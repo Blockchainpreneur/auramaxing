@@ -19,7 +19,7 @@
  *   - Ledger ignored unless it is same-session AND fresh (<6h); malformed/missing → ALLOW.
  *   - Only gates real SOURCE files; docs/markdown/json/config excluded.
  */
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
 
@@ -92,6 +92,33 @@ function analyzeTurn(transcriptPath) {
   return { mutated: [...new Set(mutated)], verified: cmdVerified || skillVerified, ranButFailed };
 }
 
+// ── BILLION WATCHDOG (the perpetual engine does not stop with open objectives) ──
+// While the session's BILLION sticky flag is armed AND its ledger has open items,
+// a stop attempt is re-BLOCKED with a NUDGE — repeatedly, up to a hard budget cap
+// (AURA_BILLION_NUDGES, default 12 per user prompt; the router resets the counter
+// on every prompt). Cap reached / no open items / no flag / other session / any
+// error → null (allow). This is the in-harness version of the doctrine's watchdog
+// (BILLION-ENGINE.md Parte 7): the model never "decides" to keep going — the
+// system re-injects the continuation mechanically.
+function billionNudge(sessionId) {
+  try {
+    if (!sessionId) return null;
+    const bf = process.env.AURA_BILLION_FLAG || join(homedir(), '.auramaxing', 'billion-mode.json');
+    if (!existsSync(bf)) return null;
+    const f = JSON.parse(readFileSync(bf, 'utf8'));
+    if (!f || f.sessionId !== sessionId) return null;
+    if ((Math.floor(Date.now() / 1000) - (f.ts || 0)) > 24 * 3600) return null;
+    const open = openLedger(sessionId);
+    if (!open) return null;
+    const cap = Math.max(1, parseInt(process.env.AURA_BILLION_NUDGES || '12', 10) || 12);
+    const count = (f.nudges || 0) + 1;
+    if (count > cap) return null;                       // budget cap → allow the stop
+    f.nudges = count;
+    writeFileSync(bf, JSON.stringify(f));
+    return { count, cap, open };
+  } catch { return null; }
+}
+
 function ledgerPath(sessionId) {
   if (process.env.AURA_LEDGER_FILE) return process.env.AURA_LEDGER_FILE;
   const dir = process.env.AURA_LEDGER_DIR || join(homedir(), '.auramaxing', 'ledger');
@@ -132,7 +159,20 @@ function block(reason) { clearTimeout(timeout); process.stdout.write(JSON.string
 async function main() {
   try {
     const input = await readStdin();
-    if (input.stop_hook_active) ALLOW();                  // already blocked once this turn → never loop
+    if (input.stop_hook_active) {
+      // Normal mode: one block per turn, never loop. BILLION mode: the watchdog
+      // re-nudges (bounded) while objectives are open — the loop does not stop.
+      const nudge = billionNudge(input.session_id);
+      if (!nudge) ALLOW();
+      const items = nudge.open.slice(0, 6).map(x => `  [${x.id}] ${x.desc.slice(0, 160)}`).join('\n');
+      block([`🚀 BILLION WATCHDOG (nudge ${nudge.count}/${nudge.cap}) — the perpetual engine does NOT stop with open objectives:`,
+        items, '',
+        'CONTINUE the top objective NOW — resume-first: read ~/.auramaxing/billion/<project>/STATE.json + GOALS.md and act.',
+        'If an objective is GENUINELY blocked externally: write the blocker to STATE.json, move the human-facing part to SUGGESTIONS.md,',
+        'pick the next autonomous objective and keep working. Only if NOTHING can advance: SCHEDULE continuation (the loop skill / cron),',
+        'quote the schedule as evidence, then close the ledger items that are truly done with `ledger.mjs done/great <id> --session ' + (input.session_id || '') + '`.',
+        'The loop exits ONLY on: goal/revenue gate met · budget cap · "billion off" · detected dead-end. Kill-switch: AURA_GATEKEEPER_OFF=1.'].join('\n'));
+    }
     const tp = input.transcript_path;
     if (!tp || !existsSync(tp)) ALLOW();                  // can't inspect → fail-open
 

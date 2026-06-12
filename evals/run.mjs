@@ -252,6 +252,25 @@ function hooksSuite() {
   add('ledger-session-flag-targets-own-file', sesA.items[0].done === true && sesB.items[0].desc === 'b-done', 'expected --session SESA to mutate only SESA.json');
   delete process.env.AURA_LEDGER_DIR;
 
+  // ── BILLION watchdog: re-nudges on stop while objectives open, bounded by cap ──
+  const bwFlag = join(TMP, 'bw-flag.json');
+  const bwLdir = join(TMP, 'bw-ledger');
+  mkdirSync(bwLdir, { recursive: true });
+  writeFileSync(join(bwLdir, 'BWA.json'), JSON.stringify({ sessionId: 'BWA', ts: stamp(), items: [{ id: 1, desc: 'reach $10k MRR objective', done: false }] }));
+  process.env.AURA_BILLION_FLAG = bwFlag;
+  process.env.AURA_LEDGER_DIR = bwLdir;
+  writeFileSync(bwFlag, JSON.stringify({ sessionId: 'BWA', ts: stamp() }));
+  add('billion-watchdog-nudges-on-stop', gatekeeper([U('x')], true, 'BWA').includes('BILLION WATCHDOG'), 'expected watchdog NUDGE block on stop with billion active + open objectives');
+  add('billion-watchdog-counts-up', JSON.parse(readFileSync(bwFlag, 'utf8')).nudges === 1, 'expected nudge counter persisted to the flag');
+  writeFileSync(bwFlag, JSON.stringify({ sessionId: 'BWA', ts: stamp(), nudges: 12 }));
+  add('billion-watchdog-respects-cap', gatekeeper([U('x')], true, 'BWA').trim() === '', 'expected allow once the nudge budget cap is exhausted');
+  writeFileSync(bwFlag, JSON.stringify({ sessionId: 'BWA', ts: stamp() }));
+  writeFileSync(join(bwLdir, 'BWA.json'), JSON.stringify({ sessionId: 'BWA', ts: stamp(), items: [{ id: 1, desc: 'd', done: true, greatness: { passed: true, evidence: 'e' } }] }));
+  add('billion-watchdog-needs-open-objectives', gatekeeper([U('x')], true, 'BWA').trim() === '', 'expected allow when every objective is closed');
+  add('billion-watchdog-other-session-immune', gatekeeper([U('x')], true, 'BWB').trim() === '', 'expected allow for a session that did not arm billion');
+  delete process.env.AURA_BILLION_FLAG;
+  delete process.env.AURA_LEDGER_DIR;
+
   // update-check.sh ver_gt — regression: string compare made local 1.10.0 "upgrade" to remote 1.9.0.
   const verGt = (a, b) => {
     try {
