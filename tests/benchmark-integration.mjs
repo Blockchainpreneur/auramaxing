@@ -18,7 +18,17 @@ import { join } from 'path';
 import { homedir } from 'os';
 
 const HOME = homedir();
-const PYTHON_BIN = '/Library/Frameworks/Python.framework/Versions/3.12/bin/python3';
+const PYTHON_BIN = (() => {
+  const candidates = [
+    '/Library/Frameworks/Python.framework/Versions/3.12/bin/python3',
+    '/usr/bin/python3',
+    '/usr/local/bin/python3',
+  ];
+  for (const c of candidates) {
+    try { execFileSync(c, ['--version'], { stdio: 'ignore' }); return c; } catch {}
+  }
+  return 'python3';
+})();
 const LIGHTRAG_CLI = join(HOME, 'auramaxing', 'scripts', 'lightrag-cli.py');
 const WORKSPACE = join(HOME, '.auramaxing', 'lightrag-workspace');
 const PROMPT_CACHE = join(HOME, '.auramaxing', 'prompt-cache');
