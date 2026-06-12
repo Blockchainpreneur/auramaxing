@@ -263,6 +263,15 @@ AUDIT_EOF
       echo "[nightly] WARN: audit produced NO output — skipping round"
       break
     fi
+    # Rate/session-limit resilience: the account limit message is NOT an audit result.
+    # Wait and retry the round instead of silently treating it as "no fixes" (found
+    # live 2026-06-12: 3 of 4 projects got zero work because the limit hit mid-run).
+    if echo "$AUDIT_RESULT" | grep -qiE "hit your (session|usage) limit|rate.?limit|resets [0-9]"; then
+      echo "[nightly] WARN: Claude session/rate limit hit — sleeping 15m then retrying (round not consumed)"
+      round=$(( round - 1 ))
+      sleep 900
+      continue
+    fi
     echo "[nightly] audit done ($(echo "$AUDIT_RESULT" | wc -l) lines)"
 
     # write audit to file for log
