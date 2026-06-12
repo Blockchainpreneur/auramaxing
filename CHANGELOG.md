@@ -5,6 +5,14 @@ All notable changes to Auramaxing are documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.15.0 — 2026-06-12
+
+- **BILLION is now STICKY + RESILIENT (user report: "se está apagando").** Root cause: the mode was per-task — any follow-up prompt without the keyword cleared the flag and killed the engine. Now the keyword arms a session-scoped sticky flag (`billion-mode.json`, rolling 24h refreshed per prompt); every subsequent prompt of the session keeps BILLION+ULTRAMAX+guard active. Only `billion off`/`apaga billion`, the 4 exit conditions, or 24h idle clear it. Live state machine 5/5: arm → persist on plain prompt → other-session isolation → explicit off → stays off.
+- **The perpetual 50→3 cycle (user directive):** from each forced-quota round the tournament selects EXACTLY the 3 maximum-leverage ideas (leverage = impact × autonomous-executability ÷ effort — not the easiest 3), all 3 execute to completion through L2/L3, and only then the 50-ideas exercise re-runs on the new world-state. Losers archived per round.
+- **Resilience mandates:** resume-first (read STATE/GOALS and continue the open objective on every prompt while active), one ledger item per objective (completeness gate blocks silent stops), and a turn may not end without a closed objective gate OR a scheduled continuation (ScheduleWakeup//loop/cron) — otherwise zero-tolerance violation.
+- **False positive caught by the new evals:** "billón **para** dominar" — the Spanish preposition "para" matched the off-words and killed the mode; off-regex tightened.
+- **evals 94/94** (+5 sticky state machine, +3 top-3/sticky anchors), baseline re-locked.
+
 ## v1.14.0 — 2026-06-12
 
 - **Full self-audit (ULTRAMAX fleet: 2 Fable auditors + main).** 21+ verified findings, all fixed:

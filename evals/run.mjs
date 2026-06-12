@@ -219,6 +219,23 @@ function hooksSuite() {
     gateKS.exitCode === 0,
     `expected exit 0 with kill-switch; got ${gateKS.exitCode}`);
 
+  // ── BILLION sticky state machine (the perpetual engine must not die on plain prompts) ──
+  const bflag = join(TMP, 'billion-flag.json');
+  const routerRun = (prompt, sid) => {
+    try {
+      return execSync(`node "${ROUTER}"`, {
+        input: JSON.stringify({ prompt, session_id: sid }), encoding: 'utf8', timeout: 8000,
+        env: { ...process.env, AURA_BILLION_FLAG: bflag, AURA_ULTRAMAX_FLAG: join(TMP, 'umx-flag-b.json') },
+      });
+    } catch (e) { return (e.stdout || '') + (e.stderr || ''); }
+  };
+  rmSync(bflag, { force: true });
+  add('billion-keyword-arms-sticky', routerRun('billion domina el mercado', 'BSESA').includes('BILLION MODE') && existsSync(bflag), 'expected BILLION directive + sticky flag written on keyword');
+  add('billion-sticky-survives-plain-prompt', routerRun('sigue con lo siguiente del plan', 'BSESA').includes('BILLION MODE'), 'expected BILLION to persist on a keyword-less prompt in the same session');
+  add('billion-sticky-isolated-per-session', !routerRun('sigue con lo siguiente', 'BSESB').includes('BILLION MODE'), 'expected another session NOT to inherit the sticky flag');
+  add('billion-off-clears', (() => { routerRun('billion off', 'BSESA'); return !existsSync(bflag); })(), 'expected "billion off" to delete the sticky flag');
+  add('billion-stays-off-after-off', !routerRun('continua el trabajo pendiente', 'BSESA').includes('BILLION MODE'), 'expected no BILLION after explicit off');
+
   // ── per-session ledger isolation (concurrent sessions must not clobber gates) ──
   const ldir = join(TMP, 'ledger-dir');
   mkdirSync(ldir, { recursive: true });

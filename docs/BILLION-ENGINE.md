@@ -60,15 +60,20 @@ verificación del loop padre. L4→gate de L3→criterio de L2→hito de L1→mo
    transición (ALTA PRIORIDAD DE REVISIÓN) · 31–50 territorio de puntos ciegos (aquí
    viven los 10x). REGLA DURA: no parar en 12 ni en 30 — si se atasca: relaciones
    forzadas, inversión del problema, rolestorming.
-3. **CONVERGENCIA ADVERSARIAL:** las 50 pasan al torneo; salen 3–5 candidatas élite.
-4. **RANKING POR EJECUTABILIDAD AUTÓNOMA (filtro duro, Principio 4):** ¿cuánto
-   ejecuta el motor SOLO, sin humanos? Idea que REQUIERE labor humana → se RECHAZA
-   de la cola (o se transforma en su variante autónoma); lo humano va a
-   `SUGGESTIONS.md` como sugerencia opcional. Idea 80%-buena que el motor ejecuta
-   solo esta noche → arriba. El plan resultante debe ser ejecutable al 100% sin
-   intervención humana.
-5. **INYECCIÓN A LA COLA** del Mission Loop; las 45 perdedoras se archivan en memoria
-   (una idea descartada hoy puede ganar en otra etapa).
+3. **CONVERGENCIA ADVERSARIAL:** las 50 pasan al torneo; jueces en conflicto puntúan,
+   matan perdedores, fusionan ganadores.
+4. **SELECCIÓN: LAS 3 DE MÁXIMO APALANCAMIENTO (exactamente 3, regla dura).** Del
+   torneo salen EXACTAMENTE las 3 ideas que representan el punto de máximo
+   apalancamiento: `apalancamiento = impacto × ejecutabilidad-autónoma ÷ esfuerzo`.
+   No las 3 más fáciles — las 3 que más mueven la aguja hacia el moat/etapa. Filtro
+   duro del Principio 4: idea que REQUIERE labor humana → se RECHAZA o se transforma
+   en su variante autónoma; lo humano va a `SUGGESTIONS.md`.
+5. **EJECUTAR LAS 3 → REPETIR (la cadencia perpetua).** Las 3 se inyectan a la cola
+   del Mission Loop y se EJECUTAN COMPLETAS vía L2/L3 (una a la vez, gate del padre
+   en cada una). SOLO cuando las 3 cierran sus gates se vuelve a correr el ejercicio
+   de las 50 ideas sobre el nuevo estado del mundo. El ciclo nunca se rompe:
+   **50 → top-3 apalancamiento → ejecutar 3 → 50 → …** Las ~47 perdedoras se
+   archivan en memoria por ronda (una idea descartada hoy puede ganar en otra etapa).
 
 **Disparadores:** etapa nueva · objetivo N iteraciones sin progreso · retrospectiva
 semanal · cambio de mercado · invocación manual.
@@ -93,6 +98,20 @@ REPETIDOS → cristalizar cada uno en un SKILL.md / slash command / sub-agente �
 identificar qué se sigue haciendo "a mano como un animal". El sistema compone
 capacidad como interés compuesto; la intel va a memoria (LightRAG) y se consulta
 ANTES de re-investigar (zero-tolerance regla 6).
+
+## PARTE 4.5 · STICKY + RESILIENTE — BILLION NO SE APAGA
+
+El modo es **pegajoso por sesión** (v1.15.0): la keyword lo arma una vez y queda
+activo para TODOS los prompts siguientes de esa sesión (ventana rodante de 24h que
+cada prompt refresca; flag `~/.auramaxing/billion-mode.json` sessionId-scoped). Solo
+lo apagan: `billion off` / `apaga billion` explícito · las 4 condiciones de salida ·
+24h sin actividad. **Resume-first:** con BILLION activo, cada prompt arranca leyendo
+`STATE.json` + `GOALS.md` y CONTINUANDO el objetivo abierto antes que cualquier otra
+cosa. **Continuidad propia:** un ledger item por objetivo activo (el completeness
+gate bloquea paradas silenciosas); si un turno debe ceder con objetivos abiertos, el
+motor agenda su propia continuación (ScheduleWakeup / loop / cron). Un turno que
+termina sin (a) gate de objetivo cerrado o (b) continuación agendada = violación
+zero-tolerance.
 
 ## PARTE 5 · EL MECANISMO ANTI-PARADA
 

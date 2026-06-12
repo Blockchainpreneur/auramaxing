@@ -542,8 +542,25 @@ async function main() {
   // Typo-tolerant: ultramax / ultra max / ultra-max / uktramax / ultramas (real user typos).
   // BILLION = the Billion-Dollar Perpetual Engine (docs/BILLION-ENGINE.md); it INHERITS
   // ULTRAMAX in full (Fable-only fleet at max presets + guard) and layers the mega-loop.
-  const billion = /\bbilli?[oó]n\b/i.test(promptText);
+  // BILLION is STICKY per session (the perpetual engine must NOT die because a follow-up
+  // prompt lacks the keyword — found live: "se está apagando"). Keyword arms it; it stays
+  // armed for THIS session (rolling 24h window, refreshed every prompt) until an explicit
+  // "billion off"/"apaga billion" or the session ends. Flag path overridable for evals.
+  const BFLAG = process.env.AURA_BILLION_FLAG || join(homedir(), '.auramaxing', 'billion-mode.json');
+  // NO bare "para" in the off-words — it is the Spanish preposition ("billón para X" must NOT kill the mode).
+  const billionOff = /\bbilli?[oó]n\s+(off|stop)\b|\b(apaga|deten|mata|desactiva)\s+(el\s+)?(modo\s+)?billi?[oó]n\b/i.test(promptText);
+  const billionKw = !billionOff && /\bbilli?[oó]n\b/i.test(promptText);
+  let billionSticky = false;
+  try {
+    const f = JSON.parse(readFileSync(BFLAG, 'utf8'));
+    billionSticky = !!f && !!sessionId && f.sessionId === sessionId &&
+      (Math.floor(Date.now() / 1000) - (f.ts || 0)) < 24 * 3600;
+  } catch {}
+  const billion = !billionOff && (billionKw || billionSticky);
   const ultramax = /\bu[lk]tra[\s-]?ma[xs]\b/i.test(promptText) || billion;
+  if (billionOff && sessionId) {
+    try { if (existsSync(BFLAG)) { const f = JSON.parse(readFileSync(BFLAG, 'utf8')); if (f.sessionId === sessionId) unlinkSync(BFLAG); } } catch {}
+  }
   // Bilingual EN+ES — the user prompts in Spanish; stems cover conjugations/imperatives
   // (aplica/aplícalo/aplicar…). English-only here meant Spanish action prompts never
   // triggered the goal-loop/ledger (found 2026-06-11).
@@ -634,6 +651,10 @@ async function main() {
       mkdirSync(AUR_DIR, { recursive: true });
       writeFileSync(join(AUR_DIR, 'ultramax.json'), JSON.stringify({
         sessionId, ts: Math.floor(Date.now() / 1000), prompt: promptText.slice(0, 200),
+      }));
+      // BILLION sticky: refresh the rolling window on EVERY prompt while active.
+      if (billion) writeFileSync(BFLAG, JSON.stringify({
+        sessionId, ts: Math.floor(Date.now() / 1000), armedBy: billionKw ? 'keyword' : 'sticky',
       }));
     } catch {}
   } else {
@@ -805,7 +826,7 @@ async function main() {
   }
   // BILLION directive — unshifted AFTER ultramax so it dominates everything this turn.
   if (billion) {
-    directives.unshift(`🚀 BILLION MODE — THE BILLION-DOLLAR PERPETUAL ENGINE (doctrine: ~/auramaxing/docs/BILLION-ENGINE.md — READ IT, then invoke the billion-engine skill). ULTRAMAX is INHERITED IN FULL (Fable 5 exclusive fleet at MAXIMUM presets, ultrathink in every spawn, 3-lock guard). On top, the mega-loop: (1) FIVE NESTED LOOPS — L0 Horizon (thesis of moats → $1B valuation) ⊃ L1 Mission (stage milestone) ⊃ L2 Goal (one measurable objective) ⊃ L3 Execution (Absolute Perfection Loop per atomic task) ⊃ L4 Reason-Act (the heartbeat); NO inner loop marks "done" without its PARENT's gate verifying it. (2) FORCED-QUOTA ENGINE at L0/L1: every strategic decision/stall/reprioritization FIRST generates 50 ideas in marked blocks (1-5 obvious · 6-15 comfortable · 16-30 transition=HIGH-REVIEW · 31-50 blind-spot territory — the gold), NEVER stops at 12 or 30, then hands off to a tournament. (3) ADVERSARIAL TOURNAMENTS at L2/L3 — no important output ships without one: A output (8 versions × 5 conflicting judges → kill → fuse → scoreboard) · B interview-before-build (≤15 questions, brutal pushback on vagueness, spec + 3 failure modes BEFORE v1) · C kill-your-company (funded rival, rank attacks by self-executability) · D counterparty negotiation (rounds + break character) · E 80-page second opinion (read EVERYTHING incl. footnotes). (4) HUMAN-INDEPENDENCE (hard rule): the plan consists ONLY of tasks the engine can do or delegate to Fable multi-agents — NEVER assign a task to a human; humans get SUGGESTIONS (~/.auramaxing/billion/<project>/SUGGESTIONS.md), never dependencies; ideas requiring human labor are REJECTED from the queue or transformed into their autonomous variant; the plan must succeed even if the human does nothing or disappears — human approvals (real money, production deploys, investor comms, contracts) are OPTIONAL ACCELERATORS the loop routes around, never blockers. (5) ANTI-STOP: close EVERY turn with the structured block (accion_realizada / observacion / siguiente_paso / tarea_completa / evidencia); persist state IMMEDIATELY to ~/.auramaxing/billion/<project>/ (STATE.json + GOALS.md + PROGRESS.log + SUGGESTIONS.md) — "lo escribo después" is banned; the next step you declare IS the next prompt; the loop only exits on: $1B defensible · budget cap · human kill-switch · detected dead-end (reprioritize, never loop the impossible). (6) RANK every candidate by AUTONOMOUS EXECUTABILITY and execute top-first. Permission matrix per Parte 8 of the doctrine. EL LOOP NUNCA PARA.`);
+    directives.unshift(`🚀 BILLION MODE — THE BILLION-DOLLAR PERPETUAL ENGINE (doctrine: ~/auramaxing/docs/BILLION-ENGINE.md — READ IT, then invoke the billion-engine skill). ULTRAMAX is INHERITED IN FULL (Fable 5 exclusive fleet at MAXIMUM presets, ultrathink in every spawn, 3-lock guard). On top, the mega-loop: (1) FIVE NESTED LOOPS — L0 Horizon (thesis of moats → $1B valuation) ⊃ L1 Mission (stage milestone) ⊃ L2 Goal (one measurable objective) ⊃ L3 Execution (Absolute Perfection Loop per atomic task) ⊃ L4 Reason-Act (the heartbeat); NO inner loop marks "done" without its PARENT's gate verifying it. (2) FORCED-QUOTA ENGINE at L0/L1 — THE PERPETUAL 50→3 CYCLE: every strategic decision/stall/reprioritization FIRST generates 50 ideas in marked blocks (1-5 obvious · 6-15 comfortable · 16-30 transition=HIGH-REVIEW · 31-50 blind-spot territory — the gold), NEVER stops at 12 or 30, then hands off to a tournament; from the tournament select EXACTLY THE 3 IDEAS OF MAXIMUM LEVERAGE (leverage = impact × autonomous-executability ÷ effort — the maximum-leverage point, not the easiest 3), inject them as the next 3 objectives, EXECUTE ALL 3 to completion through L2/L3, and ONLY when all 3 are done RE-RUN the 50-ideas exercise. The cycle never breaks: 50 → top-3 leverage → execute 3 → 50 → … (losers archived to memory each round). (3) ADVERSARIAL TOURNAMENTS at L2/L3 — no important output ships without one: A output (8 versions × 5 conflicting judges → kill → fuse → scoreboard) · B interview-before-build (≤15 questions, brutal pushback on vagueness, spec + 3 failure modes BEFORE v1) · C kill-your-company (funded rival, rank attacks by self-executability) · D counterparty negotiation (rounds + break character) · E 80-page second opinion (read EVERYTHING incl. footnotes). (4) HUMAN-INDEPENDENCE (hard rule): the plan consists ONLY of tasks the engine can do or delegate to Fable multi-agents — NEVER assign a task to a human; humans get SUGGESTIONS (~/.auramaxing/billion/<project>/SUGGESTIONS.md), never dependencies; ideas requiring human labor are REJECTED from the queue or transformed into their autonomous variant; the plan must succeed even if the human does nothing or disappears — human approvals (real money, production deploys, investor comms, contracts) are OPTIONAL ACCELERATORS the loop routes around, never blockers. (5) ANTI-STOP: close EVERY turn with the structured block (accion_realizada / observacion / siguiente_paso / tarea_completa / evidencia); persist state IMMEDIATELY to ~/.auramaxing/billion/<project>/ (STATE.json + GOALS.md + PROGRESS.log + SUGGESTIONS.md) — "lo escribo después" is banned; the next step you declare IS the next prompt; the loop only exits on: $1B defensible · budget cap · human kill-switch · detected dead-end (reprioritize, never loop the impossible). (6) RANK every candidate by AUTONOMOUS EXECUTABILITY and execute top-first. Permission matrix per Parte 8 of the doctrine. (7) STICKY + RESILIENT — BILLION DOES NOT TURN OFF: the mode persists across EVERY prompt of this session (keyword not required again; only "billion off" / exit conditions / 24h idle clear it). On EVERY prompt while active: FIRST read ~/.auramaxing/billion/<project>/STATE.json + GOALS.md and CONTINUE the open objective before anything else (resume-first). Open one ledger item per active objective so the completeness gate blocks silent stops. If the turn must yield with objectives still open, you MUST schedule your own continuation (ScheduleWakeup / the loop skill / cron) — the system owns continuity, never the model's whim. A turn that ends without either (a) a completed objective gate or (b) a scheduled continuation is a ZERO-TOLERANCE violation. EL LOOP NUNCA PARA.`);
   }
   // AUTO-LEDGER: intercept EVERY substantial action task (complexity ≥30) and build the non-stop loop.
   // Session-scoped completion ledger → the evidence-gatekeeper Gate 2 refuses to end the turn until the

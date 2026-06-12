@@ -50,11 +50,15 @@ después" is banned.
    early; if stuck use forced relations / problem inversion / rolestorming. Fan out
    Fable agents to parallelize blocks when useful (each spawn: "ultrathink" + one
    block + the vector + no-filter instruction).
-3. Hand the 50 to a tournament (adversarial judges score → kill → fuse → 3-5 elite).
-4. **Autonomy filter (hard)**: any candidate requiring human labor is REJECTED or
-   transformed into its autonomous variant; human-facing parts → SUGGESTIONS.md.
-5. Inject winners into GOALS.md ranked by autonomous executability; archive the ~45
-   losers to memory (they may win at another stage).
+3. Hand the 50 to a tournament (adversarial judges score → kill → fuse).
+4. **Select EXACTLY the 3 maximum-leverage ideas** (leverage = impact ×
+   autonomous-executability ÷ effort — the maximum-leverage point, never just the
+   easiest 3). Autonomy filter (hard): any candidate requiring human labor is
+   REJECTED or transformed into its autonomous variant; human-facing → SUGGESTIONS.md.
+5. **Execute ALL 3 → repeat (perpetual cadence):** inject the 3 into GOALS.md, run
+   each to completion through L2/L3 (parent gate per objective), and ONLY when all
+   3 gates close, RE-RUN the 50-ideas exercise on the new world-state. The cycle
+   never breaks: 50 → top-3 → execute 3 → 50 → … Archive the ~47 losers per round.
 
 ## 3 · Tournaments (L2/L3 — no important output ships without one)
 
@@ -95,11 +99,19 @@ evidencia: <output real de runs / archivos / URLs>
 ```
 
 `tarea_completa: true` is only valid when the PARENT gate verified it (ledger `great`
-with evidence; Gates 1-3 enforce mechanically). Persist state BEFORE closing. For
-continuation across turns/sessions: the auto-handoff + PostCompact resume + (when
-recurring) /loop or cron carry the loop — the model never sees an end. Exit conditions
-(the ONLY four): $1B defensible · budget cap · human kill-switch · detected dead-end
-(reprioritize; never loop the impossible).
+with evidence; Gates 1-3 enforce mechanically). Persist state BEFORE closing.
+
+**STICKY + RESILIENT (BILLION does not turn off):** the router keeps the mode armed
+for the whole session (`billion-mode.json`, rolling 24h, refreshed per prompt) — only
+"billion off" / exit conditions clear it. RESUME-FIRST: every prompt while active
+starts by reading STATE.json + GOALS.md and continuing the open objective. Open one
+ledger item per active objective (completeness gate blocks silent stops). If a turn
+must yield with objectives open, SCHEDULE your own continuation (ScheduleWakeup for
+in-session pacing; the loop skill or cron for recurring/cross-session) — ending a
+turn without a closed objective gate OR a scheduled continuation is a zero-tolerance
+violation. Exit conditions (the ONLY four): $1B defensible · budget cap · human
+kill-switch ("billion off") · detected dead-end (reprioritize; never loop the
+impossible).
 
 ## 6 · Meta-engine (every retro)
 
