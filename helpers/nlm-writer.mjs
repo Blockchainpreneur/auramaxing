@@ -175,6 +175,11 @@ export async function flush({ limit = Infinity } = {}) {
   try { writeFileSync(BUFFER, ''); } catch {}
   try { if (existsSync(RETRY)) writeFileSync(RETRY, ''); } catch {}
 
+  const tail = Number.isFinite(limit) ? queue.slice(limit) : [];
+  for (const entry of tail) {
+    try { appendFileSync(RETRY, JSON.stringify(entry) + '\n'); } catch {}
+  }
+
   let written = 0, failed = 0, deadLettered = 0;
   for (const entry of queue.slice(0, limit)) {
     try {
