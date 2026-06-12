@@ -117,9 +117,10 @@ function writeEntry(entry) {
       try {
         nlm(`note create --title "${title.replace(/"/g, '\\"')}" --file "${tmpFile}"`, { timeout: 20000 });
       } catch {
-        // Some versions: `notebooklm note create "title" < file`
-        execSync(`${NLM_BIN} note create "${title.replace(/"/g, '\\"')}" < "${tmpFile}"`, {
-          encoding: 'utf8', timeout: 20000, shell: '/bin/bash',
+        // Some versions: `notebooklm note create "title"` with content on stdin
+        execFileSync(NLM_BIN, ['note', 'create', title], {
+          encoding: 'utf8', timeout: 20000,
+          input: readFileSync(tmpFile),
           env: { ...process.env, PATH: pythonEnv().PATH },
         });
       }
