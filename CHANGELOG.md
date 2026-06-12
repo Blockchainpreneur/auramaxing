@@ -5,6 +5,11 @@ All notable changes to Auramaxing are documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.12.1 — 2026-06-11
+
+- **Per-session ledger (Critical fix, found live).** Concurrent Claude sessions shared ONE global `~/.auramaxing/ledger.json` and clobbered each other — one session's router overwrote the other's open items and one session's `great` stamped the other's deliverable (observed live: a parallel session's Vercel-deploy evidence landed on this session's item), silently fail-opening Gates 2/3. Now: router writes `~/.auramaxing/ledger/<sessionId>.json`; the gatekeeper reads its own session's file (legacy fallback intact); `ledger.mjs` gains `--session <id>` (gatekeeper/router messages include it) + newest-fresh-file fallback. 3 isolation evals added.
+- **evals 81/81**, baseline re-locked.
+
 ## v1.12.0 — 2026-06-11
 
 - **The Perfection Loop is IDENTICAL in normal and ULTRAMAX mode — only model delegation changes.** Per-phase /goal binding (one visible task per Perfection-Loop phase 00–11, closed only with gate evidence) now applies on EVERY actionable prompt, not just under ULTRAMAX.

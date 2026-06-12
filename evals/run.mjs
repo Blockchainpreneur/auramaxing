@@ -219,6 +219,22 @@ function hooksSuite() {
     gateKS.exitCode === 0,
     `expected exit 0 with kill-switch; got ${gateKS.exitCode}`);
 
+  // ── per-session ledger isolation (concurrent sessions must not clobber gates) ──
+  const ldir = join(TMP, 'ledger-dir');
+  mkdirSync(ldir, { recursive: true });
+  writeFileSync(join(ldir, 'SESA.json'), JSON.stringify({ sessionId: 'SESA', ts: stamp(), items: [{ id: 1, desc: 'a-open', done: false }] }));
+  writeFileSync(join(ldir, 'SESB.json'), JSON.stringify({ sessionId: 'SESB', ts: stamp(), items: [{ id: 1, desc: 'b-done', done: true }] }));
+  process.env.AURA_LEDGER_DIR = ldir;
+  delete process.env.AURA_LEDGER_FILE;
+  add('ledger-isolation-gate2-own-session', gatekeeper([U('x')], false, 'SESA').includes('COMPLETENESS GATE'), 'expected Gate 2 block: SESA has its own open item in its per-session ledger');
+  add('ledger-isolation-other-session-immune', gatekeeper([U('x')], false, 'SESC').trim() === '', 'expected allow: SESC has no per-session ledger (must not see SESA/SESB items)');
+  // ledger.mjs --session targets the right per-session file.
+  execSync(`node "${join(CLAUDE_H, 'ledger.mjs')}" done 1 --session SESA`, { encoding: 'utf8', env: { ...process.env, AURA_LEDGER_DIR: ldir } });
+  const sesA = JSON.parse(readFileSync(join(ldir, 'SESA.json'), 'utf8'));
+  const sesB = JSON.parse(readFileSync(join(ldir, 'SESB.json'), 'utf8'));
+  add('ledger-session-flag-targets-own-file', sesA.items[0].done === true && sesB.items[0].desc === 'b-done', 'expected --session SESA to mutate only SESA.json');
+  delete process.env.AURA_LEDGER_DIR;
+
   // update-check.sh ver_gt — regression: string compare made local 1.10.0 "upgrade" to remote 1.9.0.
   const verGt = (a, b) => {
     try {

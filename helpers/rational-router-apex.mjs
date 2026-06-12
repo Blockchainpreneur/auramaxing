@@ -802,13 +802,13 @@ async function main() {
   // deliverable is marked done (`ledger.mjs done <id>`), only after the full verified + audited loop.
   try {
     if (sessionId && complexity >= 30 && (ultramax || ACTION_VERBS.test(prompt))) {
-      const ledgerDir = join(homedir(), '.auramaxing');
+      const ledgerDir = process.env.AURA_LEDGER_DIR || join(homedir(), '.auramaxing', 'ledger');
       mkdirSync(ledgerDir, { recursive: true });
       const deliverable = promptText.replace(/\s+/g, ' ').trim().slice(0, 140);
-      writeFileSync(join(ledgerDir, 'ledger.json'), JSON.stringify({
+      writeFileSync(join(ledgerDir, `${sessionId}.json`), JSON.stringify({
         sessionId,
         ts: Math.floor(Date.now() / 1000),
-        items: [{ id: 1, desc: `Deliver to 100/100 WITH evidence (RUN + paste output) + global audit + ABSOLUTE GREATNESS GATE (3× YES) → close with \`ledger.mjs great 1 "<evidence>"\`: ${deliverable}`, done: false }],
+        items: [{ id: 1, desc: `Deliver to 100/100 WITH evidence (RUN + paste output) + global audit + ABSOLUTE GREATNESS GATE (3× YES) → close with \`ledger.mjs great 1 "<evidence>" --session ${sessionId}\`: ${deliverable}`, done: false }],
       }, null, 2));
     }
   } catch { /* non-blocking */ }

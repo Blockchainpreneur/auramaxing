@@ -20,13 +20,35 @@ import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { homedir } from 'os';
 import { join, dirname } from 'path';
 
-const LP = process.env.AURA_LEDGER_FILE || join(homedir(), '.auramaxing', 'ledger.json');
+// Per-session ledgers (~/.auramaxing/ledger/<sessionId>.json) — concurrent Claude
+// sessions used to CLOBBER one global ledger.json (one session's `great` stamped the
+// other's item; gates silently fail-opened). Resolution: AURA_LEDGER_FILE (tests) >
+// --session <id> > newest per-session file (<6h) > legacy ~/.auramaxing/ledger.json.
+import { readdirSync, statSync, existsSync } from 'fs';
+const LDIR = process.env.AURA_LEDGER_DIR || join(homedir(), '.auramaxing', 'ledger');
+const argvRaw = process.argv.slice(2);
+const sIdx = argvRaw.indexOf('--session');
+const SESSION = sIdx >= 0 ? (argvRaw[sIdx + 1] || '') : '';
+if (sIdx >= 0) argvRaw.splice(sIdx, 2);
+function resolveLP() {
+  if (process.env.AURA_LEDGER_FILE) return process.env.AURA_LEDGER_FILE;
+  if (SESSION) return join(LDIR, `${SESSION}.json`);
+  try {
+    const fresh = readdirSync(LDIR).filter(f => f.endsWith('.json'))
+      .map(f => ({ f, m: statSync(join(LDIR, f)).mtimeMs }))
+      .filter(x => Date.now() - x.m < 6 * 3600e3)
+      .sort((a, b) => b.m - a.m);
+    if (fresh.length) return join(LDIR, fresh[0].f);
+  } catch {}
+  return join(homedir(), '.auramaxing', 'ledger.json');
+}
+const LP = resolveLP();
 const now = () => Math.floor(Date.now() / 1000);
 
 function load() { try { return JSON.parse(readFileSync(LP, 'utf8')); } catch { return null; } }
 function save(o) { try { mkdirSync(dirname(LP), { recursive: true }); } catch {} writeFileSync(LP, JSON.stringify(o, null, 2)); }
 
-const [, , cmd, ...args] = process.argv;
+const [cmd, ...args] = argvRaw;
 let l = load() || { sessionId: null, ts: now(), items: [] };
 if (!Array.isArray(l.items)) l.items = [];
 const nextId = () => l.items.reduce((m, x) => Math.max(m, x.id || 0), 0) + 1;

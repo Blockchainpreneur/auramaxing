@@ -92,9 +92,17 @@ function analyzeTurn(transcriptPath) {
   return { mutated: [...new Set(mutated)], verified: cmdVerified || skillVerified, ranButFailed };
 }
 
+function ledgerPath(sessionId) {
+  if (process.env.AURA_LEDGER_FILE) return process.env.AURA_LEDGER_FILE;
+  const dir = process.env.AURA_LEDGER_DIR || join(homedir(), '.auramaxing', 'ledger');
+  const per = join(dir, `${sessionId}.json`);
+  if (sessionId && existsSync(per)) return per;        // per-session (concurrent-safe)
+  return join(homedir(), '.auramaxing', 'ledger.json'); // legacy fallback
+}
+
 function openLedger(sessionId) {
   try {
-    const p = process.env.AURA_LEDGER_FILE || join(homedir(), '.auramaxing', 'ledger.json');
+    const p = ledgerPath(sessionId);
     if (!existsSync(p)) return null;
     const l = JSON.parse(readFileSync(p, 'utf8'));
     if (!l || !Array.isArray(l.items)) return null;
@@ -109,7 +117,7 @@ function openLedger(sessionId) {
 // session, fresh. Same fail-open contract as openLedger (missing / wrong session / stale → []).
 function greatnessPending(sessionId) {
   try {
-    const p = process.env.AURA_LEDGER_FILE || join(homedir(), '.auramaxing', 'ledger.json');
+    const p = ledgerPath(sessionId);
     if (!existsSync(p)) return [];
     const l = JSON.parse(readFileSync(p, 'utf8'));
     if (!l || !Array.isArray(l.items)) return [];
@@ -152,7 +160,7 @@ async function main() {
       block(['COMPLETENESS GATE — do NOT stop. The task ledger has OPEN items for this session:',
         items, '',
         'Finish them (or explicitly de-scope with the user). As each completes, mark it:',
-        '  node ~/.claude/helpers/ledger.mjs done <id>',
+        `  node ~/.claude/helpers/ledger.mjs done <id> --session ${input.session_id || ''}`,
         'The gate clears when all items are done. Never stop with open work — the ledger is what context forgets.',
         'Kill-switch: AURA_GATEKEEPER_OFF=1.'].join('\n'));
     }
@@ -171,7 +179,7 @@ async function main() {
           '  Q1. Does it meet/exceed the 20x hypothesis (measurable evidence)?',
           '  Q2. Would the 3 best-in-class references consider this competitive or better?',
           '  Q3. Is it production-ready RIGHT NOW (not "needs polish", not "MVP-fine")?',
-          'Then record the pass:  node ~/.claude/helpers/ledger.mjs great <id> "<one-line evidence>"',
+          `Then record the pass:  node ~/.claude/helpers/ledger.mjs great <id> "<one-line evidence>" --session ${input.session_id || ''}`,
           'Kill-switch: AURA_GATEKEEPER_OFF=1.'].join('\n'));
       }
     }
