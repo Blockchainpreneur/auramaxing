@@ -5,6 +5,13 @@ All notable changes to Auramaxing are documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.13.0 — 2026-06-11
+
+- **BILLION MODE — The Billion-Dollar Perpetual Engine.** Keyword `billion`/`billón` in any prompt → inherits ULTRAMAX in full (Fable-5-only fleet at MAX presets + 3-lock guard) and layers the mega-loop from the user's blueprint, now canonical at `docs/BILLION-ENGINE.md`: 5 nested loops (Horizon $1B-thesis ⊃ Mission ⊃ Goal ⊃ Execution ⊃ Reason-Act, parent-gate verification at every level), the forced-quota engine (50 ideas in marked blocks — never stop at 12 or 30), the 5 adversarial tournaments (output · interview-before-build · kill-your-company · negotiation · 80-page second opinion), autonomous-executability ranking, the 8-stage chain to $1B + measurable ladder, the anti-stop structured turn close, and the permission matrix.
+- **HUMAN-INDEPENDENCE (hard principle #4, per user directive):** the plan contains ONLY engine/multi-agent-executable tasks — never assigns work to a human; humans get SUGGESTIONS.md entries, never dependencies; approval-gated items are optional accelerators the loop routes around. The plan succeeds even if the human does nothing or disappears.
+- New `billion-engine` skill (operating protocol: state files under `~/.auramaxing/billion/<project>/`, quota blocks, tournament judge sets as parallel Fable spawns, anti-stop block). Router: tier `FABLE 5 · BILLION`, complexity 95, dominant BILLION directive; ultramax typo-tolerance extended to `ultramas`.
+- **evals 85/85** (+4: billion activates engine incl. HUMAN-INDEPENDENCE/QUOTA/TOURNAMENT anchors, billón Spanish, `billing` must NOT trigger, `ultramas` typo), baseline re-locked.
+
 ## v1.12.1 — 2026-06-11
 
 - **Per-session ledger (Critical fix, found live).** Concurrent Claude sessions shared ONE global `~/.auramaxing/ledger.json` and clobbered each other — one session's router overwrote the other's open items and one session's `great` stamped the other's deliverable (observed live: a parallel session's Vercel-deploy evidence landed on this session's item), silently fail-opening Gates 2/3. Now: router writes `~/.auramaxing/ledger/<sessionId>.json`; the gatekeeper reads its own session's file (legacy fallback intact); `ledger.mjs` gains `--session <id>` (gatekeeper/router messages include it) + newest-fresh-file fallback. 3 isolation evals added.

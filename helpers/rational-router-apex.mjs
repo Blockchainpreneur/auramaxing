@@ -537,10 +537,13 @@ async function main() {
 
   // Pure questions (no action verb) pass through silently
   const normalized = prompt.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  // ULTRAMAX detection lives BEFORE every early-exit: an ultramax prompt must NEVER
+  // ULTRAMAX/BILLION detection lives BEFORE every early-exit: these prompts must NEVER
   // leave the router silently (English-biased rules/scorer used to drop Spanish ones).
-  // Typo-tolerant: ultramax / ultra max / ultra-max / uktramax (real user typos).
-  const ultramax = /\bu[lk]tra[\s-]?max\b/i.test(promptText);
+  // Typo-tolerant: ultramax / ultra max / ultra-max / uktramax / ultramas (real user typos).
+  // BILLION = the Billion-Dollar Perpetual Engine (docs/BILLION-ENGINE.md); it INHERITS
+  // ULTRAMAX in full (Fable-only fleet at max presets + guard) and layers the mega-loop.
+  const billion = /\bbilli?[oó]n\b/i.test(promptText);
+  const ultramax = /\bu[lk]tra[\s-]?ma[xs]\b/i.test(promptText) || billion;
   // Bilingual EN+ES — the user prompts in Spanish; stems cover conjugations/imperatives
   // (aplica/aplícalo/aplicar…). English-only here meant Spanish action prompts never
   // triggered the goal-loop/ledger (found 2026-06-11).
@@ -621,7 +624,7 @@ async function main() {
   // It is PER-TASK: a prompt without the keyword clears the flag for this session.
   const AUR_DIR = join(homedir(), '.auramaxing');
   if (ultramax) {
-    complexity = Math.max(complexity, 85);  // full phased-excellence + ultrathink always engages
+    complexity = Math.max(complexity, billion ? 95 : 85);  // full phased-excellence + ultrathink always engages
     // Only persist the flag for a REAL session — eval/offline runs have no sessionId and
     // must never clobber a live session's enforcement flag.
     if (sessionId) try {
@@ -641,7 +644,7 @@ async function main() {
     } catch {}
   }
 
-  const tier           = ultramax ? 'FABLE 5 · ULTRAMAX' : complexity < 30 ? 'HAIKU' : complexity < 65 ? 'SONNET' : 'OPUS';
+  const tier           = billion ? 'FABLE 5 · BILLION' : ultramax ? 'FABLE 5 · ULTRAMAX' : complexity < 30 ? 'HAIKU' : complexity < 65 ? 'SONNET' : 'OPUS';
   const isEntrepreneur = ENTREPRENEUR_TASKS.has(primary.id);
 
   // Gap 1: write current-task.json for completion diagram ──────────────────
@@ -796,6 +799,10 @@ async function main() {
   // ULTRAMAX directive — unshifted to the FRONT so it dominates every other directive this turn.
   if (ultramax) {
     directives.unshift(`⚡ ULTRAMAX MODE — FABLE 5 EXCLUSIVE (NON-NEGOTIABLE): this entire task runs on Fable 5 ONLY, at MAXIMUM capability presets. NO other model anywhere — no Sonnet/Haiku workers, no \`model:"sonnet"\`/\`"haiku"\`/\`"opus"\` on any Agent/Task/Workflow call, no box fleet (orchestra.sh / nightly / SSH to the box). DELEGATION IS ALLOWED — but ONLY to Fable 5 multi-agents at max settings: (1) every Agent/Task spawn OMITS the model parameter (inherits the Fable 5 session default: claude-fable-5 + effortLevel ultracode) or sets \`model:"fable"\`; (2) every spawned agent prompt MUST include the word "ultrathink" so the fleet agent engages its MAXIMUM extended-thinking budget — no exceptions, every spawn; (3) Workflow scripts must NOT set any non-Fable \`model:\` override on agent() or meta.phases; (4) MAXIMUM presets EVERYWHERE, no exceptions — YOU (the main agent) engage extended thinking (ultrathink) on every phase of the loop, and main + every fleet agent run at maximum effort (the ultracode session default — never lower it); (5) ULTRAMAX = maximum scope of capability and work: every applicable phase of the Absolute Perfection Loop becomes a visible /goal task (TaskCreate per phase), closed only with gate evidence. YOU (Fable) remain the orchestrator and reviewer: the aura-delegate Sonnet protocol is SUSPENDED, but its DISCIPLINE is not — every Fable sub-task is still one atomic fully-specified spec shipped WITH its acceptance test, carries the 8 ZERO-TOLERANCE RULES + the Tier-2 micro-loop verbatim, and its return is REJECTED unless a deterministic gate passes (verify OUTCOMES, not utterances). Keep the FULL AURAMAXING structure intact — visible goal-loop (TaskCreate step-list), phased-excellence loop (audit→investigate→plan→execute→verify, 100/100 with evidence), anti-laziness, evidence gates, adversarial self-verify. A PreToolUse guard hard-blocks any non-Fable spawn, any spawn prompt missing "ultrathink", and any Workflow model override; if blocked, re-issue the SAME call corrected per the block message. Use the Fable fleet to fan out, adversarially verify, and synthesize — exhaustive correctness over token cost. Kill-switch: AURA_ULTRAMAX_OFF=1.`);
+  }
+  // BILLION directive — unshifted AFTER ultramax so it dominates everything this turn.
+  if (billion) {
+    directives.unshift(`🚀 BILLION MODE — THE BILLION-DOLLAR PERPETUAL ENGINE (doctrine: ~/auramaxing/docs/BILLION-ENGINE.md — READ IT, then invoke the billion-engine skill). ULTRAMAX is INHERITED IN FULL (Fable 5 exclusive fleet at MAXIMUM presets, ultrathink in every spawn, 3-lock guard). On top, the mega-loop: (1) FIVE NESTED LOOPS — L0 Horizon (thesis of moats → $1B valuation) ⊃ L1 Mission (stage milestone) ⊃ L2 Goal (one measurable objective) ⊃ L3 Execution (Absolute Perfection Loop per atomic task) ⊃ L4 Reason-Act (the heartbeat); NO inner loop marks "done" without its PARENT's gate verifying it. (2) FORCED-QUOTA ENGINE at L0/L1: every strategic decision/stall/reprioritization FIRST generates 50 ideas in marked blocks (1-5 obvious · 6-15 comfortable · 16-30 transition=HIGH-REVIEW · 31-50 blind-spot territory — the gold), NEVER stops at 12 or 30, then hands off to a tournament. (3) ADVERSARIAL TOURNAMENTS at L2/L3 — no important output ships without one: A output (8 versions × 5 conflicting judges → kill → fuse → scoreboard) · B interview-before-build (≤15 questions, brutal pushback on vagueness, spec + 3 failure modes BEFORE v1) · C kill-your-company (funded rival, rank attacks by self-executability) · D counterparty negotiation (rounds + break character) · E 80-page second opinion (read EVERYTHING incl. footnotes). (4) HUMAN-INDEPENDENCE (hard rule): the plan consists ONLY of tasks the engine can do or delegate to Fable multi-agents — NEVER assign a task to a human; humans get SUGGESTIONS (~/.auramaxing/billion/<project>/SUGGESTIONS.md), never dependencies; ideas requiring human labor are REJECTED from the queue or transformed into their autonomous variant; the plan must succeed even if the human does nothing or disappears — human approvals (real money, production deploys, investor comms, contracts) are OPTIONAL ACCELERATORS the loop routes around, never blockers. (5) ANTI-STOP: close EVERY turn with the structured block (accion_realizada / observacion / siguiente_paso / tarea_completa / evidencia); persist state IMMEDIATELY to ~/.auramaxing/billion/<project>/ (STATE.json + GOALS.md + PROGRESS.log + SUGGESTIONS.md) — "lo escribo después" is banned; the next step you declare IS the next prompt; the loop only exits on: $1B defensible · budget cap · human kill-switch · detected dead-end (reprioritize, never loop the impossible). (6) RANK every candidate by AUTONOMOUS EXECUTABILITY and execute top-first. Permission matrix per Parte 8 of the doctrine. EL LOOP NUNCA PARA.`);
   }
   // AUTO-LEDGER: intercept EVERY substantial action task (complexity ≥30) and build the non-stop loop.
   // Session-scoped completion ledger → the evidence-gatekeeper Gate 2 refuses to end the turn until the
