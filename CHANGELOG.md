@@ -5,6 +5,15 @@ All notable changes to Auramaxing are documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.14.0 — 2026-06-12
+
+- **Full self-audit (ULTRAMAX fleet: 2 Fable auditors + main).** 21+ verified findings, all fixed:
+  - **Truth pass on CLAUDE.md/AUTOPILOT-FLOW/CAPABILITIES** (19 findings, 8 operationally-false): fastMode claimed on (off), Ruflo claimed active (disabled), phantom MCP roster (sentry/supabase/github/figma/n8n/firecrawl/sequential-thinking removed; serena/codegraph were never installed — 5 task routes pointed at them, now route Grep/Glob+Explore), agent-browser CLI missing, wrong CLI names (notebooklm-py→`python3 -m notebooklm`), stale counts.
+  - **Helper graveyard cleaned:** 32 .claude helpers audited → 15 DEAD (12 stale shadows of live auramaxing twins + 3 dead-both) archived to `_archived-2026-06-12/`. Key structural truth: runtime is SPLIT — 12 hooks run from .claude, 7 from auramaxing, and ALL internal cross-helper execs point at auramaxing. New `drift-all-helper-pairs` eval guards every remaining mirror pair (was only 4 of 28).
+  - **Loop coverage now literally every routed prompt:** full Perfection Loop ≥30 complexity, new GOAL LOOP (COMPACT) for routed tasks <30 (docs/retro/browse — depth scales, discipline doesn't). Fixed a live silent-drop: Spanish actionable prompts with no English rule match ("escribe un post…") exited the router with zero output — now fall back to the build route with the full loop.
+  - **Meta-engine applied:** new `nlm-fix` skill (crystallized from the repeated NLM auth-repair flow; auth is broken right now per SessionStart). Skill candidates logged: /taste, ledger, self-heal.
+- **evals 89/89** (+3 coverage cases +1 universal drift), baseline re-locked.
+
 ## v1.13.0 — 2026-06-11
 
 - **BILLION MODE — The Billion-Dollar Perpetual Engine.** Keyword `billion`/`billón` in any prompt → inherits ULTRAMAX in full (Fable-5-only fleet at MAX presets + 3-lock guard) and layers the mega-loop from the user's blueprint, now canonical at `docs/BILLION-ENGINE.md`: 5 nested loops (Horizon $1B-thesis ⊃ Mission ⊃ Goal ⊃ Execution ⊃ Reason-Act, parent-gate verification at every level), the forced-quota engine (50 ideas in marked blocks — never stop at 12 or 30), the 5 adversarial tournaments (output · interview-before-build · kill-your-company · negotiation · 80-page second opinion), autonomous-executability ranking, the 8-stage chain to $1B + measurable ladder, the anti-stop structured turn close, and the permission matrix.

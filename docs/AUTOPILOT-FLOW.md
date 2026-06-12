@@ -37,14 +37,14 @@ without being asked. CLI-first; MCP lazy-loaded via Tool Search.
 
 | Task | Auto-composed chain |
 |---|---|
-| **new-feature** | `/office-hours`→`/plan-eng-review` · **serena**+**codegraph** (understand code) · **spec-kit** (`specify`) for non-trivial · **deepwiki** (external libs) · build · `/review`+`/cso`+**/codex** · `/qa` (Playwright) · `/ship` |
-| **bug-fix** | `/investigate` · **serena** (trace refs to root cause) · **deepwiki** (lib behavior) · Playwright repro · `/review` · `/qa` |
+| **new-feature** | `/office-hours`→`/plan-eng-review` · **Grep/Glob + Explore agent** (understand code) · **spec-kit** (`specify`) for non-trivial · **deepwiki** (external libs) · build · `/review`+`/cso`+**/codex** · `/qa` (Playwright) · `/ship` |
+| **bug-fix** | `/investigate` · **Grep/Glob + Explore agent** (trace refs to root cause) · **deepwiki** (lib behavior) · Playwright repro · `/review` · `/qa` |
 | **design / UI** ⭐PRIORITY | **MANDATORY skill stack (all installed, invoke ALL):** frontend-design + emil-design-eng + impeccable + design-taste-frontend + high-end-visual-design + hallmark + ui-ux-pro-max (+ style register: minimalist-ui/gpt-taste/industrial-brutalist-ui/stitch-design-taste per brief). Then: Design Supremacy §0.5 · `/design-consultation`/DESIGN.md SSOT · **designlang** (extract reference→tokens) · Tailwind v4 OKLCH + shadcn(Base UI) + Fontsource + Motion/AutoAnimate · **pqoqubbw/icons** + **@number-flow/react** · react-bits/animate-ui/magicui · **GATE:** hallmark 65 + impeccable + axe + Lighthouse + vision-QA loop · `/design-review`→`/qa`. UX/UI is load-bearing — "looks fine" ≠ done. |
 | **marketing / copy / growth** | 43 installed marketing skills (`coreyhaines31`): copywriting · cro · seo · ai-seo · aso · ads · ad-creative · analytics · ab-testing · churn-prevention · launch · pricing · retention. Invoke the matching one(s) for landing copy, SEO, ads, growth. |
-| **investigate** | `/investigate` · **serena** · **deepwiki** · context7 · sequential-thinking |
+| **investigate** | `/investigate` · **Grep/Glob + Explore agent** · **deepwiki** · context7 · ultrathink (native) |
 | **research** | `/deep-research` · **deepwiki** (repo Q&A) · context7 · firecrawl CLI · `/browse` |
-| **refactor** | **serena**+**codegraph** (impact/callers) · `/review`→`/qa` · context7 |
-| **security** | `/cso` (OWASP+STRIDE) · serena (trace trust boundaries) |
+| **refactor** | **Grep/Glob + Explore agent** (impact/callers) · `/review`→`/qa` · context7 |
+| **security** | `/cso` (OWASP+STRIDE) · Grep/Glob + Explore agent (trace trust boundaries) |
 | **deploy-ship** | `/review`→`/qa`→`/cso`→`/ship`→`/land-and-deploy`→`/canary` · `gh` CLI |
 | **performance** | `/benchmark` · Lighthouse CI · Playwright CWV |
 
@@ -66,7 +66,7 @@ When a capability gap blocks the prompt, the autopilot installs FREE tooling aut
 ## MCP roster (post-cleanup, token-audited 2026-05-30)
 
 **Active (9, lazy-loaded via Tool Search):** context7(1k) · shadcn(1k) · magicui(0k) ·
-serena(6k) · codegraph(2k) · designlang(0k) · deepwiki(0k, remote HTTP) · + 2 inherited.
+designlang(0k) · deepwiki(0k, remote HTTP) · chrome-devtools · + inherited. (serena/codegraph REMOVED — never installed; code-nav = Grep/Glob + Explore agent.)
 **Removed (CLI-replaceable / low-use):** github(4k → `gh` CLI) · supabase(5k → CLI/per-project) ·
 figma (user call → designlang replaces). **Net baseline saving ≈ 9k tokens/turn.**
 

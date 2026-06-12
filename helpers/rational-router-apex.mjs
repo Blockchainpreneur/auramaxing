@@ -576,7 +576,10 @@ async function main() {
     if (inv) matches = [{ ...inv, hits: 1 }];
   }
 
-  if (matches.length === 0 && ultramax) {
+  // Actionable prompts (action verb, ES or EN) must never silently drop just because no
+  // English rule pattern matched — fall back to the generic build route (found live:
+  // "escribe un post sobre el lanzamiento" exited with zero output).
+  if (matches.length === 0 && (ultramax || ACTION_VERBS.test(normalized))) {
     const nf = RULES.find(r => r.id === 'new-feature');
     if (nf) matches = [{ ...nf, hits: 1 }];
   }
@@ -824,6 +827,11 @@ async function main() {
   if (complexity >= 30 && (ultramax || ACTION_VERBS.test(prompt))) {
     directives.push('GOAL LOOP (VISIBLE, MANDATORY): treat this prompt as a /goal. FIRST tool call of the turn = TaskCreate, PER-PHASE: one task for EVERY phase of the Absolute Perfection Loop that applies to this prompt (Tier 1: 00 foundation · 01 moat · 02 architecture → Tier 2 per atomic detail: 03 scope · 04 build · 05 test · 06 audit · 07 improve · 08 greatness gate → Tier 3: 09 ship review · 10 final audit · 11 retro+memory), each marked completed only with its gate evidence, so the user SEES the step list. The loop is IDENTICAL in normal and ULTRAMAX mode — only the model delegation changes. AUTO-INVOKE (the heart of the AURAMAXING autopilot): every phase COMPOSES AND CALLS its tools AUTOMATICALLY — gstack skills, MCP tools, subagents/fleet, Bash — per the task→tool table (~/auramaxing/docs/AUTOPILOT-FLOW.md + CAPABILITIES.md); never ask permission, never wait for input mid-loop, never DESCRIBE a tool call instead of MAKING it. As you work: set exactly one task in_progress, mark it completed with its evidence the moment its gate passes, then advance. Keep the list live (add steps as the loop discovers them); never finish with a step still in_progress. This visible list + the durable ledger are the two trackers — the turn ends only when every step is completed AND the ledger deliverable is marked done.');
     directives.push('ABSOLUTE PERFECTION LOOP (the constitution — full text: ~/auramaxing/docs/ORCHESTRATION.md §0.0): "boil the whole lake," loop ∞ until greatness. ⛔ ZERO-TOLERANCE (a violation VOIDS the result): (1) ship Critical/High bugs, (2) skip a gate because "looks fine", (3) merge without /review clean, (4) advance a phase unverified, (5) "done" without a passing /qa, (6) re-research a logged moat (query memory), (7) build before /plan-eng-review clears architecture, (8) deploy before /ship confirms coverage ≥35%. TIER 1 Foundation (00 /office-hours 6Q + /plan-ceo-review scope · 01 moat research + ≥3 "10x because Y" hypotheses · 02 /plan-eng-review architecture LOCK) → TIER 2 per ATOMIC detail (03 scope + 3 best-in-class refs + 20x hypothesis · 04 build to the hypothesis + tests ≥35% · 05 /qa + /browse screenshots + /codex · 06 /review + /cso + quantified moat gap → Improvement Directive · 07 implement all + re-/qa + 20x binary PASS/FAIL · 08 ABSOLUTE GREATNESS GATE) → TIER 3 (09 system /review + /ship + full /cso + /docs · 10 e2e /qa + moat final check · 11 /retro + memory). ABSOLUTE GREATNESS GATE = three binary YES-with-evidence: Q1 meets/exceeds the 20x hypothesis? Q2 competitive vs the 3 best-in-class refs? Q3 production-ready RIGHT NOW (not "needs polish"/"MVP-fine")? Any NO ⇒ return to Phase 06. All YES ⇒ record `node ~/.claude/helpers/ledger.mjs great <id> "<evidence>"` (Gate 3 blocks turn-end until you do). Depth scales with the task; the gates never relax.');
+  }
+  // COMPACT loop for low-complexity actionable prompts (docs/retro/browse/small edits):
+  // the loop applies to EVERY actionable prompt — depth scales, the discipline does not.
+  if (complexity < 30 && !ultramax) {  // any ROUTED task below 30 — it survived the filters, so it is actionable
+    directives.push('GOAL LOOP (COMPACT — depth scales, discipline does not): this is still a /goal. If it has 2+ steps, open a short TaskCreate list; if truly one step, do it directly. Either way: AUTO-INVOKE the right tool immediately (never describe a call instead of making it), VERIFY the outcome with real evidence before calling it done (run/screenshot/diff — "should work" is banned), and leave nothing half-finished.');
   }
   if (enrichLine) directives.push(enrichLine);
   if (toolsLine)  directives.push(toolsLine);

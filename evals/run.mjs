@@ -21,7 +21,7 @@
  *        node ~/.auramaxing/evals/run.mjs --json      # machine-readable
  *        node ~/.auramaxing/evals/run.mjs --baseline  # write current score as baseline
  */
-import { readFileSync, writeFileSync, existsSync, mkdirSync, rmSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, rmSync, readdirSync } from 'fs';
 import { execSync } from 'child_process';
 import { homedir } from 'os';
 import { join } from 'path';
@@ -290,6 +290,13 @@ function hooksSuite() {
   add('drift-compressor-copies', sameFile(COMPRESSOR, join(AURA_H, 'output-compressor.mjs')), 'output-compressor copies DRIFTED (.claude vs auramaxing)');
 
   add('drift-router-copies', sameFile(ROUTER, join(AURA_H, 'rational-router-apex.mjs')), 'router copies DRIFTED (.claude vs auramaxing)');
+  // Universal mirror guard: EVERY same-named .claude↔auramaxing helper pair must be identical
+  // (the 2026-06-12 audit found 12 stale shadows that silently diverged — now archived).
+  try {
+    const diverged = readdirSync(CLAUDE_H).filter(f => f.endsWith('.mjs'))
+      .filter(f => existsSync(join(AURA_H, f)) && !sameFile(join(CLAUDE_H, f), join(AURA_H, f)));
+    add('drift-all-helper-pairs', diverged.length === 0, `helper pairs DIVERGED: ${diverged.join(', ')}`);
+  } catch (e) { add('drift-all-helper-pairs', false, 'mirror scan failed: ' + e.message); }
   add('drift-prompt-engine-copies', sameFile(join(CLAUDE_H, 'prompt-engine.mjs'), PROMPT_ENGINE), 'prompt-engine copies DRIFTED');
   add('drift-eval-cases-copies', sameFile(CASES, join(HOME, 'auramaxing', 'evals', 'cases', 'router.jsonl')), 'eval-cases copies DRIFTED');
 

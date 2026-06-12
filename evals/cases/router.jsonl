@@ -33,3 +33,6 @@
 {"id": "billion-spanish-billon", "prompt": "crea el plan billón para dominar el mercado", "expect_task": "planning", "must_include": ["BILLION MODE", "FABLE 5 · BILLION", "SUGGESTIONS.md", "EL LOOP NUNCA PARA"], "must_not": ["Push BULK labor"]}
 {"id": "billing-does-not-trigger", "prompt": "fix the billing page bug", "expect_task": "bug-fix", "must_include": ["GOAL LOOP"], "must_not": ["BILLION MODE", "ULTRAMAX MODE"]}
 {"id": "ultramas-typo-triggers-ultramax", "prompt": "ultramas mejora el dashboard de metricas", "expect_task": "design", "must_include": ["ULTRAMAX MODE — FABLE 5 EXCLUSIVE"], "must_not": ["BILLION MODE", "Push BULK labor"]}
+{"id": "spanish-no-rule-not-silent", "prompt": "escribe un post sobre el lanzamiento", "expect_task": "new-feature", "must_include": ["GOAL LOOP", "ABSOLUTE PERFECTION LOOP"], "must_not": ["ULTRAMAX MODE"]}
+{"id": "low-complexity-gets-compact-loop", "prompt": "update the readme documentation", "expect_task": "documentation", "must_include": ["GOAL LOOP (COMPACT", "AUTO-INVOKE"], "must_not": ["ABSOLUTE PERFECTION LOOP"]}
+{"id": "routed-noun-task-gets-compact", "prompt": "retro de la semana", "expect_task": "retro", "must_include": ["GOAL LOOP (COMPACT"], "must_not": ["ABSOLUTE PERFECTION LOOP"]}

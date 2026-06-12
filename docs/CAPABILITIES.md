@@ -28,7 +28,7 @@ Pick by FIT, not habit. Prefer CLI/skill over MCP (token cost). Lazy-load MCP (T
 - **`/codex`** — cross-model adversarial review (different model family).
 - **Cloud fleet** (`~/auramaxing/cloud/`, when `AURA_FLEET_HOST` set) — delegate RAM-heavy parallel work to the box; the Mac stays a thin client. **`acode`** = full box-resident session (Path A); **`orchestra.sh "<goal>" [cloud/roles/{research,frontend,code}.roles]`** = role fan-out → adversarial judges → synthesis (Path B); **`swarm.sh`** = drain ≤200 tasks (mem-capped); **`fleet.sh`** = N agents, one per subtask. All workers run hooks-OFF + RAM-aware concurrency. Reach for it on big research/audits/batch refactors that would thrash the 8 GB Mac.
 
-## 2. gstack skills (42 installed) — the lifecycle
+## 2. gstack skills (33 installed) — the lifecycle
 Plan: `/office-hours` `/plan-ceo-review` `/plan-eng-review` `/plan-design-review` `/autoplan`
 Build: `/investigate` `/review` `/ship` `/land-and-deploy`
 QA: `/qa` `/qa-only` `/benchmark` `/canary` `/health`
@@ -37,8 +37,8 @@ Browser: `/browse` `/connect-chrome` · Safety: `/careful` `/freeze` `/guard` ·
 Native: `/code-review` (incl. `ultra`), `/simplify`, `/verify`, `/security-review`, `/deep-research`.
 
 ## 3. Code intelligence (MCP/CLI)
-- **Serena** (MCP, installed) — LSP `find_symbol`/`find_references`/atomic edits, 40+ langs.
-- **codegraph** (MCP, `serve --mcp`) — pre-indexed local code graph; token-cheap repo queries. Per-project: run `codegraph init` + `codegraph index` in a repo before its MCP tools return data (A/B vs Serena per task).
+- **Serena** (NOT INSTALLED — do not route; use Grep/Glob + Explore) — LSP `find_symbol`/`find_references`/atomic edits, 40+ langs.
+- **codegraph** (NOT INSTALLED — do not route; use Grep/Glob + Explore) — pre-indexed local code graph; token-cheap repo queries. Per-project: run `codegraph init` + `codegraph index` in a repo before its MCP tools return data (A/B vs Serena per task).
 - **spec-kit** (`specify` CLI) — spec-driven dev; run `specify init` in a project → `/speckit.*`.
 
 ## 4. Memory & knowledge
