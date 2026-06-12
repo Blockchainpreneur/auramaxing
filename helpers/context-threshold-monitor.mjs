@@ -22,8 +22,8 @@ const NB_ID_FILE = join(AUR, 'nlm-notebook-id');
 const _FLAG_DIR = mkdtempSync(join(tmpdir(), `auramaxing-handoff-${process.ppid}-`));
 const FLAG_PATH = join(_FLAG_DIR, `${randomBytes(8).toString('hex')}.flag`);
 process.on('exit', () => { try { rmSync(_FLAG_DIR, { recursive: true, force: true }); } catch {} });
-const THRESHOLD_USED_PCT = Number(process.env.AURA_CTX_THRESHOLD_PCT || 55);
-const SOFT_THRESHOLD_PCT = Number(process.env.AURA_CTX_SOFT_THRESHOLD_PCT || 45);
+const THRESHOLD_USED_PCT = Number(process.env.AURA_CTX_THRESHOLD_PCT) || 55;
+const SOFT_THRESHOLD_PCT = Number(process.env.AURA_CTX_SOFT_THRESHOLD_PCT) || 45;
 
 // Model→window map for human-readable token counts in advisories.
 // Calibration itself is runtime-driven (statusline reads
