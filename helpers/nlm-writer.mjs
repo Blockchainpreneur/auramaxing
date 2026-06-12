@@ -79,7 +79,7 @@ export function bufferWrite(type, payload, ctx = {}) {
 
 function nlm(args, { timeout = 30000 } = {}) {
   if (!NLM_BIN) throw new Error('NLM CLI not available');
-  return execSync(`${NLM_BIN} ${args}`, {
+  return execSync(`"${NLM_BIN}" ${args}`, {
     encoding: 'utf8',
     timeout,
     env: { ...process.env, PATH: pythonEnv().PATH },
