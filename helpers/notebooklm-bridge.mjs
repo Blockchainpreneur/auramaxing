@@ -73,7 +73,7 @@ switch (command) {
         break;
       }
     }
-    const result = nlm(`ask '${input.replace(/'/g, "'\\''")}'`);
+    const result = (() => { try { return execFileSync(NLM_BIN, ['ask', input], { encoding: 'utf8', timeout: 30000 }).trim(); } catch (e) { return `[NLM error: ${e.message?.slice(0, 80)}]`; } })();
     // Extract just the answer
     const answer = result.split('Answer:').pop()?.trim() || result;
     writeFileSync(cacheFile, answer);
