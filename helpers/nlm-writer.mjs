@@ -106,10 +106,10 @@ function writeEntry(entry) {
     try {
       // note create subcommand varies; try both positional forms gracefully
       try {
-        nlm(`note create --title "${title.replace(/"/g, '\\"')}" --file "${tmpFile}"`, { timeout: 20000 });
+        nlm(`note create --title '${title.replace(/'/g, "'\\''")}' --file "${tmpFile}"`, { timeout: 20000 });
       } catch {
         // Some versions: `notebooklm note create "title" < file`
-        execSync(`${NLM_BIN} note create "${title.replace(/"/g, '\\"')}" < "${tmpFile}"`, {
+        execSync(`${NLM_BIN} note create '${title.replace(/'/g, "'\\''")}' < "${tmpFile}"`, {
           encoding: 'utf8', timeout: 20000, shell: '/bin/bash',
           env: { ...process.env, PATH: pythonEnv().PATH },
         });
