@@ -27,6 +27,11 @@ WORK="$BASE/work"
 REPORTS="$BASE/reports"
 LOGS="$BASE/logs"
 TODAY="$(date +%F)"
+# Unique branch per RUN (not per day) — two runs in one day used to collide on the
+# same branch: the 2nd run based its branch on main, the remote already had the 1st
+# run's commits, push rejected non-fast-forward and the whole run's work stranded
+# in the work dir (found live 2026-06-12: 4 repos' evening fixes needed manual rescue).
+RUN_STAMP="$(date +%Y%m%d-%H%M)"
 LOG_FILE="$LOGS/$TODAY.log"
 REPORT_FILE="$REPORTS/$TODAY.md"
 LOCK_FILE="$BASE/.lock"
@@ -136,7 +141,7 @@ for i in "${!PROJECTS[@]}"; do
   TEST_CMD="${TEST_CMDS[$i]}"
   REPO_NAME="${SLUG##*/}"
   WORK_DIR="$WORK/$REPO_NAME"
-  BRANCH="aura/nightly-$(date +%Y%m%d)"
+  BRANCH="aura/nightly-$RUN_STAMP"
   PROJECT_START="$(date +%s)"
   PROJECT_DEADLINE=$(( PROJECT_START + NIGHTLY_PER_PROJECT_MIN * 60 ))
 
