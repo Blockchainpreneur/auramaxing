@@ -223,6 +223,7 @@ async function main() {
   if (cmd === 'flush') {
     const args = process.argv.slice(3);
     const limit = args.includes('--limit') ? Number(args[args.indexOf('--limit') + 1]) : Infinity;
+    if (Number.isNaN(limit)) { console.error('--limit must be a number'); process.exit(2); }
     // Ensure notebooks exist before flushing (cheap if already done)
     try { ensureAll({ project: projectFromCwd(process.cwd()) }); } catch {}
     const res = await flush({ limit });
