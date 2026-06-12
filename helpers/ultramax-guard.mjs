@@ -1,6 +1,15 @@
 #!/usr/bin/env node
 /**
- * ULTRAMAX guard — PreToolUse hook on Agent/Task/Workflow.
+ * ULTRAMAX + delegation-quality guard — PreToolUse hook on Agent/Task/Workflow.
+ *
+ * NORMAL MODE (always on, no flag needed): any Agent/Task spawn that explicitly
+ * targets a CHEAPER worker (model contains "sonnet"/"haiku") must carry the 10x
+ * forced-diligence frame — the prompt MUST include "ultrathink" (max extended
+ * thinking for the worker) AND the ZERO-TOLERANCE frame (the 8 rules pasted into
+ * the spec per the aura-delegate harness). Sonnet is only useful next to Fable
+ * under forced max presets + heavy prompt engineering; a bare spawn is blocked
+ * with re-issue instructions. Workflow scripts with sonnet/haiku overrides need
+ * the same two markers in the script. Fable/inherit spawns pass untouched.
  *
  * When ULTRAMAX mode is active for THIS session (the user typed `ultramax` in the
  * prompt → rational-router-apex wrote ~/.auramaxing/ultramax.json {sessionId, ts}),
@@ -66,12 +75,45 @@ async function main() {
 
   // Is ULTRAMAX active for THIS session and fresh? (flag path overridable for tests)
   const flagPath = process.env.AURA_ULTRAMAX_FLAG || join(homedir(), '.auramaxing', 'ultramax.json');
-  let flag;
-  try { flag = JSON.parse(readFileSync(flagPath, 'utf8')); }
-  catch { return approve(); }                       // no flag → normal mode
-  if (!flag || flag.sessionId !== sid) return approve();
-  const age = Math.floor(Date.now() / 1000) - (flag.ts || 0);
-  if (age > FRESH_SEC) return approve();             // stale → stop enforcing
+  let umxActive = false;
+  try {
+    const flag = JSON.parse(readFileSync(flagPath, 'utf8'));
+    const age = Math.floor(Date.now() / 1000) - ((flag && flag.ts) || 0);
+    umxActive = !!flag && flag.sessionId === sid && age <= FRESH_SEC;
+  } catch { /* no flag → normal mode */ }
+
+  const DILIGENCE = /ultrathink/i;
+  const FRAME = /zero[\s-]?tolerance/i;
+
+  if (!umxActive) {
+    // ── NORMAL MODE: cheap workers only ship under the 10x forced-diligence frame ──
+    if (tool === 'workflow') {
+      const script = String(input.script || '');
+      if (/model\s*:\s*["'`]\s*(sonnet|haiku)/i.test(script) && !(DILIGENCE.test(script) && FRAME.test(script))) {
+        return block(
+          `[AURA-DELEGATE] Sonnet/Haiku workflow agents only run under the 10x forced-diligence frame — ` +
+          `every cheap-worker agent() prompt in the script must include "ultrathink" (max extended thinking) ` +
+          `AND the ZERO-TOLERANCE frame (the 8 rules + Tier-2 micro-loop per the aura-delegate harness). ` +
+          `Re-issue the workflow with both embedded.`
+        );
+      }
+      return approve();
+    }
+    const model = String(input.model || '').trim().toLowerCase();
+    if (/sonnet|haiku/.test(model)) {
+      const prompt = String(input.prompt || '');
+      if (!(DILIGENCE.test(prompt) && FRAME.test(prompt))) {
+        return block(
+          `[AURA-DELEGATE] A "${model}" worker is only useful next to Fable under 10x FORCED DILIGENCE — ` +
+          `re-issue this SAME spawn with BOTH in the worker prompt: (1) the word "ultrathink" (engages the ` +
+          `worker's MAXIMUM extended-thinking budget) and (2) the ZERO-TOLERANCE frame (paste the 8 rules + ` +
+          `Tier-2 micro-loop + acceptance test + evidence contract, per the aura-delegate harness). ` +
+          `Bare specs to cheap workers are banned.`
+        );
+      }
+    }
+    return approve();
+  }
 
   // ── 3. WORKFLOW LOCK ────────────────────────────────────────────────────
   if (tool === 'workflow') {

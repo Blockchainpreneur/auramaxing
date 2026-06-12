@@ -250,7 +250,13 @@ function hooksSuite() {
   add('ultramax-blocks-missing-ultrathink', guardRun('Agent', { prompt: 'do x' }).includes('"block"'), 'expected block: fleet spawn prompt missing "ultrathink" (max-thinking lock)');
   add('ultramax-blocks-workflow-model-override', guardRun('Workflow', { script: "await agent('x', {model: 'sonnet'})" }).includes('"block"'), 'expected block: workflow script overrides an agent onto sonnet');
   add('ultramax-allows-workflow-no-override', guardRun('Workflow', { script: "await agent('ultrathink. x', {schema: S})" }).includes('"approve"'), 'expected approve: workflow with no model overrides (inherits Fable)');
-  add('ultramax-failopen-other-session', guardRun('Agent', { model: 'sonnet', prompt: 'x' }, 'OTHER').includes('"approve"'), 'expected approve: flag belongs to a different session');
+  add('ultramax-failopen-other-session', guardRun('Agent', { model: 'opus', prompt: 'x' }, 'OTHER').includes('"approve"'), 'expected approve: flag belongs to a different session (opus is not a cheap worker — normal mode allows)');
+  // ── normal mode (no ultramax flag): Sonnet 10x forced diligence ──────────
+  add('normalmode-blocks-bare-sonnet', guardRun('Agent', { model: 'sonnet', prompt: 'do x' }, 'OTHER').includes('"block"'), 'expected block: bare sonnet spawn without the 10x diligence frame');
+  add('normalmode-allows-framed-sonnet', guardRun('Agent', { model: 'sonnet', prompt: 'ultrathink. ZERO-TOLERANCE rules: (1)... acceptance test: npm test. do x' }, 'OTHER').includes('"approve"'), 'expected approve: sonnet with ultrathink + zero-tolerance frame');
+  add('normalmode-allows-inherit', guardRun('Agent', { prompt: 'do x' }, 'OTHER').includes('"approve"'), 'expected approve: inherit (Fable) spawn untouched in normal mode');
+  add('normalmode-blocks-workflow-bare-sonnet', guardRun('Workflow', { script: "await agent('x', {model: 'sonnet'})" }, 'OTHER').includes('"block"'), 'expected block: workflow sonnet override without diligence markers');
+  add('normalmode-allows-workflow-framed-sonnet', guardRun('Workflow', { script: "// ZERO-TOLERANCE frame... await agent('ultrathink. x', {model: 'sonnet'})" }, 'OTHER').includes('"approve"'), 'expected approve: workflow sonnet override with ultrathink + frame');
   add('ultramax-kill-switch', guardRun('Agent', { model: 'sonnet', prompt: 'x' }, 'UMX', { AURA_ULTRAMAX_OFF: '1' }).includes('"approve"'), 'expected approve: AURA_ULTRAMAX_OFF=1 disables enforcement');
   add('drift-ultramax-guard-copies', sameFile(GUARD, join(AURA_H, 'ultramax-guard.mjs')), 'ultramax-guard copies DRIFTED (.claude vs auramaxing)');
 

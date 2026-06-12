@@ -5,6 +5,14 @@ All notable changes to Auramaxing are documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.12.0 — 2026-06-11
+
+- **The Perfection Loop is IDENTICAL in normal and ULTRAMAX mode — only model delegation changes.** Per-phase /goal binding (one visible task per Perfection-Loop phase 00–11, closed only with gate evidence) now applies on EVERY actionable prompt, not just under ULTRAMAX.
+- **AUTO-INVOKE — the heart of the autopilot, explicit.** The GOAL LOOP directive now mandates that every phase composes AND CALLS its tools automatically (gstack skills, MCP, subagents/fleet, Bash) per the task→tool table — never ask permission mid-loop, never describe a tool call instead of making it.
+- **SONNET AT MAXIMUM — 10x forced diligence.** Sonnet is only useful next to Fable under forced max presets + heavy prompt engineering: every Sonnet/Haiku worker prompt MUST carry "ultrathink" (max extended thinking) + the ZERO-TOLERANCE frame + acceptance test + evidence contract (returns must quote real run output) + banned phrases (auto-REJECT). Wired into the router's DELEGATE directive and the aura-delegate skill (new harness rule 9).
+- **Guard normal mode (mechanical enforcement).** `ultramax-guard.mjs` now also enforces WITHOUT the ultramax flag: any Agent/Task/Workflow spawn explicitly targeting sonnet/haiku is hard-blocked unless its prompt/script carries "ultrathink" AND the ZERO-TOLERANCE frame. Fable/inherit spawns untouched; kill-switch intact.
+- **evals 78/78** (+6 normal-mode guard cases, +1 delegate-sonnet-max router case; failopen-other-session migrated to opus), baseline re-locked.
+
 ## v1.11.0 — 2026-06-11
 
 - **The Perfection Loop now reaches EVERY actionable prompt — including Spanish.** `ACTION_VERBS` was English-only, so Spanish prompts ("verifica", "aplica", "arregla"…) never triggered the goal-loop/ledger/Perfection-Loop directives. Now bilingual with stem matching for conjugations (aplic-, verific-, arregl-, mejor-, termin-, integr-…).
