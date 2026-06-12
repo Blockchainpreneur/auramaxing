@@ -153,6 +153,7 @@ function writeEntry(entry) {
 }
 
 export async function flush({ limit = Infinity } = {}) {
+  if (typeof limit !== 'number' || Number.isNaN(limit)) limit = Infinity;
   if (!existsSync(BUFFER)) return { written: 0, failed: 0, deadLettered: 0 };
   if (!NLM_BIN) return { written: 0, failed: 0, deadLettered: 0, skipped: true };
 
