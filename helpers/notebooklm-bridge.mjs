@@ -64,7 +64,7 @@ switch (command) {
         break;
       }
     }
-    const result = nlm(`ask "${input.replace(/"/g, '\\"')}"`);
+    const result = nlm(`ask '${input.replace(/'/g, "'\\''")}'`);
     // Extract just the answer
     const answer = result.split('Answer:').pop()?.trim() || result;
     writeFileSync(cacheFile, answer);
@@ -84,7 +84,7 @@ switch (command) {
   case 'add-source': {
     ensureNotebook();
     if (!existsSync(input)) { console.error('File not found:', input); break; }
-    const result = nlm(`source add-text "${input.replace(/"/g, '\\"')}"`);
+    const result = nlm(`source add-text '${input.replace(/'/g, "'\\''")}'`);
     console.log(result);
     break;
   }
