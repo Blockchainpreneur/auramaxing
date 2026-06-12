@@ -75,10 +75,11 @@ function refreshCookies() {
 
 function authProbe() {
   try {
-    const out = execSync(`${NLM_BIN} list 2>&1 | head -3`, {
-      encoding: 'utf8', timeout: 8000, shell: '/bin/bash',
+    const out = execFileSync(NLM_BIN, ['list'], {
+      encoding: 'utf8', timeout: 8000,
+      stdio: ['ignore', 'pipe', 'pipe'],
       env: { ...process.env, PATH: pythonEnv().PATH },
-    });
+    }).split('\n').slice(0, 3).join('\n');
     if (/Authentication expired|Redirected|notebooklm login|Missing required cookies/i.test(out)) {
       return { ok: false, reason: out.trim().split('\n')[0].slice(0, 120) };
     }
