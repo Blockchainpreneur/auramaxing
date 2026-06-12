@@ -15,7 +15,7 @@
  *   node nlm-writer.mjs stats              # buffer + retry + dead-letter counts
  */
 import { execSync } from 'child_process';
-import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync, mkdtempSync, unlinkSync, statSync, renameSync } from 'fs';
+import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync, mkdtempSync, unlinkSync, rmdirSync, statSync, renameSync } from 'fs';
 import { join, basename } from 'path';
 import { homedir, tmpdir } from 'os';
 import { findNlm, pythonEnv } from './find-bin.mjs';
@@ -117,7 +117,7 @@ function writeEntry(entry) {
       }
     } finally {
       try { unlinkSync(tmpFile); } catch {}
-      try { unlinkSync(tmpDir); } catch {}
+      try { rmdirSync(tmpDir); } catch {}
     }
     return { ok: true };
   }
@@ -144,7 +144,7 @@ function writeEntry(entry) {
       }
     } finally {
       try { unlinkSync(tmpFile); } catch {}
-      try { unlinkSync(tmpDir); } catch {}
+      try { rmdirSync(tmpDir); } catch {}
     }
     return { ok: true };
   }
