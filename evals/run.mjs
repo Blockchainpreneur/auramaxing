@@ -39,6 +39,13 @@ const BASELINE = join(HOME, '.auramaxing', 'evals', 'baseline.json');
 const LEARNINGS = join(HOME, '.auramaxing', 'learnings');
 const TMP = join(HOME, '.auramaxing', 'evals', 'tmp', `run-${process.pid}`); // pid-scoped: concurrent runs never collide
 
+// Neutralize the LIVE fable-window for the whole suite (evals must be deterministic
+// regardless of the user's current window); the dedicated window cases override per-call.
+if (!process.env.AURA_FABLE_WINDOW) {
+  const fwNeutral = join(HOME, '.auramaxing', 'evals', 'tmp', 'fw-neutral.json');
+  try { mkdirSync(join(HOME, '.auramaxing', 'evals', 'tmp'), { recursive: true }); writeFileSync(fwNeutral, JSON.stringify({ until: '2020-01-01' })); process.env.AURA_FABLE_WINDOW = fwNeutral; } catch {}
+}
+
 const args = process.argv.slice(2);
 const asJson = args.includes('--json');
 const setBaseline = args.includes('--baseline');
@@ -218,6 +225,23 @@ function hooksSuite() {
   add('gate-kill-switch',
     gateKS.exitCode === 0,
     `expected exit 0 with kill-switch; got ${gateKS.exitCode}`);
+
+  // ── FABLE-ONLY window (until 2026-06-23): suppresses Sonnet delegation, expires alone ──
+  const fwActive = join(TMP, 'fw-active.json'); writeFileSync(fwActive, JSON.stringify({ until: '2099-01-01' }));
+  const fwExpired = join(TMP, 'fw-expired.json'); writeFileSync(fwExpired, JSON.stringify({ until: '2020-01-01' }));
+  const routerFW = (fw) => {
+    try { return execSync(`node "${ROUTER}"`, { input: JSON.stringify({ prompt: 'build a payments feature with stripe integration' }), encoding: 'utf8', timeout: 8000, env: { ...process.env, AURA_FABLE_WINDOW: fw, AURA_BILLION_FLAG: join(TMP, 'no-bflag.json') } }); }
+    catch (e) { return (e.stdout || '') + (e.stderr || ''); }
+  };
+  const fwOn = routerFW(fwActive), fwOff = routerFW(fwExpired);
+  add('fable-window-active-suppresses-sonnet', fwOn.includes('FABLE-ONLY WINDOW') && !fwOn.includes('SONNET AT MAXIMUM'), 'expected window directive + suppressed Sonnet DELEGATE while active');
+  add('fable-window-expired-restores-normal', !fwOff.includes('FABLE-ONLY WINDOW') && fwOff.includes('SONNET AT MAXIMUM'), 'expected normal Sonnet delegation after the window date');
+  const guardFW = (fw) => {
+    try { return execSync(`node "${join(CLAUDE_H, 'ultramax-guard.mjs')}"`, { input: JSON.stringify({ tool_name: 'Agent', session_id: 'FWX', tool_input: { model: 'sonnet', prompt: 'ultrathink. ZERO-TOLERANCE frame... do x' } }), encoding: 'utf8', timeout: 5000, env: { ...process.env, AURA_FABLE_WINDOW: fw, AURA_ULTRAMAX_FLAG: join(TMP, 'no-umx.json') } }); }
+    catch (e) { return (e.stdout || '') + (e.stderr || ''); }
+  };
+  add('fable-window-guard-blocks-framed-sonnet', guardFW(fwActive).includes('"block"'), 'expected guard to block sonnet even WITH the diligence frame while window active');
+  add('fable-window-guard-expired-allows-framed', guardFW(fwExpired).includes('"approve"'), 'expected framed sonnet allowed after window expiry');
 
   // ── BILLION sticky state machine (the perpetual engine must not die on plain prompts) ──
   const bflag = join(TMP, 'billion-flag.json');

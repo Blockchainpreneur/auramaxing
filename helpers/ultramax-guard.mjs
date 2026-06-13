@@ -85,6 +85,26 @@ async function main() {
   const DILIGENCE = /ultrathink/i;
   const FRAME = /zero[\s-]?tolerance/i;
 
+  // FABLE-ONLY WINDOW: until the date in fable-window.json, sonnet/haiku spawns are
+  // blocked OUTRIGHT (no frame exception) — user directive 2026-06-12, expires alone.
+  let fableWindow = false;
+  try {
+    const fw = JSON.parse(readFileSync(process.env.AURA_FABLE_WINDOW || join(homedir(), '.auramaxing', 'fable-window.json'), 'utf8'));
+    fableWindow = !!fw.until && Date.now() < Date.parse(fw.until + 'T05:00:00Z');
+  } catch {}
+  if (!umxActive && fableWindow) {
+    if (tool === 'workflow') {
+      const m = String(input.script || '').match(/model\s*:\s*["'`]\s*(sonnet|haiku)[a-z0-9._-]*\s*["'`]/i);
+      if (m) return block(`[FABLE-ONLY WINDOW] Until 2026-06-23 ALL delegation runs on Fable 5 — remove the "${m[1]}" override (omit model: to inherit Fable) and re-issue. Normal delegation resumes automatically on the 23rd.`);
+      return approve();
+    }
+    const model = String(input.model || '').trim().toLowerCase();
+    if (/sonnet|haiku/.test(model)) {
+      return block(`[FABLE-ONLY WINDOW] Until 2026-06-23 ALL delegation runs on Fable 5 — "${model}" is blocked regardless of framing. Re-issue this SAME spawn WITHOUT a model parameter (inherits claude-fable-5) and keep "ultrathink" in the prompt. Normal delegation resumes automatically on the 23rd.`);
+    }
+    return approve();
+  }
+
   if (!umxActive) {
     // ── NORMAL MODE: cheap workers only ship under the 10x forced-diligence frame ──
     if (tool === 'workflow') {

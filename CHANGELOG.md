@@ -5,6 +5,12 @@ All notable changes to Auramaxing are documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.17.0 — 2026-06-12
+
+- **FABLE-ONLY WINDOW (user directive): everything runs on Fable 5 until 2026-06-23, then back to normal AUTOMATICALLY.** `~/.auramaxing/fable-window.json` gates it by date (midnight Cancún): the router suppresses the Sonnet DELEGATE directive and emits the window directive on every routed prompt; the guard blocks ANY sonnet/haiku spawn outright (no frame exception) on Agent/Task/Workflow. Expires alone — zero manual reversion. Box nightly switched to `NIGHTLY_MODEL=claude-fable-5` with a PERSISTENT systemd timer (`fable-revert`, survives reboots, Persistent=true) reverting to Sonnet on Jun 23 05:05 UTC and disabling itself.
+- Eval harness self-neutralizes the live window (deterministic suite regardless of the active window; dedicated cases test active/expired explicitly).
+- **evals 103/103** (+4 window cases), baseline re-locked.
+
 ## v1.16.0 — 2026-06-12
 
 - **BILLION WATCHDOG — mechanical anti-stop (user report: "stopping before achieving the given goals and revenue").** Sticky mode kept the engine ARMED but nothing mechanically forced continuation: the gatekeeper blocked once per turn (anti-wedge) and the model stopped anyway. Now, while the session's BILLION flag is armed AND its ledger has open objectives, EVERY stop attempt is re-blocked with a continuation NUDGE (resume-first → next autonomous objective → schedule continuation), bounded by a nudge budget (`AURA_BILLION_NUDGES`, default 12 per user prompt; router resets the counter each prompt — cap reached/objectives closed/"billion off" → allow, so it can never wedge). This is the doctrine's Parte-7 watchdog, in-harness: continuation is the SYSTEM's property, not the model's whim.
