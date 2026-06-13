@@ -3,7 +3,7 @@
   "theme": "dark",
   "fontSize": 14,
   "fastMode": true,
-  "preferredModel": "claude-fable-5",
+  "preferredModel": "claude-opus-4-8",
   "agentTeams": {
     "enabled": true,
     "defaultTopology": "hierarchical-mesh",

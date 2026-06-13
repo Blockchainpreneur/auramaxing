@@ -95,12 +95,12 @@ async function main() {
   if (!umxActive && fableWindow) {
     if (tool === 'workflow') {
       const m = String(input.script || '').match(/model\s*:\s*["'`]\s*(sonnet|haiku)[a-z0-9._-]*\s*["'`]/i);
-      if (m) return block(`[FABLE-ONLY WINDOW] Until 2026-06-23 ALL delegation runs on Fable 5 — remove the "${m[1]}" override (omit model: to inherit Fable) and re-issue. Normal delegation resumes automatically on the 23rd.`);
+      if (m) return block(`[OPUS-ONLY WINDOW] Until 2026-06-23 ALL delegation runs on Opus 4.8 — remove the "${m[1]}" override (omit model: to inherit Opus 4.8) and re-issue. Normal delegation resumes automatically on the 23rd.`);
       return approve();
     }
     const model = String(input.model || '').trim().toLowerCase();
     if (/sonnet|haiku/.test(model)) {
-      return block(`[FABLE-ONLY WINDOW] Until 2026-06-23 ALL delegation runs on Fable 5 — "${model}" is blocked regardless of framing. Re-issue this SAME spawn WITHOUT a model parameter (inherits claude-fable-5) and keep "ultrathink" in the prompt. Normal delegation resumes automatically on the 23rd.`);
+      return block(`[OPUS-ONLY WINDOW] Until 2026-06-23 ALL delegation runs on Opus 4.8 — "${model}" is blocked regardless of framing. Re-issue this SAME spawn WITHOUT a model parameter (inherits claude-opus-4-8) and keep "ultrathink" in the prompt. Normal delegation resumes automatically on the 23rd.`);
     }
     return approve();
   }
@@ -138,12 +138,12 @@ async function main() {
   // ── 3. WORKFLOW LOCK ────────────────────────────────────────────────────
   if (tool === 'workflow') {
     const script = String(input.script || '');
-    const m = script.match(/model\s*:\s*["'`]\s*(?!fable)([a-z0-9._-]+)\s*["'`]/i);
+    const m = script.match(/model\s*:\s*["'`]\s*(?!fable|opus)([a-z0-9._-]+)\s*["'`]/i);
     if (m) {
       return block(
-        `[ULTRAMAX] This task is locked to a Fable-5-only fleet — the workflow script ` +
-        `overrides an agent onto "${m[1]}". Remove every non-Fable \`model:\` override ` +
-        `(omit it to inherit Fable 5, or set model: "fable") and re-issue. Every agent ` +
+        `[ULTRAMAX] This task is locked to an Opus-4.8-only fleet — the workflow script ` +
+        `overrides an agent onto "${m[1]}". Remove every non-Opus \`model:\` override ` +
+        `(omit it to inherit Opus 4.8, or set model: "opus") and re-issue. Every agent ` +
         `prompt in the script must also include "ultrathink" for max extended thinking. ` +
         `(One-time override: AURA_ULTRAMAX_OFF=1.)`
       );
@@ -153,11 +153,11 @@ async function main() {
 
   // ── 1. MODEL LOCK (Agent/Task) ──────────────────────────────────────────
   const model = String(input.model || '').trim().toLowerCase();
-  if (model && !model.includes('fable')) {
+  if (model && !model.includes('fable') && !model.includes('opus')) {
     return block(
-      `[ULTRAMAX] This task is locked to Fable 5 — delegation to "${model}" is blocked. ` +
-      `Re-issue this Agent/Task call WITHOUT a model parameter (inherits the Fable 5 ` +
-      `session default) or with model:"fable", and include "ultrathink" in the agent ` +
+      `[ULTRAMAX] This task is locked to Opus 4.8 — delegation to "${model}" is blocked. ` +
+      `Re-issue this Agent/Task call WITHOUT a model parameter (inherits the Opus 4.8 ` +
+      `session default) or with model:"opus", and include "ultrathink" in the agent ` +
       `prompt for max extended thinking. (One-time override: AURA_ULTRAMAX_OFF=1.)`
     );
   }
@@ -168,10 +168,10 @@ async function main() {
   const prompt = String(input.prompt || '');
   if (!/ultrathink/i.test(prompt)) {
     return block(
-      `[ULTRAMAX] Fable-5 fleet spawns must run at MAXIMUM thinking — re-issue this ` +
+      `[ULTRAMAX] Opus 4.8 fleet spawns must run at MAXIMUM thinking — re-issue this ` +
       `SAME Agent/Task call with the word "ultrathink" included in the agent's prompt ` +
-      `(e.g. prefix it with "ultrathink. ") so the delegated Fable agent engages its ` +
-      `maximum extended-thinking budget. Keep the model parameter omitted or "fable". ` +
+      `(e.g. prefix it with "ultrathink. ") so the delegated Opus agent engages its ` +
+      `maximum extended-thinking budget. Keep the model parameter omitted or "opus". ` +
       `(One-time override: AURA_ULTRAMAX_OFF=1.)`
     );
   }

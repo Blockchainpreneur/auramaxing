@@ -241,6 +241,8 @@
   },
   "fastMode": false,
   "skipDangerousModePermissionPrompt": true,
-  "effortLevel": "ultracode",
-  "model": "claude-fable-5"
+  "effortLevel": "xhigh",
+  "ultracode": true,
+  "alwaysThinkingEnabled": true,
+  "model": "claude-opus-4-8"
 }
