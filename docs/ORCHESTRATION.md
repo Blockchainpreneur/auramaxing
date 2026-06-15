@@ -4,7 +4,7 @@
 > categorically 10x any other global Claude Code setup. Loaded on demand by the router;
 > the always-on summary lives in `~/.claude/CLAUDE.md` → "Perpetual Perfection Loop".
 
-Version 2.0 · 2026-06-10 · Model floor: Fable 5 · `effortLevel: ultracode`
+Version 2.1 · 2026-06-13 · Model: Opus 4.8 EXCLUSIVE (main + all delegation) · `effortLevel: ultracode`
 
 ---
 
@@ -253,17 +253,40 @@ hard rules make the loop bite:
 
 ---
 
-## 0.7 The Fable→Sonnet Orchestration Engine (ALWAYS ON, automatic)
+## 0.7 The Opus-4.8 Orchestration Engine (ALWAYS ON, automatic)
 
-Default model is **Fable 5** (`claude-fable-5`): the orchestrator + reviewer. **Sonnet 4.6** does the bulk under strict gates. Fully automatic — no manual tool/skill/model calls; the autopilot wires the loop from every prompt.
+Default model is **Opus 4.8** (`claude-opus-4-8`, 1M context) at `effortLevel: ultracode` — for BOTH the orchestrator/reviewer AND the worker fleet (main + every delegated/parallel agent run Opus 4.8 at max; enforced by `~/.auramaxing/opus-window.json` + the `ultramax-guard` PreToolUse hook). Fully automatic — no manual tool/skill/model calls; the autopilot wires the loop from every prompt.
 
 **The loop, per prompt:**
 1. **Intercept** — `rational-router-apex.mjs` (UserPromptSubmit) runs on EVERY prompt.
 2. **Build the loop** — on any action task (complexity ≥30) it auto-opens a session-scoped completion ledger (`~/.auramaxing/ledger.json`).
 3. **Enforce** — `evidence-gatekeeper.mjs` (Stop hook) refuses to end the turn until **Gate 1** (every source change has a *passing* verification — verify OUTCOMES not utterances; a failing test does NOT count) and **Gate 2** (the ledger deliverable is marked done via `ledger.mjs done <id>`, only after the full verified + globally-audited loop). Loop to 100/100 with evidence.
-4. **Delegate** — the **`aura-delegate`** skill: Fable stays terse (plan · spec · accept/reject · fuse · crucial edits); Sonnet workers (`Agent model:sonnet`, or box `orchestra.sh ORCH_MODEL=claude-sonnet-4-6`) do the bulk under a draconian gated harness (atomic spec + acceptance test, plan-before-code, mandatory self-critique, deterministic gate on return, 2-of-3 redundancy on critical, Reflexion on failure). Sonnet output is never trusted raw — it passes a deterministic gate or gets re-specced.
+4. **Delegate** — the **`aura-delegate`** skill: the main Opus 4.8 session stays terse (plan · spec · accept/reject · fuse · crucial edits); an **Opus 4.8 worker fleet** (`Agent` with `model:"opus"` or omit-to-inherit) does the bulk in parallel under a draconian gated harness (atomic spec + acceptance test, plan-before-code, mandatory self-critique, deterministic gate on return, 2-of-3 redundancy on critical, Reflexion on failure). Every worker prompt carries **"ultrathink"**; the `ultramax-guard` hard-blocks any non-Opus spawn. Worker output is never trusted raw — it passes a deterministic gate or gets re-specced.
 
-**Honest economics (no inflated claims):** realistic token split is **~25–40% Fable / 60–75% Sonnet**; the 5–10% Fable ideal is not reachable on complex/novel work (the orchestrator's plan + diff-review + accept/reject + fuse is irreducible). By cost Fable stays **~55–60%** (it is ~3.3× pricier/token). Real win: **Fable-level orchestration quality at ~30–50% lower cost than Fable-solo** — NOT a measured 10×, NOT 90/10. One session = one model (Fable spawns Sonnet workers, not token-level switching). Sonnet ≠ Fable on hard reasoning — that is why the crucial 5–10% stays on Fable. Grounded in orchestrator-worker + Reflexion + harness-engineering research (external-gate verification, durable cross-context state).
+**Honest framing (no inflated claims):** one session = one model, and that model is **Opus 4.8** — main and workers are the SAME tier (not a downgrade). The win is **parallelism + fresh isolated context per sub-task + independent adversarial verification**, NOT cheaper tokens. The orchestrator keeps the crucial 5–10% (plan · diff-review · accept/reject · fuse) because a single coherent judgment must sit above the fan-out; the irreducible orchestration cost is real. Token cost is not the constraint — exhaustive correctness and elite output are. Grounded in orchestrator-worker + Reflexion + harness-engineering research (external-gate verification, durable cross-context state).
+
+---
+
+## 0.8 Diligence principles — distilled from the Anthropic published-prompt audit (2026-06-14)
+
+Audited Anthropic's published Claude system prompt. ~80% of it is consumer-product plumbing
+(connectors, artifacts, file-path conventions, copyright/lyrics refusals) IRRELEVANT to a Claude
+Code framework; its transferable rules (don't-guess-APIs, verify-before-claiming, scale-effort-to-
+complexity, complete-verification-loops) were ALREADY enforced here. Three gaps it exposed are now
+enforced via the prompt-engine (injected every actionable prompt) + the eval suite:
+
+1. **Skill-first** — when a phase maps to a gstack/AURAMAXING skill, READ that skill's `SKILL.md`
+   (and the files it references) BEFORE composing the action. Skills encode environment constraints,
+   contracts, and tool quirks not in training data. Never invoke a skill blind or guess its contract.
+2. **Substance-first (anti-sycophancy)** — lead with the result + evidence; address the user as an
+   expert peer; no flattery, filler, hedging, or narrating intended actions; don't ask for
+   clarification when intent is clear. Ceremony (boxes/banners) never substitutes for substance.
+3. **No confabulation** — never invent a file:line, API signature, command output, citation, metric,
+   or test result; verify against the real source/run or omit and say so. Confidence scales strictly
+   to what was ACTUALLY verified this turn (an unverified claim is treated as FALSE — ties to §0.6).
+
+Honest scope: this was a focused hardening of three principles, NOT a "10x" — the audited document
+did not contain hidden capability multipliers; AURAMAXING already encoded the rest.
 
 ---
 

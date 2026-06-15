@@ -1,13 +1,13 @@
 ---
 name: billion-engine
-description: ALWAYS invoke when BILLION mode is active (the word "billion"/"billón" in the prompt → the router emits the BILLION directive). The Billion-Dollar Perpetual Engine operating protocol — 5 nested loops (Horizon→Mission→Goal→Execution→Reason-Act), the forced-quota engine (50 ideas in blocks), the 5 adversarial tournaments (A-E), autonomous-executability ranking, human-independence, and the anti-stop structured turn close. Inherits ULTRAMAX in full (Fable-only fleet at max presets). Doctrine: ~/auramaxing/docs/BILLION-ENGINE.md.
+description: ALWAYS invoke when BILLION mode is active (the word "billion"/"billón" in the prompt → the router emits the BILLION directive). The Billion-Dollar Perpetual Engine operating protocol — 5 nested loops (Horizon→Mission→Goal→Execution→Reason-Act), the forced-quota engine (50 ideas in blocks), the 5 adversarial tournaments (A-E), autonomous-executability ranking, human-independence, and the anti-stop structured turn close. Inherits ULTRAMAX in full (Opus-4.8-only fleet at max presets). Doctrine: ~/auramaxing/docs/BILLION-ENGINE.md.
 ---
 
 # Billion Engine — operating protocol
 
 **Read the doctrine first** (`~/auramaxing/docs/BILLION-ENGINE.md`) — this skill is the
-in-session execution protocol. BILLION inherits ULTRAMAX completely: Fable 5 exclusive,
-every spawn inherits/sets fable + carries "ultrathink", guard enforces. Token cost is
+in-session execution protocol. BILLION inherits ULTRAMAX completely: Opus 4.8 exclusive,
+every spawn inherits/sets opus + carries "ultrathink", guard enforces. Token cost is
 not a constraint; exhaustive correctness and elite output are.
 
 ## 0 · State first (always)
@@ -35,7 +35,7 @@ después" is banned.
 - **L2 GOAL**: pop ONE objective from GOALS.md. Decompose into atomic tasks
   (TaskCreate — the visible goal-loop). Exit only on its measurable criterion.
 - **L3 EXECUTION**: per atomic task, the Absolute Perfection Loop (ORCHESTRATION §0.0)
-  + the artifact's tournament. Delegate bulk to Fable multi-agents (ultrathink in every
+  + the artifact's tournament. Delegate bulk to Opus 4.8 multi-agents (ultrathink in every
   spawn prompt — the guard enforces it).
 - **L4 REASON-ACT**: the heartbeat — reason→act→observe; no claimed step without its
   observation. The parent gate verifies every "done" (nesting rule: ledger + gatekeeper
@@ -48,7 +48,7 @@ después" is banned.
 2. Generate **all 50** in marked blocks — `[1-5 OBVIAS]`, `[6-15 CÓMODAS]`,
    `[16-30 TRANSICIÓN — high review]`, `[31-50 PUNTOS CIEGOS]`. Hard rule: never stop
    early; if stuck use forced relations / problem inversion / rolestorming. Fan out
-   Fable agents to parallelize blocks when useful (each spawn: "ultrathink" + one
+   Opus 4.8 agents to parallelize blocks when useful (each spawn: "ultrathink" + one
    block + the vector + no-filter instruction).
 3. Hand the 50 to a tournament (adversarial judges score → kill → fuse).
 4. **Select EXACTLY the 3 maximum-leverage ideas** (leverage = impact ×
@@ -74,7 +74,7 @@ become the counterparty, rounds, break character after each ("esto acabas de reg
 **E** dense documents → read EVERYTHING (tables/footnotes/exhibits); 3 lists + 3 asks
 with exact phrasing + lawyer flag.
 
-Implement each tournament as parallel Fable spawns (one judge/persona per agent,
+Implement each tournament as parallel Opus 4.8 spawns (one judge/persona per agent,
 "ultrathink" in every prompt) or a Workflow with adversarial verify — never one model
 agreeing with itself.
 

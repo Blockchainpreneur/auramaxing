@@ -6,7 +6,7 @@
  * Requires browser-server.mjs running on port 9222.
  * Non-blocking: exits 0 always.
  */
-import { execSync, spawn } from 'child_process';
+import { execSync, spawn, spawnSync } from 'child_process';
 import { existsSync, mkdirSync, writeFileSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
@@ -84,8 +84,42 @@ try {
     }
   }
 
-  // ── Step 3: Capture cookies via Playwright CDP ────────────────
-  log('Connecting to Chrome via CDP to capture cookies...');
+  // ── Step 3 (headless, DEFAULT): capture cookies WITHOUT opening a tab ──
+  // Root-cause fix for "NotebookLM opens in my browser every few minutes":
+  // read cookies from the user's EXISTING Chrome session via CDP HTTP
+  // (nlm-cookie-sync.mjs → Network.getCookies) — no new_page(), no goto(),
+  // no visible NotebookLM tab. The old visible-tab capture is now opt-in only
+  // (AURA_NLM_VISIBLE_AUTH=1), so the recurring refresh path never hijacks Chrome.
+  let needVisible = false;
+  try {
+    const syncScript = join(HOME, 'auramaxing', 'helpers', 'nlm-cookie-sync.mjs');
+    if (existsSync(syncScript)) {
+      const r = spawnSync('node', [syncScript], { stdio: 'pipe', timeout: 30000, env: { ...process.env, PATH: pythonEnv().PATH } });
+      const out = (r.stdout?.toString() || '') + (r.stderr?.toString() || '');
+      const reason = out.match(/NO_GOOGLE_TAB|MISSING_AUTH|CDP_UNREACHABLE|MISSING_WEBSOCKETS|NO_RESPONSE/)?.[0] || `status ${r.status}`;
+      if (r.status === 0) {
+        log('Headless cookie sync OK (no browser tab opened)');
+      } else if (process.env.AURA_NLM_VISIBLE_AUTH === '1') {
+        log(`Headless sync insufficient (${reason}); AURA_NLM_VISIBLE_AUTH=1 → opening a tab to re-auth...`);
+        needVisible = true;
+      } else {
+        log(`Headless sync found no live Google session (${reason}). NOT opening a browser tab. Run \`notebooklm login\` once, or set AURA_NLM_VISIBLE_AUTH=1 to allow auto re-auth.`);
+        process.exit(0);
+      }
+    } else if (process.env.AURA_NLM_VISIBLE_AUTH === '1') {
+      needVisible = true;
+    } else {
+      log('nlm-cookie-sync.mjs missing; not opening a tab (set AURA_NLM_VISIBLE_AUTH=1 to allow).');
+      process.exit(0);
+    }
+  } catch (e) {
+    if (process.env.AURA_NLM_VISIBLE_AUTH === '1') { needVisible = true; }
+    else { log(`Headless sync error: ${(e.message || '').slice(0, 80)} — not opening a tab.`); process.exit(0); }
+  }
+
+  // ── Step 3b (VISIBLE, opt-in only via AURA_NLM_VISIBLE_AUTH=1): legacy Playwright tab capture ──
+  if (needVisible) {
+  log('Connecting to Chrome via CDP to capture cookies (visible tab)...');
 
   mkdirSync(join(HOME, '.notebooklm'), { recursive: true });
 
@@ -157,6 +191,7 @@ try {
 
   // Clean up temp script
   try { unlinkSync(tmpScript); } catch {}
+  } // end if (needVisible) — visible-tab capture is opt-in only
 
   // ── Step 4: Verify auth works ─────────────────────────────────
   try {

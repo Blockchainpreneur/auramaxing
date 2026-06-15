@@ -1,29 +1,34 @@
 #!/usr/bin/env node
 /**
- * ULTRAMAX + delegation-quality guard — PreToolUse hook on Agent/Task/Workflow.
+ * OPUS-MAX + delegation-quality guard — PreToolUse hook on Agent/Task/Workflow.
  *
- * NORMAL MODE (always on, no flag needed): any Agent/Task spawn that explicitly
- * targets a CHEAPER worker (model contains "sonnet"/"haiku") must carry the 10x
- * forced-diligence frame — the prompt MUST include "ultrathink" (max extended
- * thinking for the worker) AND the ZERO-TOLERANCE frame (the 8 rules pasted into
- * the spec per the aura-delegate harness). Sonnet is only useful next to Fable
- * under forced max presets + heavy prompt engineering; a bare spawn is blocked
- * with re-issue instructions. Workflow scripts with sonnet/haiku overrides need
- * the same two markers in the script. Fable/inherit spawns pass untouched.
+ * OPUS-ONLY WINDOW (the standing default — user directive 2026-06-12): while
+ * ~/.auramaxing/opus-window.json has an `until` date in the future, EVERYTHING runs
+ * on Opus 4.8 at MAXIMUM presets — main session AND every delegated/parallel agent.
+ * Any Agent/Task/Workflow spawn requesting a non-Opus model (sonnet/haiku/fable) is
+ * blocked OUTRIGHT, and every spawn prompt MUST contain "ultrathink" (max extended
+ * thinking). Allowed: model:"opus" or no model param (inherits the Opus session
+ * default). Delete the window file to fall back to normal delegation.
+ *
+ * NORMAL MODE (window absent/expired, no ultramax flag): any Agent/Task spawn that
+ * explicitly targets a CHEAPER worker (model contains "sonnet"/"haiku") must carry the
+ * 10x forced-diligence frame — the prompt MUST include "ultrathink" AND the
+ * ZERO-TOLERANCE frame (the 8 rules per the aura-delegate harness). Opus/inherit
+ * spawns pass untouched.
  *
  * When ULTRAMAX mode is active for THIS session (the user typed `ultramax` in the
  * prompt → rational-router-apex wrote ~/.auramaxing/ultramax.json {sessionId, ts}),
- * the task is locked to a FABLE-5-ONLY fleet at MAXIMUM capability presets:
+ * the task is locked to an OPUS-4.8-ONLY fleet at MAXIMUM capability presets:
  *
- *  1. MODEL LOCK — any Agent/Task spawn requesting a NON-Fable model is blocked.
- *     Allowed: no model param (inherits the Fable session default) or model
- *     containing "fable".
+ *  1. MODEL LOCK — any Agent/Task spawn requesting a NON-Opus model is blocked.
+ *     Allowed: no model param (inherits the Opus session default) or model
+ *     containing "opus".
  *  2. MAX-THINKING LOCK — every Agent/Task spawn prompt MUST contain "ultrathink"
- *     so the delegated Fable agent runs with its maximum extended-thinking budget.
+ *     so the delegated Opus agent runs with its maximum extended-thinking budget.
  *     A spawn without it is blocked with instructions to re-issue.
- *  3. WORKFLOW LOCK — Workflow scripts must not override agents onto a non-Fable
- *     model (`model: "sonnet"|"haiku"|"opus"` in agent()/meta.phases is blocked);
- *     omitting model inherits Fable, which is correct.
+ *  3. WORKFLOW LOCK — Workflow scripts must not override agents onto a non-Opus
+ *     model (`model: "sonnet"|"haiku"|"fable"` in agent()/meta.phases is blocked);
+ *     omitting model inherits Opus, which is correct.
  *
  * Fail-open by design: missing/stale/mismatched flag, parse errors, or
  * AURA_ULTRAMAX_OFF=1 → approve. Never wedges a session.
@@ -51,7 +56,7 @@ function block(reason) {
 }
 
 async function main() {
-  
+
   if (process.env.AURA_ULTRAMAX_OFF === '1') return approve();
 
   let raw = '';
@@ -85,22 +90,27 @@ async function main() {
   const DILIGENCE = /ultrathink/i;
   const FRAME = /zero[\s-]?tolerance/i;
 
-  // FABLE-ONLY WINDOW: until the date in fable-window.json, sonnet/haiku spawns are
-  // blocked OUTRIGHT (no frame exception) — user directive 2026-06-12, expires alone.
-  let fableWindow = false;
+  // OPUS-ONLY WINDOW: until the date in opus-window.json, ALL spawns run on Opus 4.8 —
+  // any non-Opus model (sonnet/haiku/fable) is blocked OUTRIGHT, and every spawn prompt
+  // must carry "ultrathink". User directive 2026-06-12. Delete the file to end it early.
+  let opusWindow = false;
   try {
-    const fw = JSON.parse(readFileSync(process.env.AURA_FABLE_WINDOW || join(homedir(), '.auramaxing', 'fable-window.json'), 'utf8'));
-    fableWindow = !!fw.until && Date.now() < Date.parse(fw.until + 'T05:00:00Z');
+    const fw = JSON.parse(readFileSync(process.env.AURA_OPUS_WINDOW || join(homedir(), '.auramaxing', 'opus-window.json'), 'utf8'));
+    opusWindow = !!fw.until && Date.now() < Date.parse(fw.until + 'T05:00:00Z'); // midnight Cancun (UTC-5)
   } catch {}
-  if (!umxActive && fableWindow) {
+  if (opusWindow) {
     if (tool === 'workflow') {
-      const m = String(input.script || '').match(/model\s*:\s*["'`]\s*(sonnet|haiku)[a-z0-9._-]*\s*["'`]/i);
-      if (m) return block(`[FABLE-ONLY WINDOW] Until 2026-06-23 ALL delegation runs on Fable 5 — remove the "${m[1]}" override (omit model: to inherit Fable) and re-issue. Normal delegation resumes automatically on the 23rd.`);
+      const m = String(input.script || '').match(/model\s*:\s*["'`]\s*(sonnet|haiku|fable)[a-z0-9._-]*\s*["'`]/i);
+      if (m) return block(`[OPUS-ONLY WINDOW] ALL delegation runs on Opus 4.8 at max — remove the "${m[1]}" override (omit model: to inherit Opus, or set model:"opus") and re-issue. Every agent() prompt must also include "ultrathink".`);
       return approve();
     }
     const model = String(input.model || '').trim().toLowerCase();
-    if (/sonnet|haiku/.test(model)) {
-      return block(`[FABLE-ONLY WINDOW] Until 2026-06-23 ALL delegation runs on Fable 5 — "${model}" is blocked regardless of framing. Re-issue this SAME spawn WITHOUT a model parameter (inherits claude-fable-5) and keep "ultrathink" in the prompt. Normal delegation resumes automatically on the 23rd.`);
+    if (model && !model.includes('opus')) {
+      return block(`[OPUS-ONLY WINDOW] ALL delegation runs on Opus 4.8 at maximum spec — "${model}" is blocked. Re-issue this SAME spawn with model:"opus" (or omit model: to inherit the Opus session default) and keep "ultrathink" in the prompt.`);
+    }
+    const prompt = String(input.prompt || '');
+    if (!/ultrathink/i.test(prompt)) {
+      return block(`[OPUS-ONLY WINDOW] Opus 4.8 fleet spawns must run at MAXIMUM thinking — re-issue this SAME ${tool} call with the word "ultrathink" in the agent's prompt (e.g. prefix "ultrathink. ") so the delegated Opus agent engages its maximum extended-thinking budget. Keep model:"opus" or omit it to inherit Opus. (One-time override: AURA_ULTRAMAX_OFF=1.)`);
     }
     return approve();
   }
@@ -124,7 +134,7 @@ async function main() {
       const prompt = String(input.prompt || '');
       if (!(DILIGENCE.test(prompt) && FRAME.test(prompt))) {
         return block(
-          `[AURA-DELEGATE] A "${model}" worker is only useful next to Fable under 10x FORCED DILIGENCE — ` +
+          `[AURA-DELEGATE] A "${model}" worker is only useful next to Opus under 10x FORCED DILIGENCE — ` +
           `re-issue this SAME spawn with BOTH in the worker prompt: (1) the word "ultrathink" (engages the ` +
           `worker's MAXIMUM extended-thinking budget) and (2) the ZERO-TOLERANCE frame (paste the 8 rules + ` +
           `Tier-2 micro-loop + acceptance test + evidence contract, per the aura-delegate harness). ` +
@@ -138,12 +148,12 @@ async function main() {
   // ── 3. WORKFLOW LOCK ────────────────────────────────────────────────────
   if (tool === 'workflow') {
     const script = String(input.script || '');
-    const m = script.match(/model\s*:\s*["'`]\s*(?!fable)([a-z0-9._-]+)\s*["'`]/i);
+    const m = script.match(/model\s*:\s*["'`]\s*(?!opus)([a-z0-9._-]+)\s*["'`]/i);
     if (m) {
       return block(
-        `[ULTRAMAX] This task is locked to a Fable-5-only fleet — the workflow script ` +
-        `overrides an agent onto "${m[1]}". Remove every non-Fable \`model:\` override ` +
-        `(omit it to inherit Fable 5, or set model: "fable") and re-issue. Every agent ` +
+        `[ULTRAMAX] This task is locked to an Opus-4.8-only fleet — the workflow script ` +
+        `overrides an agent onto "${m[1]}". Remove every non-Opus \`model:\` override ` +
+        `(omit it to inherit Opus 4.8, or set model: "opus") and re-issue. Every agent ` +
         `prompt in the script must also include "ultrathink" for max extended thinking. ` +
         `(One-time override: AURA_ULTRAMAX_OFF=1.)`
       );
@@ -153,25 +163,25 @@ async function main() {
 
   // ── 1. MODEL LOCK (Agent/Task) ──────────────────────────────────────────
   const model = String(input.model || '').trim().toLowerCase();
-  if (model && !model.includes('fable')) {
+  if (model && !model.includes('opus')) {
     return block(
-      `[ULTRAMAX] This task is locked to Fable 5 — delegation to "${model}" is blocked. ` +
-      `Re-issue this Agent/Task call WITHOUT a model parameter (inherits the Fable 5 ` +
-      `session default) or with model:"fable", and include "ultrathink" in the agent ` +
+      `[ULTRAMAX] This task is locked to Opus 4.8 — delegation to "${model}" is blocked. ` +
+      `Re-issue this Agent/Task call WITHOUT a model parameter (inherits the Opus 4.8 ` +
+      `session default) or with model:"opus", and include "ultrathink" in the agent ` +
       `prompt for max extended thinking. (One-time override: AURA_ULTRAMAX_OFF=1.)`
     );
   }
 
   // ── 2. MAX-THINKING LOCK (Agent/Task) ───────────────────────────────────
-  // Every delegated Fable agent must run at max extended thinking: the spawn prompt
+  // Every delegated Opus agent must run at max extended thinking: the spawn prompt
   // must carry the "ultrathink" trigger. (Description fields don't count.)
   const prompt = String(input.prompt || '');
   if (!/ultrathink/i.test(prompt)) {
     return block(
-      `[ULTRAMAX] Fable-5 fleet spawns must run at MAXIMUM thinking — re-issue this ` +
+      `[ULTRAMAX] Opus-4.8 fleet spawns must run at MAXIMUM thinking — re-issue this ` +
       `SAME Agent/Task call with the word "ultrathink" included in the agent's prompt ` +
-      `(e.g. prefix it with "ultrathink. ") so the delegated Fable agent engages its ` +
-      `maximum extended-thinking budget. Keep the model parameter omitted or "fable". ` +
+      `(e.g. prefix it with "ultrathink. ") so the delegated Opus agent engages its ` +
+      `maximum extended-thinking budget. Keep the model parameter omitted or "opus". ` +
       `(One-time override: AURA_ULTRAMAX_OFF=1.)`
     );
   }

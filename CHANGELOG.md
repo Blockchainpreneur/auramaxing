@@ -5,6 +5,15 @@ All notable changes to Auramaxing are documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.18.0 — 2026-06-15
+
+- **EVERYTHING → Opus 4.8 at max (replaces the Fable-only window).** `settings.json` `model: opus[1m]` + `effortLevel: ultracode` + `fastMode: off`; standing default enforced by `~/.auramaxing/opus-window.json` (router emits the OPUS-MAX directive; `ultramax-guard` hard-blocks any non-Opus spawn + requires `ultrathink`). ULTRAMAX & BILLION inherit Opus 4.8. `aura-delegate` reframed Sonnet→Opus fleet. `install.sh` + `setup/` templates de-Fabled (and the reinstall-time Ruflo daemon removed). Revert: delete `opus-window.json`.
+- **Loop-resilience hardening of the evidence-gatekeeper (v3→v4→v5).** v3: persistent bounded re-block (`AURA_GK_MAX_NUDGES`, default 20) so a still-failing gate re-blocks on every stop attempt, not once; +4.5s self-timeout, 24h ledger freshness. v4: greatness gate decoupled from this-turn source mutation + rubber-stamp ("(no evidence given)"/empty) rejected + Bash source-edits (`sed -i`/`tee`/redirect) counted as mutation. v5: `isFail` vocabulary now covers cargo/rspec/vitest `×`/eslint `✖`/make/`exited status` (red tests were counting GREEN); `tool_result.is_error:true` wired (authoritative); RED dominates GREEN (no masking); `isSidechain` lines no longer credit the parent gate; BILLION no longer single-shot on re-block; the router AUTO-LEDGER now APPENDS across prompts instead of overwriting (multi-prompt tasks keep their deliverable).
+- **3 principles** from the published-Claude-prompt audit added to `prompt-engine.mjs` + `ORCHESTRATION.md §0.8`: `[skill-first]`, `[substance-first]`, `[no-confabulation]`.
+- **Security/correctness fixes** (5-agent audit): `compact-hooks.mjs` `bash -c "$(cat …)"` command-injection → structured argv; `pii-redactor` HIGH-secret block now dual-format (`permissionDecision:deny`); `~/.auramaxing` perms 700/600; serena/codegraph (uninstalled MCP) routing removed.
+- **NLM browser-hijack fix**: `nlm-auth-refresh.mjs` is headless-first via `nlm-cookie-sync` (no NotebookLM tab opened); visible re-auth opt-in via `AURA_NLM_VISIBLE_AUTH=1`.
+- **evals 103 → 125/125** (router 38 · hooks 87), baseline re-locked.
+
 ## v1.17.0 — 2026-06-12
 
 - **FABLE-ONLY WINDOW (user directive): everything runs on Fable 5 until 2026-06-23, then back to normal AUTOMATICALLY.** `~/.auramaxing/fable-window.json` gates it by date (midnight Cancún): the router suppresses the Sonnet DELEGATE directive and emits the window directive on every routed prompt; the guard blocks ANY sonnet/haiku spawn outright (no frame exception) on Agent/Task/Workflow. Expires alone — zero manual reversion. Box nightly switched to `NIGHTLY_MODEL=claude-fable-5` with a PERSISTENT systemd timer (`fable-revert`, survives reboots, Persistent=true) reverting to Sonnet on Jun 23 05:05 UTC and disabling itself.

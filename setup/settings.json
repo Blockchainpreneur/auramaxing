@@ -167,15 +167,6 @@
         "hooks": [
           {
             "type": "command",
-            "command": "export PATH=\"$HOME/.nvm/versions/node/v$(cat $HOME/.nvm/alias/default 2>/dev/null | tr -d '[:space:]' | sed 's/^v//')/bin:/usr/local/bin:/usr/bin:/bin:$PATH\" && cd ~/.ruflo-global && (npx ruflo@latest daemon status 2>/dev/null | grep -qi running || npx ruflo@latest daemon start >/dev/null 2>&1 &) >/dev/null 2>&1 || true",
-            "timeout": 5000
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
             "command": "export PATH=\"$HOME/.nvm/versions/node/v$(cat $HOME/.nvm/alias/default 2>/dev/null | tr -d '[:space:]' | sed 's/^v//')/bin:/usr/local/bin:/usr/bin:/bin:$PATH\" && node ~/auramaxing/helpers/nlm-health-check.mjs 2>/dev/null || true",
             "timeout": 8000
           }
@@ -242,5 +233,5 @@
   "fastMode": false,
   "skipDangerousModePermissionPrompt": true,
   "effortLevel": "ultracode",
-  "model": "claude-fable-5"
+  "model": "opus[1m]"
 }

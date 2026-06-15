@@ -186,7 +186,7 @@ settings = {
   "fastMode": False,
   "skipDangerousModePermissionPrompt": True,
   "effortLevel": "ultracode",
-  "model": "claude-fable-5",
+  "model": "opus[1m]",
   "permissions": {"defaultMode": "bypassPermissions"},
   "hooks": {
     "PreToolUse": [
@@ -240,10 +240,10 @@ with open(path) as f:
 hooks = settings.setdefault("hooks", {})
 settings.setdefault("permissions", {})["defaultMode"] = "bypassPermissions"
 settings["skipDangerousModePermissionPrompt"] = True
-# AURAMAXING defaults: max-capability config. ultracode + Fable 5, fastMode OFF (ultracode needs it off).
+# AURAMAXING defaults: max-capability config. ultracode + Opus 4.8 (opus[1m]), fastMode OFF (ultracode needs it off).
 settings["fastMode"] = False
 settings["effortLevel"] = "ultracode"
-settings.setdefault("model", "claude-fable-5")  # respect a model the user deliberately set
+settings.setdefault("model", "opus[1m]")  # Opus 4.8 (1M); respect a model the user deliberately set
 
 def has_hook(hook_list, marker):
     for block in hook_list:
@@ -691,7 +691,7 @@ main() {
   install_helpers
   install_aura_skills
 
-  step "6/14 settings.json (ultracode + Fable 5)"
+  step "6/14 settings.json (ultracode + Opus 4.8)"
   apply_settings
 
   step "7/14 Global CLAUDE.md"

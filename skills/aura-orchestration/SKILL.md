@@ -10,7 +10,7 @@ Full doctrine: read `~/auramaxing/docs/ORCHESTRATION.md` for the complete detail
 ## The Iron Loop (non-negotiable on every executional task)
 `RESEARCH → PLAN → EXECUTE → AUDIT → TEST → SELF-IMPROVE`, and **loop back** whenever AUDIT or TEST finds anything — restart at the step that owns the gap. Never stop on the first "good enough."
 
-1. **RESEARCH** — read all relevant files; map dependencies; never guess an API (verify via context7/deepwiki/serena/codegraph/WebSearch); retrieve prior learnings first.
+1. **RESEARCH** — read all relevant files; map dependencies; never guess an API (verify via context7/deepwiki + Grep/Explore/WebSearch); retrieve prior learnings first.
 2. **PLAN** — state the full approach before coding; route through `/office-hours` → `/plan-eng-review` (+ceo/design) or spec-kit for non-trivial work. Strong specs multiply across agents.
 3. **EXECUTE** — build the COMPLETE thing (states, errors, edge cases, tests); parallelize independent streams in one message; match surrounding style.
 4. **AUDIT** — `/review` + `/cso` + cross-model `/codex`. UI also runs aura-design-supremacy.

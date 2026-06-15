@@ -39,11 +39,12 @@ const BASELINE = join(HOME, '.auramaxing', 'evals', 'baseline.json');
 const LEARNINGS = join(HOME, '.auramaxing', 'learnings');
 const TMP = join(HOME, '.auramaxing', 'evals', 'tmp', `run-${process.pid}`); // pid-scoped: concurrent runs never collide
 
-// Neutralize the LIVE fable-window for the whole suite (evals must be deterministic
+// Neutralize the LIVE opus-window for the whole suite (evals must be deterministic
 // regardless of the user's current window); the dedicated window cases override per-call.
-if (!process.env.AURA_FABLE_WINDOW) {
-  const fwNeutral = join(HOME, '.auramaxing', 'evals', 'tmp', 'fw-neutral.json');
-  try { mkdirSync(join(HOME, '.auramaxing', 'evals', 'tmp'), { recursive: true }); writeFileSync(fwNeutral, JSON.stringify({ until: '2020-01-01' })); process.env.AURA_FABLE_WINDOW = fwNeutral; } catch {}
+// (Hooks read AURA_OPUS_WINDOW; the legacy AURA_FABLE_WINDOW is no longer consulted.)
+if (!process.env.AURA_OPUS_WINDOW) {
+  const fwNeutral = join(HOME, '.auramaxing', 'evals', 'tmp', 'opusw-neutral.json');
+  try { mkdirSync(join(HOME, '.auramaxing', 'evals', 'tmp'), { recursive: true }); writeFileSync(fwNeutral, JSON.stringify({ until: '2020-01-01' })); process.env.AURA_OPUS_WINDOW = fwNeutral; } catch {}
 }
 
 const args = process.argv.slice(2);
@@ -87,6 +88,7 @@ function hooksSuite() {
   // Give the gatekeeper headroom over its tight production self-timeout so the eval is stable on a
   // busy machine (tests the LOGIC, not the latency budget). Production keeps its 1800ms default.
   process.env.AURA_GK_TIMEOUT_MS = '6000';
+  process.env.AURA_GK_NUDGE_DIR = join(TMP, 'gk-nudges'); // isolate v3 nudge counters from the real ~/.auramaxing
   const checks = [];
   const add = (id, passed, detail) => checks.push({ suite: 'hooks', id, pass: !!passed, fails: passed ? [] : [detail] });
 
@@ -105,6 +107,20 @@ function hooksSuite() {
   add('gatekeeper-allows-passing-test-result', gatekeeper([...editNoVerify, TOOLID('v1', 'Bash', { command: 'npm test' }), RESULT('v1', 'Tests: 5 passed, 0 failed')], false).trim() === '', 'expected allow: a PASSING verify result clears the gate');
   add('gatekeeper-blocks-agent-review-bypass', gatekeeper([...editNoVerify, TOOL('Agent', { prompt: 'please review the code' })], false).includes('"block"'), 'expected block: spawning an agent whose prompt says "review" is not an outcome');
 
+  // ── v3: PERSISTENT BOUNDED RE-BLOCK (loops must not stop after a single nudge) ──
+  // WITH a session id, a still-failing gate re-blocks on EVERY stop attempt, bounded by a
+  // per-prompt cap, auto-resetting when the user prompt changes. WITHOUT a session, the old
+  // single-block loop-guard stands (gatekeeper-loop-guard above stays green).
+  process.env.AURA_GK_MAX_NUDGES = '2';
+  const gkn1 = gatekeeper(editNoVerify, true, 'GKN');   // count 1 ≤ 2 → block
+  const gkn2 = gatekeeper(editNoVerify, true, 'GKN');   // count 2 ≤ 2 → block
+  const gkn3 = gatekeeper(editNoVerify, true, 'GKN');   // count 3 > 2 → allow (bounded, never wedge)
+  add('gk-reblocks-on-stop-with-session', gkn1.includes('"block"') && gkn2.includes('"block"'), 'expected re-block on repeated stop while a gate is still failing (session-scoped, 10x-rigor fix)');
+  add('gk-respects-nudge-cap', gkn3.trim() === '', 'expected allow once the per-prompt nudge budget is exhausted (never wedge)');
+  const editNoVerify2 = [U('now a different task entirely'), TOOL('Edit', { file_path: '/x/b.ts' })];
+  add('gk-nudge-resets-on-new-prompt', gatekeeper(editNoVerify2, true, 'GKN').includes('"block"'), 'expected the nudge counter to reset when the user prompt changes (enforcement resumes)');
+  delete process.env.AURA_GK_MAX_NUDGES;
+
   // Gate 3 — ABSOLUTE GREATNESS GATE (Phase 08). Uses a temp ledger via AURA_LEDGER_FILE so the
   // real session ledger is never touched. okV = mutated source + a PASSING verify (clears Gate 1).
   mkdirSync(TMP, { recursive: true });
@@ -116,7 +132,39 @@ function hooksSuite() {
   add('gatekeeper-greatness-blocks-done-without-pass', gatekeeper(okV, false, 'GK3').includes('ABSOLUTE GREATNESS GATE'), 'expected block: deliverable done WITHOUT a recorded greatness pass');
   writeFileSync(g3Ledger, JSON.stringify({ sessionId: 'GK3', ts: stamp(), items: [{ id: 1, desc: 'd', done: true, greatness: { passed: true, evidence: 'e' } }] }));
   add('gatekeeper-greatness-allows-recorded-pass', gatekeeper(okV, false, 'GK3').trim() === '', 'expected allow: greatness pass recorded');
-  add('gatekeeper-greatness-skips-on-no-mutation', gatekeeper([U('x'), TOOL('Edit', { file_path: '/x/README.md' }), TOOLID('g3', 'Bash', { command: 'npm test' }), RESULT('g3', '5 passed, 0 failed')], false, 'GK3').trim() === '', 'expected allow: docs-only change never triggers the greatness gate');
+  add('gatekeeper-greatness-skips-on-no-mutation', gatekeeper([U('x'), TOOL('Edit', { file_path: '/x/README.md' }), TOOLID('g3', 'Bash', { command: 'npm test' }), RESULT('g3', '5 passed, 0 failed')], false, 'GK3').trim() === '', 'expected allow: a recorded real greatness pass clears the gate even with no mutation this turn');
+
+  // ── resilience hardening (audit 2026-06-15): greatness gate must fire WITHOUT this-turn source edit + reject rubber-stamps + catch Bash edits ──
+  // FIX A — greatness gate fires on a non-editing closing turn (the dominant early-stop hole).
+  writeFileSync(g3Ledger, JSON.stringify({ sessionId: 'GK3', ts: stamp(), items: [{ id: 1, desc: 'd', done: true }] }));
+  add('gatekeeper-greatness-blocks-done-without-mutation', gatekeeper([U('x'), TOOL('Bash', { command: 'echo hi' })], false, 'GK3').includes('GREATNESS GATE'), 'expected block: a `done` deliverable lacking real greatness is caught even on a turn that edited no source');
+  // FIX B — bare/placeholder greatness evidence is a rubber-stamp, not a pass.
+  writeFileSync(g3Ledger, JSON.stringify({ sessionId: 'GK3', ts: stamp(), items: [{ id: 1, desc: 'd', done: true, greatness: { passed: true, evidence: '(no evidence given)' } }] }));
+  add('gatekeeper-greatness-blocks-placeholder-evidence', gatekeeper([U('x')], false, 'GK3').includes('GREATNESS GATE'), 'expected block: greatness recorded with the empty placeholder must not satisfy the gate');
+  // FIX C — source edits via Bash (sed -i / redirect) count as mutation → Gate 1 demands verification.
+  add('gatekeeper-bash-sed-edit-needs-verify', gatekeeper([U('x'), TOOL('Bash', { command: 'sed -i "s/a/b/" src/app.ts' })], false).includes('"block"'), 'expected block: sed -i on a .ts file with no verification');
+  add('gatekeeper-bash-redirect-edit-needs-verify', gatekeeper([U('x'), TOOL('Bash', { command: 'cat > lib/util.py' })], false).includes('"block"'), 'expected block: redirect writing a .py file with no verification');
+  add('gatekeeper-bash-read-not-mutation', gatekeeper([U('x'), TOOL('Bash', { command: 'cat src/app.ts' })], false).trim() === '', 'expected allow: reading a source file (cat) is not a mutation');
+
+  // ── verification CORRECTNESS hardening (audit 2026-06-15: the gate's core job is detecting RED) ──
+  // F1 — red-test vocabulary covers the major runners (a red test must NOT count as green).
+  add('gatekeeper-detects-cargo-error', gatekeeper([...editNoVerify, TOOLID('vr', 'Bash', { command: 'cargo test' }), RESULT('vr', 'error[E0425]: cannot find value x')], false).includes('"block"'), 'expected block: cargo error[E…] is a failing verify');
+  add('gatekeeper-detects-rspec-failures', gatekeeper([...editNoVerify, TOOLID('vr', 'Bash', { command: 'rspec' }), RESULT('vr', '5 examples, 2 failures')], false).includes('"block"'), 'expected block: rspec "N failures" is red');
+  add('gatekeeper-detects-vitest-x', gatekeeper([...editNoVerify, TOOLID('vr', 'Bash', { command: 'vitest run' }), RESULT('vr', '× src/x.test.ts > does y')], false).includes('"block"'), 'expected block: vitest × marks a failed test');
+  // F2 — is_error:true on the tool_result is authoritative even when the text looks clean.
+  add('gatekeeper-is-error-blocks', gatekeeper([...editNoVerify, TOOLID('ve', 'Bash', { command: 'npm test' }), JSON.stringify({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 've', content: 'ok', is_error: true }] } })], false).includes('"block"'), 'expected block: tool_result is_error:true is a failed verify regardless of text');
+  // F4 — a RED verify is NOT masked by a green one in the same turn.
+  add('gatekeeper-red-dominates-green', gatekeeper([...editNoVerify, TOOLID('vp', 'Bash', { command: 'tsc' }), RESULT('vp', '0 errors'), TOOLID('vf', 'Bash', { command: 'npm test' }), RESULT('vf', '2 failed')], false).includes('"block"'), 'expected block: a failing verify dominates any passing one');
+  // F9 — subagent/sidechain lines must not credit the parent gate.
+  add('gatekeeper-sidechain-edit-ignored', gatekeeper([U('x'), JSON.stringify({ type: 'assistant', isSidechain: true, message: { role: 'assistant', content: [{ type: 'tool_use', name: 'Edit', input: { file_path: '/x/sub.ts' } }] } })], false).trim() === '', 'expected allow: a sidechain (subagent) source edit is not the parent turn mutation');
+  // L1 — router APPENDS to the session ledger across prompts (does not clobber the open deliverable).
+  process.env.AURA_PE_FAST = '1'; process.env.AURA_LEDGER_DIR = join(TMP, 'l1-ledger');
+  run(ROUTER, JSON.stringify({ prompt: 'build the auth feature now', session_id: 'L1S' }));
+  run(ROUTER, JSON.stringify({ prompt: 'now add the payments module', session_id: 'L1S' }));
+  let l1ok = false; try { const led = JSON.parse(readFileSync(join(TMP, 'l1-ledger', 'L1S.json'), 'utf8')); l1ok = led.items.length === 2 && led.items.filter(x => !x.done).length === 2; } catch {}
+  add('router-ledger-appends-not-overwrites', l1ok, 'expected the router to carry forward the open deliverable + append the new one (2 open items), not overwrite');
+  delete process.env.AURA_LEDGER_DIR;
+
   // ledger.mjs `great` records the pass AND marks done.
   const greatLedger = join(TMP, 'great-ledger.json');
   writeFileSync(greatLedger, JSON.stringify({ sessionId: 'X', ts: stamp(), items: [{ id: 1, desc: 'd', done: false }] }));
@@ -157,6 +205,17 @@ function hooksSuite() {
   const pe = run(PROMPT_ENGINE, JSON.stringify({ prompt: 'build a payments feature' }), 25000);
   add('prompt-engine-phased-gate', pe.includes('PHASED EXCELLENCE LOOP'), 'phased-loop gate missing from prompt-engine');
   add('prompt-engine-evidence-rigor', pe.includes('treated as FALSE') && pe.includes('ADVERSARIALLY'), 'evidence/adversarial rigor missing from prompt-engine');
+  // Principles distilled from the Anthropic published-prompt audit (2026-06-14).
+  add('prompt-engine-skill-first', pe.includes('[skill-first]') && pe.includes('SKILL.md'), 'skill-first (read the skill contract before acting) missing from prompt-engine');
+  add('prompt-engine-substance-first', pe.includes('[substance-first]') && pe.includes('no flattery'), 'substance-first / anti-sycophancy principle missing from prompt-engine');
+  add('prompt-engine-no-confabulation', pe.includes('[no-confabulation]') && pe.includes('NEVER invent'), 'anti-confabulation principle missing from prompt-engine');
+
+  // ── pii-redactor: the secrets safety-net under bypassPermissions (was ZERO coverage; audit 2026-06-14) ──
+  const PII = join(CLAUDE_H, 'pii-redactor.mjs');
+  const piiBlk = run(PII, JSON.stringify({ tool_name: 'Write', tool_input: { file_path: '/x/a.ts', content: 'const KEY = "sk_live_' + 'a'.repeat(24) + '";' } }));
+  add('pii-blocks-secret', piiBlk.includes('"block"'), 'expected pii-redactor to BLOCK a hardcoded sk_live_ secret');
+  add('pii-block-dual-format', piiBlk.includes('permissionDecision') && piiBlk.includes('deny'), 'expected dual-format block (hookSpecificOutput.permissionDecision:deny) so every CLI version honors it');
+  add('pii-allows-clean-code', !run(PII, JSON.stringify({ tool_name: 'Write', tool_input: { file_path: '/x/a.ts', content: 'export const sum = (a, b) => a + b;' } })).includes('"block"'), 'expected pii-redactor to allow clean code');
 
   const post = run(COMPACT, JSON.stringify({ hook_type: 'PostCompact' }));
   add('compact-auto-resume', post.includes('AUTO-RESUMED') && post.includes('MAXXING-SDR'), 'compact PostCompact missing AUTO-RESUMED marker');
@@ -226,22 +285,22 @@ function hooksSuite() {
     gateKS.exitCode === 0,
     `expected exit 0 with kill-switch; got ${gateKS.exitCode}`);
 
-  // ── FABLE-ONLY window (until 2026-06-23): suppresses Sonnet delegation, expires alone ──
+  // ── OPUS-ONLY window (standing default): forces Opus, suppresses the normal delegate, expires alone ──
   const fwActive = join(TMP, 'fw-active.json'); writeFileSync(fwActive, JSON.stringify({ until: '2099-01-01' }));
   const fwExpired = join(TMP, 'fw-expired.json'); writeFileSync(fwExpired, JSON.stringify({ until: '2020-01-01' }));
   const routerFW = (fw) => {
-    try { return execSync(`node "${ROUTER}"`, { input: JSON.stringify({ prompt: 'build a payments feature with stripe integration' }), encoding: 'utf8', timeout: 8000, env: { ...process.env, AURA_FABLE_WINDOW: fw, AURA_BILLION_FLAG: join(TMP, 'no-bflag.json') } }); }
+    try { return execSync(`node "${ROUTER}"`, { input: JSON.stringify({ prompt: 'build a payments feature with stripe integration' }), encoding: 'utf8', timeout: 8000, env: { ...process.env, AURA_OPUS_WINDOW: fw, AURA_BILLION_FLAG: join(TMP, 'no-bflag.json') } }); }
     catch (e) { return (e.stdout || '') + (e.stderr || ''); }
   };
   const fwOn = routerFW(fwActive), fwOff = routerFW(fwExpired);
-  add('fable-window-active-suppresses-sonnet', fwOn.includes('FABLE-ONLY WINDOW') && !fwOn.includes('SONNET AT MAXIMUM'), 'expected window directive + suppressed Sonnet DELEGATE while active');
-  add('fable-window-expired-restores-normal', !fwOff.includes('FABLE-ONLY WINDOW') && fwOff.includes('SONNET AT MAXIMUM'), 'expected normal Sonnet delegation after the window date');
+  add('opus-window-active-suppresses-delegate', fwOn.includes('MAXIMUM SPEC, EVERYWHERE') && !fwOn.includes('10x FORCED DILIGENCE'), 'expected OPUS-MAX window directive + suppressed normal delegate while active');
+  add('opus-window-expired-restores-delegate', !fwOff.includes('MAXIMUM SPEC, EVERYWHERE') && fwOff.includes('10x FORCED DILIGENCE'), 'expected normal Opus delegate directive after the window date');
   const guardFW = (fw) => {
-    try { return execSync(`node "${join(CLAUDE_H, 'ultramax-guard.mjs')}"`, { input: JSON.stringify({ tool_name: 'Agent', session_id: 'FWX', tool_input: { model: 'sonnet', prompt: 'ultrathink. ZERO-TOLERANCE frame... do x' } }), encoding: 'utf8', timeout: 5000, env: { ...process.env, AURA_FABLE_WINDOW: fw, AURA_ULTRAMAX_FLAG: join(TMP, 'no-umx.json') } }); }
+    try { return execSync(`node "${join(CLAUDE_H, 'ultramax-guard.mjs')}"`, { input: JSON.stringify({ tool_name: 'Agent', session_id: 'FWX', tool_input: { model: 'sonnet', prompt: 'ultrathink. ZERO-TOLERANCE frame... do x' } }), encoding: 'utf8', timeout: 5000, env: { ...process.env, AURA_OPUS_WINDOW: fw, AURA_ULTRAMAX_FLAG: join(TMP, 'no-umx.json') } }); }
     catch (e) { return (e.stdout || '') + (e.stderr || ''); }
   };
-  add('fable-window-guard-blocks-framed-sonnet', guardFW(fwActive).includes('"block"'), 'expected guard to block sonnet even WITH the diligence frame while window active');
-  add('fable-window-guard-expired-allows-framed', guardFW(fwExpired).includes('"approve"'), 'expected framed sonnet allowed after window expiry');
+  add('opus-window-guard-blocks-nonopus', guardFW(fwActive).includes('"block"'), 'expected guard to block sonnet (even framed) while the opus window is active');
+  add('opus-window-guard-expired-allows-framed', guardFW(fwExpired).includes('"approve"'), 'expected framed sonnet allowed after window expiry (normal mode)');
 
   // ── BILLION sticky state machine (the perpetual engine must not die on plain prompts) ──
   const bflag = join(TMP, 'billion-flag.json');
@@ -306,7 +365,7 @@ function hooksSuite() {
   add('vercheck-remote-newer-upgrades', verGt('1.10.0', '1.9.0') === true, 'expected ver_gt(1.10.0 > 1.9.0)=true');
   add('vercheck-equal-no-upgrade', verGt('1.10.0', '1.10.0') === false, 'expected ver_gt(equal)=false');
 
-  // ── ultramax-guard cases (Fable-5-only fleet at MAX presets) ─────────────
+  // ── ultramax-guard cases (Opus-4.8-only fleet at MAX presets) ─────────────
   // Uses AURA_ULTRAMAX_FLAG to point at a TMP flag — the real session flag is never touched.
   const GUARD = join(CLAUDE_H, 'ultramax-guard.mjs');
   const umFlag = join(TMP, 'ultramax-flag.json');
@@ -321,11 +380,12 @@ function hooksSuite() {
     } catch (e) { return (e.stdout || '') + (e.stderr || ''); }
   };
   add('ultramax-blocks-sonnet-spawn', guardRun('Agent', { model: 'sonnet', prompt: 'ultrathink. do x' }).includes('"block"'), 'expected block: sonnet spawn while ULTRAMAX active');
-  add('ultramax-allows-fable-ultrathink', guardRun('Agent', { model: 'fable', prompt: 'ultrathink. do x' }).includes('"approve"'), 'expected approve: fable model + ultrathink prompt');
-  add('ultramax-allows-inherit-ultrathink', guardRun('Agent', { prompt: 'ultrathink. do x' }).includes('"approve"'), 'expected approve: inherited (Fable) model + ultrathink prompt');
+  add('ultramax-allows-opus-ultrathink', guardRun('Agent', { model: 'opus', prompt: 'ultrathink. do x' }).includes('"approve"'), 'expected approve: opus model + ultrathink prompt');
+  add('ultramax-blocks-fable-spawn', guardRun('Agent', { model: 'fable', prompt: 'ultrathink. do x' }).includes('"block"'), 'expected block: fable spawn while ULTRAMAX (Opus-exclusive) active');
+  add('ultramax-allows-inherit-ultrathink', guardRun('Agent', { prompt: 'ultrathink. do x' }).includes('"approve"'), 'expected approve: inherited (Opus) model + ultrathink prompt');
   add('ultramax-blocks-missing-ultrathink', guardRun('Agent', { prompt: 'do x' }).includes('"block"'), 'expected block: fleet spawn prompt missing "ultrathink" (max-thinking lock)');
   add('ultramax-blocks-workflow-model-override', guardRun('Workflow', { script: "await agent('x', {model: 'sonnet'})" }).includes('"block"'), 'expected block: workflow script overrides an agent onto sonnet');
-  add('ultramax-allows-workflow-no-override', guardRun('Workflow', { script: "await agent('ultrathink. x', {schema: S})" }).includes('"approve"'), 'expected approve: workflow with no model overrides (inherits Fable)');
+  add('ultramax-allows-workflow-no-override', guardRun('Workflow', { script: "await agent('ultrathink. x', {schema: S})" }).includes('"approve"'), 'expected approve: workflow with no model overrides (inherits Opus)');
   add('ultramax-failopen-other-session', guardRun('Agent', { model: 'opus', prompt: 'x' }, 'OTHER').includes('"approve"'), 'expected approve: flag belongs to a different session (opus is not a cheap worker — normal mode allows)');
   // ── normal mode (no ultramax flag): Sonnet 10x forced diligence ──────────
   add('normalmode-blocks-bare-sonnet', guardRun('Agent', { model: 'sonnet', prompt: 'do x' }, 'OTHER').includes('"block"'), 'expected block: bare sonnet spawn without the 10x diligence frame');

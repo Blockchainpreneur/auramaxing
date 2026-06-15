@@ -148,9 +148,13 @@ async function main() {
       writeLog(toolName, highScan.found, scanText.length);
       const types = highScan.found.map(f => f.type).join(', ');
       process.stderr.write(`\x1b[31m🚫 Safety guard stopped this\x1b[0m — found a secret (${types}) in your code.\n   Secrets don't belong in code. Remove it and try again.\n`);
+      // Dual-format so EVERY CLI version honors the block (the secrets safety-net must not
+      // silently fail-open on builds that require hookSpecificOutput.permissionDecision).
+      const reason = `PII Shield: detected ${types} in ${toolName} input. Remove secrets before proceeding.`;
       process.stdout.write(JSON.stringify({
         decision: 'block',
-        reason:   `PII Shield: detected ${types} in ${toolName} input. Remove secrets before proceeding.`,
+        reason,
+        hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: reason },
       }));
       process.exit(0);
     }

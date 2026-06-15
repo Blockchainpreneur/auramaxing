@@ -127,8 +127,14 @@ async function preCompact(input) {
   writeFileSync(SDR_PATH, buildSDR(mem, learns, gitDiffStat(), model) + buildResumeBlock());
   try {
     if (!NLM_BIN) return;
-    // Shell-invoke so `python3 -m notebooklm` works as well as direct binaries
-    const c = spawn('/bin/bash', ['-c', `${NLM_BIN} ask "Summarize this SDR in 3 sentences: $(cat '${SDR_PATH}')" >/dev/null 2>&1`], {
+    // SECURITY: read the SDR in Node and pass it as a STRUCTURED argv arg — never via
+    // `bash -c "...$(cat '${SDR_PATH}')..."`. The SDR is built from session MEMORY
+    // (prior prompts + repo/web/CDP content folded in), which is attacker-influenceable;
+    // a `$(...)`/backtick in that content would EXECUTE in the shell at compaction time.
+    // No shell here → no command substitution. Split NLM_BIN to keep `python3 -m notebooklm`.
+    const sdrText = readFileSync(SDR_PATH, 'utf8').slice(0, 6000);
+    const parts = String(NLM_BIN).split(/\s+/).filter(Boolean);
+    const c = spawn(parts[0], [...parts.slice(1), 'ask', `Summarize this SDR in 3 sentences: ${sdrText}`], {
       detached: true, stdio: 'ignore',
     });
     c.unref();

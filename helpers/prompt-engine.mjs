@@ -260,6 +260,11 @@ try {
 
   if (memoryContext) structuredPrompt += `\n[past context]:\n${memoryContext}`;
   structuredPrompt += '\n[quality]: Do the COMPLETE thing. Verify claims. Show evidence.';
+  // Principles distilled from auditing Anthropic's published Claude system prompt (2026-06-14):
+  // the few transferable rules AURAMAXING under-enforced. Concise on purpose.
+  structuredPrompt += '\n[skill-first]: When a phase maps to a gstack/AURAMAXING skill, READ that skill\'s SKILL.md (and the files it references) BEFORE composing the action — skills encode environment constraints, contracts, and tool quirks that are NOT in training data. Never invoke a skill blind or guess its inputs/outputs/preconditions.';
+  structuredPrompt += '\n[substance-first]: Lead with the result + evidence. Address the user as an expert peer — no flattery, no filler, no hedging, no narrating what you are about to do. Do NOT ask for clarification when intent is clear. Ceremony (boxes/headers/banners) NEVER substitutes for substance; calibrate verbosity to the task, not to appearances.';
+  structuredPrompt += '\n[no-confabulation]: NEVER invent a file:line, API/method signature, command output, citation, metric, or test result — verify it against the real source/run, or omit it and say so. State uncertainty explicitly; confidence must scale to what you have ACTUALLY verified THIS turn (an unverified claim is treated as FALSE).';
   // ── MANDATORY: Phased Excellence Loop — forced on every actionable prompt ──
   // gstack route → phases → per-phase opening steps → per-phase verify loop → final verify loop.
   const phasedLoop = [
@@ -267,7 +272,7 @@ try {
     '0. ROUTE through gstack. Decompose the task into explicit PHASES; track them with TaskCreate. ALL phases live inside THIS task. Auto-INJECT supporting sub-tasks for each phase: (i) tool/repo/skill SEARCH, (ii) investigation/research, (iii) reference EXAMPLES — and complete them before EXECUTE.',
     'For EVERY phase, run the SAME opening sequence — no phase skips a step:',
     '  a. AUDIT — inspect the current real state of what this phase touches.',
-    '  b. INVESTIGATE — read every relevant file completely; verify APIs/behaviors via context7/codegraph/serena/deepwiki/WebSearch; gather real reference EXAMPLES / proven implementations; never guess.',
+    '  b. INVESTIGATE — read every relevant file completely; verify APIs/behaviors via context7/deepwiki + Grep/Explore/WebSearch; gather real reference EXAMPLES / proven implementations; never guess.',
     '  c. PLAN (ultrathink) — run INVESTIGATE + PLAN under EXTENDED THINKING (ultrathink): reason through 2-3 candidate approaches and pick the best WITH explicit reasons; state the full phase approach. CLARITY GATE: do NOT write a single line of code until the strategy is airtight and you can explain WHY it is correct.',
     '  d. SELECT THE BEST — actively SEARCH and COMPARE candidate tools, repos and skills (ToolSearch + ~/auramaxing/docs/CAPABILITIES.md registry + WebSearch for best-in-class); pick the BEST fit, not merely an available one; install FREE skills/MCP on a capability gap. gstack skills are always in scope.',
     '  e. EXECUTE — build the COMPLETE thing: states, errors, edge cases, tests. ROOT-CAUSE fixes only — never a symptom patch, never a vague/temporary workaround. No placeholders, no partials.',

@@ -8,7 +8,7 @@ description: Invoke when you need to know WHICH tool, skill, MCP, or CLI AURAMAX
 Full registry: read `~/auramaxing/docs/CAPABILITIES.md` and the task→tool table in `~/auramaxing/docs/AUTOPILOT-FLOW.md`. Operative summary:
 
 ## Active MCP (8, lazy-loaded via Tool Search)
-context7 (lib docs) · shadcn (components) · magicui (animated) · **serena** (LSP symbol nav/edit) · **codegraph** (token-cheap repo graph; `codegraph init` first) · **designlang** (site→DTCG tokens) · **deepwiki** (external/OSS repo Q&A, no clone) · **chrome-devtools** (devtools/perf). CLI-first: prefer `gh`, `firecrawl`, `codex`, Playwright CLI over MCP on cost ties. NEVER Playwright MCP.
+context7 (lib docs) · shadcn (components) · magicui (animated) · **designlang** (site→DTCG tokens) · **deepwiki** (external/OSS repo Q&A, no clone) · **chrome-devtools** (devtools/perf). (6 registered MCP — serena/codegraph are NOT installed; use Grep/Glob + the Explore agent for symbol nav/repo graph.) CLI-first: prefer `gh`, `firecrawl`, `codex`, Playwright CLI over MCP on cost ties. NEVER Playwright MCP.
 
 ## Reasoning/planning brains
 gstack `/office-hours` `/plan-eng-review` `/plan-ceo-review` `/plan-design-review` `/autoplan` · spec-kit (`specify`) · sequential-thinking · native Agent Teams + Workflows · `/codex` (cross-model).
