@@ -10,7 +10,7 @@
 #   NIGHTLY_END_HOUR       — stop starting new projects after this hour (24h, box UTC)
 #                            default 8 (= 2am Cancun / America/Cancun = UTC-6 in CST)
 #   NIGHTLY_PER_PROJECT_MIN — soft time budget per project in minutes (default 50)
-#   NIGHTLY_MODEL          — claude model for audit/fix passes (default claude-sonnet-4-6)
+#   NIGHTLY_MODEL          — claude model for audit/fix passes (default claude-opus-4-8)
 #   NIGHTLY_MAX_ROUNDS     — max audit→fix→gate cycles per project (default 4)
 #   NIGHTLY_CONF           — path to projects.conf (default ~/nightly/projects.conf)
 #   NIGHTLY_GH_TOKEN       — GitHub PAT for private repos (optional; falls back to GH_TOKEN env)
@@ -38,7 +38,7 @@ LOCK_FILE="$BASE/.lock"
 
 NIGHTLY_END_HOUR="${NIGHTLY_END_HOUR:-8}"
 NIGHTLY_PER_PROJECT_MIN="${NIGHTLY_PER_PROJECT_MIN:-50}"
-NIGHTLY_MODEL="${NIGHTLY_MODEL:-claude-sonnet-4-6}"
+NIGHTLY_MODEL="${NIGHTLY_MODEL:-claude-opus-4-8}"
 NIGHTLY_MAX_ROUNDS="${NIGHTLY_MAX_ROUNDS:-4}"
 CONF="${NIGHTLY_CONF:-$BASE/projects.conf}"
 

@@ -5,6 +5,10 @@ All notable changes to Auramaxing are documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.18.1 — 2026-06-15
+
+- **Box nightly → Opus 4.8 (kill the last Fable/Sonnet remnant).** The v1.17.0 Fable-only window left a box-side `fable-revert` systemd timer that would flip `NIGHTLY_MODEL` to `claude-sonnet-4-6` on 2026-06-23. Removed that timer/service on the box and set `NIGHTLY_MODEL=claude-opus-4-8` in `/root/nightly/.nightly-env`; `cloud/nightly.sh` default is now `claude-opus-4-8` (was sonnet) so redeploys stay Opus. Everything (local + box) now runs Opus 4.8 only.
+
 ## v1.18.0 — 2026-06-15
 
 - **EVERYTHING → Opus 4.8 at max (replaces the Fable-only window).** `settings.json` `model: opus[1m]` + `effortLevel: ultracode` + `fastMode: off`; standing default enforced by `~/.auramaxing/opus-window.json` (router emits the OPUS-MAX directive; `ultramax-guard` hard-blocks any non-Opus spawn + requires `ultrathink`). ULTRAMAX & BILLION inherit Opus 4.8. `aura-delegate` reframed Sonnet→Opus fleet. `install.sh` + `setup/` templates de-Fabled (and the reinstall-time Ruflo daemon removed). Revert: delete `opus-window.json`.
