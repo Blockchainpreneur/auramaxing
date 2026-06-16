@@ -122,7 +122,7 @@ Read any files listed above before making changes.
 
 async function preCompact(input) {
   mkdirSync(AUR, { recursive: true });
-  const mem = recentFiles(MEMORY_DIR, '.json', 5), learns = recentFiles(LEARNINGS_DIR, '.jsonl', 3);
+  const mem = recentFiles(MEMORY_DIR, '.json', 5), learns = recentFiles(LEARNINGS_DIR, '.json', 3);
   const model = input.model || process.env.CLAUDE_MODEL || '';
   writeFileSync(SDR_PATH, buildSDR(mem, learns, gitDiffStat(), model) + buildResumeBlock());
   try {
