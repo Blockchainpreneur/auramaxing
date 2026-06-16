@@ -14,7 +14,7 @@
  *   node nlm-writer.mjs classify           # reads text from stdin, prints type
  *   node nlm-writer.mjs stats              # buffer + retry + dead-letter counts
  */
-import { execSync } from 'child_process';
+import { execSync, execFileSync } from 'child_process';
 import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync, unlinkSync, statSync, renameSync } from 'fs';
 import { join, basename } from 'path';
 import { homedir, tmpdir } from 'os';
@@ -106,7 +106,10 @@ function writeEntry(entry) {
     try {
       // note create subcommand varies; try both positional forms gracefully
       try {
-        nlm(`note create --title "${title.replace(/"/g, '\\"')}" --file "${tmpFile}"`, { timeout: 20000 });
+        execFileSync(NLM_BIN, ['note', 'create', '--title', title, '--file', tmpFile], {
+          encoding: 'utf8', timeout: 20000,
+          env: { ...process.env, PATH: pythonEnv().PATH },
+        });
       } catch {
         // Some versions: `notebooklm note create "title" < file`
         execSync(`${NLM_BIN} note create "${title.replace(/"/g, '\\"')}" < "${tmpFile}"`, {
