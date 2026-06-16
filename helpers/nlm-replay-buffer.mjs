@@ -26,11 +26,11 @@
  *   node nlm-replay-buffer.mjs --limit 50
  *   node nlm-replay-buffer.mjs --dry-run
  */
-import { execSync } from 'child_process';
+import { execSync, execFileSync } from 'child_process';
 import { readFileSync, writeFileSync, existsSync, appendFileSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
-import { findNlm, pythonEnv } from './find-bin.mjs';
+import { findNlm, findNlmArgs, pythonEnv } from './find-bin.mjs';
 
 const HOME = homedir();
 const AUR = join(HOME, '.auramaxing');
@@ -111,30 +111,27 @@ function entryToNote(entry) {
 }
 
 function postNote(noteTitle, noteContent) {
-  // Pass content via stdin? No — note create takes content as positional arg.
-  // To avoid ARG_MAX issues with huge content, write to a temp file and read it.
-  // But CLI takes content positionally; for safety stay under 100k via truncation in entryToNote.
-  // Encode as base64 path? simpler: pass content directly as last arg.
-  const escapedTitle = noteTitle.replace(/"/g, '\\"');
-  // Write content to a temp file and inject via shell substitution (avoids
-  // shell-escape pitfalls for newlines, quotes, backticks).
-  const tmpFile = join('/tmp', `aura-replay-note-${process.pid}-${Math.random().toString(36).slice(2,8)}.txt`);
-  writeFileSync(tmpFile, noteContent);
+  // Pass title and content directly as argv via execFileSync (no shell). This
+  // avoids both shell-escape pitfalls and command injection — the payload is
+  // never interpreted by a shell, so newlines/quotes/backticks/`$(...)` are
+  // treated as literal data. Content stays under the size cap via truncation
+  // in entryToNote, keeping us well within ARG_MAX.
+  const nlm = findNlmArgs();
   try {
-    const cmd = `${NLM_BIN} note create -t "${escapedTitle}" "$(cat "${tmpFile}")"`;
-    execSync(cmd, {
-      encoding: 'utf8',
-      timeout: 30000,
-      shell: '/bin/bash',
-      stdio: ['ignore', 'pipe', 'pipe'],
-      env: { ...process.env, PATH: pythonEnv().PATH },
-    });
+    execFileSync(
+      nlm.bin,
+      [...nlm.args, 'note', 'create', '-t', noteTitle, noteContent],
+      {
+        encoding: 'utf8',
+        timeout: 30000,
+        stdio: ['ignore', 'pipe', 'pipe'],
+        env: { ...process.env, PATH: pythonEnv().PATH },
+      },
+    );
     return { ok: true };
   } catch (e) {
     const err = (e.stderr?.toString() || e.message || '').slice(0, 200);
     return { ok: false, error: err };
-  } finally {
-    try { execSync(`rm -f "${tmpFile}"`, { stdio: 'ignore', timeout: 2000 }); } catch {}
   }
 }
 
