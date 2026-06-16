@@ -66,7 +66,7 @@ find_project_root() {
     d=$(dirname "$d")
   done
   # No marker anywhere — if we reached HOME show ~, else basename of cwd
-  if [ "$d" = "$HOME" ]; then echo "~"; else basename "$1"; fi
+  if [ "$d" = "$HOME" ]; then echo "~"; else basename "$dir"; fi
 }
 DIR=$(find_project_root "$CWD")
 R5H=$(echo "$input" | jq -r '.rate_limits.five_hour.used_percentage // empty' 2>/dev/null | cut -d. -f1)
