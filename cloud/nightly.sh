@@ -350,6 +350,7 @@ FIX_EOF
       if [ "$gate_pass" -eq 0 ]; then
         echo "[nightly] GATE FAILED — reverting fix"
         git -C "$WORK_DIR" checkout . 2>&1 || true
+        git -C "$WORK_DIR" clean -fd 2>&1 || true
         # pop stash if still there
         git -C "$WORK_DIR" stash pop 2>&1 || true
         echo "[nightly] fix reverted: $fix_title"
