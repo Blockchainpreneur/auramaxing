@@ -74,7 +74,8 @@ switch (command) {
 
   case 'structure': {
     ensureNotebook();
-    const structuredPrompt = nlm(`ask "Structure this prompt for maximum precision. Add requirements a senior engineer would expect. Prevent lazy responses. The prompt is: ${input.replace(/"/g, '\\"')}"`);
+    const structurePrompt = `Structure this prompt for maximum precision. Add requirements a senior engineer would expect. Prevent lazy responses. The prompt is: ${input}`;
+    const structuredPrompt = nlm(`ask '${structurePrompt.replace(/'/g, `'\\''`)}'`);
     const answer = structuredPrompt.split('Answer:').pop()?.trim() || structuredPrompt;
     console.log(answer);
     break;
