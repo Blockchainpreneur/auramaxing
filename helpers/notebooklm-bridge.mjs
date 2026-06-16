@@ -84,7 +84,7 @@ switch (command) {
   case 'add-source': {
     ensureNotebook();
     if (!existsSync(input)) { console.error('File not found:', input); break; }
-    const result = nlm(`source add-text "${input.replace(/"/g, '\\"')}"`);
+    const result = nlm(`source add-text '${input.replace(/'/g, `'\\''`)}'`);
     console.log(result);
     break;
   }
