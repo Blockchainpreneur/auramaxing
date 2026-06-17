@@ -210,7 +210,11 @@ async function main() {
 
     // Extract code content and file path
     const filePath = toolInput.file_path || '';
-    const code     = toolInput.content || toolInput.new_string || toolInput.new_content || '';
+    let code       = toolInput.content || toolInput.new_string || toolInput.new_content || '';
+    // MultiEdit carries content in edits[] — concatenate each edit's new_string so it gets scanned too
+    if (Array.isArray(toolInput.edits)) {
+      code += '\n' + toolInput.edits.map(e => (e && (e.new_string || e.new_content)) || '').join('\n');
+    }
 
     if (!code || code.length < 10) {
       console.log('{"decision":"approve"}');
