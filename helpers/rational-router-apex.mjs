@@ -565,7 +565,7 @@ async function main() {
   let opusWindow = false;
   try {
     const fw = JSON.parse(readFileSync(process.env.AURA_OPUS_WINDOW || join(homedir(), '.auramaxing', 'opus-window.json'), 'utf8'));
-    opusWindow = !!fw.until && Date.now() < Date.parse(fw.until + 'T05:00:00Z'); // midnight Cancun (UTC-5)
+    opusWindow = !!fw.until && Date.now() < (/[T ]\d/.test(fw.until) ? Date.parse(fw.until) : Date.parse(fw.until + 'T05:00:00Z')); // date-only → midnight Cancun (UTC-5); else use given time
   } catch {}
   const ultramax = /\bu[lk]tra[\s-]?ma[xs]\b/i.test(promptText) || billion;
   if (billionOff && sessionId) {
