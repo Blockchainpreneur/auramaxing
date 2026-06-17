@@ -14,7 +14,7 @@
  *   node notebooklm-bridge.mjs store-knowledge          — store structured knowledge as NLM source (JSON via stdin)
  *   node notebooklm-bridge.mjs query-knowledge "q"      — query all stored session knowledge
  */
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { createHash } from 'crypto';
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync } from 'fs';
 import { join } from 'path';
@@ -33,9 +33,34 @@ mkdirSync(CACHE_DIR, { recursive: true });
 const command = process.argv[2] || 'help';
 const input = process.argv.slice(3).join(' ') || '';
 
+// Tokenize a command string into argv, honoring double-quoted groups and \" escapes.
+// No shell is invoked, so user-supplied args cannot inject shell metacharacters.
+function tokenizeArgs(cmd) {
+  const args = [];
+  let cur = '';
+  let inQuote = false;
+  let hasToken = false;
+  for (let i = 0; i < cmd.length; i++) {
+    const c = cmd[i];
+    if (inQuote) {
+      if (c === '\\' && cmd[i + 1] === '"') { cur += '"'; i++; }
+      else if (c === '"') { inQuote = false; }
+      else { cur += c; }
+    } else if (c === '"') {
+      inQuote = true; hasToken = true;
+    } else if (c === ' ' || c === '\t' || c === '\n' || c === '\r') {
+      if (hasToken) { args.push(cur); cur = ''; hasToken = false; }
+    } else {
+      cur += c; hasToken = true;
+    }
+  }
+  if (hasToken) args.push(cur);
+  return args;
+}
+
 function nlm(cmd) {
   try {
-    return execSync(`${NLM_BIN} ${cmd}`, { encoding: 'utf8', timeout: 30000 }).trim();
+    return execFileSync(NLM_BIN, tokenizeArgs(cmd), { encoding: 'utf8', timeout: 30000 }).trim();
   } catch (e) {
     return `[NLM error: ${e.message?.slice(0, 80)}]`;
   }
