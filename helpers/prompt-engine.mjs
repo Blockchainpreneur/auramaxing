@@ -10,7 +10,7 @@
  * All non-blocking. Max 3s total. Cached results are instant.
  */
 import { execSync, execFileSync, spawn } from 'child_process';
-import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync, openSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 import { findPython, findNlm, findNlmArgs, pythonEnv } from "./find-bin.mjs";
@@ -164,20 +164,15 @@ try {
         // Structured bin+args — spawn() does not shell-split "python3 -m notebooklm". Finding #3.
         const { bin: nlmBin, args: nlmBase = [] } = findNlmArgs() || {};
         if (nlmBin) {
+          // Write the child's stdout STRAIGHT to the cache file via a redirected fd.
+          // The parent hits process.exit(0) within ms, so an in-parent 'close' handler
+          // never fires — the detached child must own the write itself.
+          const cacheFd = openSync(cacheFile, 'w');
           const child = spawn(nlmBin, [...nlmBase, 'ask', prompt.slice(0, 200)], {
             detached: true,
-            stdio: ['ignore', 'pipe', 'ignore'],
+            stdio: ['ignore', cacheFd, 'ignore'],
             env: { ...process.env, PATH: pythonEnv().PATH },
             timeout: 25000,
-          });
-          // Capture output and cache it
-          let output = '';
-          child.stdout.on('data', d => { output += d.toString(); });
-          child.on('close', () => {
-            const answer = output.split('Answer:').pop()?.trim() || output.trim();
-            if (answer.length > 20) {
-              try { writeFileSync(cacheFile, answer); } catch {}
-            }
           });
           child.unref();
         }
