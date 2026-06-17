@@ -201,17 +201,13 @@ if (lightragResults.length === 0) {
       const { bin: drBin, args: drBase = [] } = findNlmArgs() || {};
       if (drBin) {
         const q = `Based on all stored session knowledge and progress, what is relevant context for this task: ${prompt.slice(0, 200)}`;
+        // Write the child's stdout STRAIGHT to the cache file via a redirected fd.
+        // The parent hits process.exit(0) within ms, so an in-parent 'close' handler
+        // never fires — the detached child must own the write itself.
+        const drFd = openSync(drCache, 'w');
         const child = spawn(drBin, [...drBase, 'ask', q], {
-          detached: true, stdio: ['ignore', 'pipe', 'ignore'],
+          detached: true, stdio: ['ignore', drFd, 'ignore'],
           env: { ...process.env, PATH: pythonEnv().PATH }, timeout: 25000,
-        });
-        let out = '';
-        child.stdout.on('data', d => { out += d.toString(); });
-        child.on('close', () => {
-          const answer = out.split('Answer:').pop()?.trim() || out.trim();
-          if (answer && answer.length > 30 && !answer.includes('Error:')) {
-            try { writeFileSync(drCache, answer); } catch {}
-          }
         });
         child.unref();
       }
