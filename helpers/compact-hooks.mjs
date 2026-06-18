@@ -14,7 +14,7 @@ const SDR_PATH = join(AUR, 'sdr-active.md');
 const NEXT_ACTION = join(AUR, 'next-action.txt');
 const PREDICTION = join(AUR, 'prompt-cache', 'session-prediction.txt');
 const HANDOFF = join(AUR, 'pending-handoff.json');
-const LINEAGE = join(AUR, 'ledger-lineage.json'); // L6 — links pre-compact session → post-compact session
+const LINEAGE = process.env.AURA_LINEAGE_FILE || join(AUR, 'ledger-lineage.json'); // L6 — links pre→post compact session (env-overridable for hermetic tests)
 
 // Pull the important state staged by the threshold monitor + intent-predictor so the
 // post-compact context can AUTO-RESUME the big task with zero user action.
@@ -168,7 +168,12 @@ function postCompact(input) {
 async function main() {
   try {
     const input = await readStdin();
-    const ht = (input.hook_type || input.hookType || input.type || '').toLowerCase();
+    // Claude Code passes the event on `hook_event_name` ("PreCompact"/"PostCompact") — NOT hook_type.
+    // Reading the wrong field made `ht` always empty → PostCompact silently ran the preCompact branch,
+    // so the [MAXXING-SDR] auto-resume AND the L6 ledger migration NEVER fired in production (the eval
+    // gave a false green because its fixture used the wrong field). Read hook_event_name first; keep
+    // the legacy fields as harmless fallbacks. (audit 2026-06-18, verified vs official hooks docs.)
+    const ht = (input.hook_event_name || input.hook_type || input.hookType || input.type || '').toLowerCase();
     if (ht.includes('post')) postCompact(input); else await preCompact(input);
   } catch {}
   clearTimeout(timeout);

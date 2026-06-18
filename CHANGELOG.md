@@ -5,6 +5,14 @@ All notable changes to Auramaxing are documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.20.1 — 2026-06-18
+
+**Rigor-verification pass found a real production bug: PostCompact was dead.** An independent adversarial sweep of the whole loop+resilience architecture (22/22 live-gatekeeper cases + end-to-end checks) surfaced that `compact-hooks.mjs` read the event from `input.hook_type`, but Claude Code passes it on **`hook_event_name`** (confirmed against the official hooks docs). So `ht` was always empty → PostCompact silently ran the PreCompact branch, which means **the `[MAXXING-SDR]` auto-resume AND the L6 ledger migration NEVER fired after a real auto-compact** — exactly the resilience L6 was meant to provide. The eval gave a false green because its fixture used the wrong field.
+
+- **Fix:** read `input.hook_event_name` first (legacy fields kept as fallbacks). PostCompact now correctly emits the auto-resume block and runs `ledger.mjs migrate` so open deliverables + greatness/refinement gates survive compaction.
+- **Regression protection:** the compact eval case now uses the real `hook_event_name`; added `compact-precompact-no-autoresume` (Pre must not emit the Post block) and `compact-l6-migrates-end-to-end` (PreCompact→PostCompact through the hook migrates open work, with `AURA_LINEAGE_FILE` making the lineage path overridable for hermetic tests). Eval **147→149/149**.
+- Verified intact (no early-stop hole): Gate 1 (incl. bash-edit + sidechain-verify-not-credited), Gate 2, Gate 3 + F8 + convergence, the FIX-E wedge fix, fail-open + bounded-nudge safety, router→gatekeeper E2E, and the v1.20.0 stdout-truncation fix.
+
 ## v1.20.0 — 2026-06-18
 
 **Convergent Refinement Loop — a stricter delivery bar than "100/100".** Every action-prompt deliverable now enters an *infinite refinement loop* and ships ONLY at proven convergence (a refinement round that yields zero material improvement), enforced with real gatekeeper teeth — not just doctrine. Eval **142→147/147** (+5 cases). Plus two latent bugs caught while hardening.

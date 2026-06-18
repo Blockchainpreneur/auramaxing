@@ -267,8 +267,22 @@ function hooksSuite() {
   add('pii-blocks-hex-privatekey', run(PII, JSON.stringify({ tool_name: 'Write', tool_input: { file_path: '/x/w.ts', content: 'const privateKey = "0x' + 'a'.repeat(64) + '";' } })).includes('"block"'), 'expected block: a context-flagged 64-hex PRIVATE KEY controls funds (P-6 — old gate missed it entirely)');
   add('pii-allows-sha256-hash', !run(PII, JSON.stringify({ tool_name: 'Write', tool_input: { file_path: '/x/h.ts', content: 'const fileHash = "' + 'a'.repeat(64) + '";' } })).includes('"block"'), 'expected allow: a bare 64-hex sha256/git hash is not a private key (P-6 no false-positive)');
 
-  const post = run(COMPACT, JSON.stringify({ hook_type: 'PostCompact' }));
-  add('compact-auto-resume', post.includes('AUTO-RESUMED') && post.includes('MAXXING-SDR'), 'compact PostCompact missing AUTO-RESUMED marker');
+  // Claude Code identifies the event via `hook_event_name` (NOT hook_type). Test with the REAL field
+  // (the old fixture used hook_type → false green while PostCompact was dead in production, audit 2026-06-18).
+  const post = run(COMPACT, JSON.stringify({ hook_event_name: 'PostCompact' }));
+  add('compact-auto-resume', post.includes('AUTO-RESUMED') && post.includes('MAXXING-SDR'), 'compact PostCompact (hook_event_name) missing AUTO-RESUMED marker');
+  // Discrimination: PreCompact must NOT emit the auto-resume block (else it fires on the wrong event).
+  const pre = run(COMPACT, JSON.stringify({ hook_event_name: 'PreCompact' }));
+  add('compact-precompact-no-autoresume', !pre.includes('AUTO-RESUMED'), 'PreCompact must not emit the PostCompact AUTO-RESUMED block');
+  // L6 end-to-end THROUGH compact-hooks with the real field: PreCompact stamps lineage → PostCompact migrates.
+  const cDir = join(TMP, 'compact-l6'); mkdirSync(cDir, { recursive: true });
+  const cLin = join(cDir, 'lineage.json');
+  writeFileSync(join(cDir, 'OLDS.json'), JSON.stringify({ sessionId: 'OLDS', ts: Math.floor(Date.now() / 1000), items: [{ id: 1, desc: 'unfinished', done: false }] }));
+  const cEnv = { ...process.env, AURA_LEDGER_DIR: cDir, AURA_LINEAGE_FILE: cLin };
+  try { execSync(`node "${COMPACT}"`, { input: JSON.stringify({ hook_event_name: 'PreCompact', session_id: 'OLDS' }), env: cEnv, timeout: 6000 }); } catch {}
+  try { execSync(`node "${COMPACT}"`, { input: JSON.stringify({ hook_event_name: 'PostCompact', session_id: 'NEWS' }), env: cEnv, timeout: 6000 }); } catch {}
+  let cMig = {}; try { cMig = JSON.parse(readFileSync(join(cDir, 'NEWS.json'), 'utf8')); } catch {}
+  add('compact-l6-migrates-end-to-end', (cMig.items || []).some(x => x.desc === 'unfinished' && !x.done), 'expected L6: PreCompact→PostCompact through compact-hooks migrates open work to the new session (real hook_event_name field)');
 
   // nlm-live-recall must early-exit SILENT (no [AURAMAXING NLM-RECALL] block, no work) when NLM is
   // unavailable — i.e. notebook-id absent OR last health check failed/stale. Forcing a tiny health
