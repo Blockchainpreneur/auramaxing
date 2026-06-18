@@ -77,6 +77,7 @@ const U = (txt) => JSON.stringify({ type: 'user', message: { role: 'user', conte
 const TOOL = (name, input) => JSON.stringify({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', name, input }] } });
 const TOOLID = (id, name, input) => JSON.stringify({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', id, name, input }] } });
 const RESULT = (id, txt) => JSON.stringify({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: txt }] } });
+const UU = (uuid, txt) => JSON.stringify({ type: 'user', uuid, message: { role: 'user', content: txt } }); // F5: prompt with a stable uuid
 function gatekeeper(transcriptLines, stopActive, sessionId = '') {
   mkdirSync(TMP, { recursive: true });
   const tp = join(TMP, `t-${Math.abs(transcriptLines.join('').length)}-${stopActive}-${sessionId}.jsonl`);
@@ -121,6 +122,16 @@ function hooksSuite() {
   add('gk-nudge-resets-on-new-prompt', gatekeeper(editNoVerify2, true, 'GKN').includes('"block"'), 'expected the nudge counter to reset when the user prompt changes (enforcement resumes)');
   delete process.env.AURA_GK_MAX_NUDGES;
 
+  // ── F5 (audit 2026-06-17): nudge turnKey is keyed on the prompt's STABLE uuid (+session), NOT the
+  // line index — so auto-compact inserting/removing lines must NOT spuriously reset the counter. ──
+  process.env.AURA_GK_MAX_NUDGES = '1';
+  const f5n1 = gatekeeper([UU('uid-1', 'do the task'), TOOL('Edit', { file_path: '/x/f5.ts' })], true, 'F5S');                       // count 1 ≤ 1 → block
+  const f5n2 = gatekeeper([U('noise a'), U('noise b'), UU('uid-1', 'do the task'), TOOL('Edit', { file_path: '/x/f5.ts' })], true, 'F5S'); // same uuid, shifted index → count 2 > 1 → allow
+  add('gk-turnkey-survives-line-shift', f5n1.includes('"block"') && f5n2.trim() === '', 'expected F5: a uuid-keyed nudge counter persists across line-index shifts (cap=1 → the 2nd stop allows, proving no spurious reset)');
+  const f5n3 = gatekeeper([UU('uid-2', 'a totally different task'), TOOL('Edit', { file_path: '/x/f5c.ts' })], true, 'F5S');           // new uuid → reset → count 1 → block
+  add('gk-turnkey-resets-on-new-uuid', f5n3.includes('"block"'), 'expected F5: a new prompt uuid resets the counter so enforcement resumes on the next task');
+  delete process.env.AURA_GK_MAX_NUDGES;
+
   // Gate 3 — ABSOLUTE GREATNESS GATE (Phase 08). Uses a temp ledger via AURA_LEDGER_FILE so the
   // real session ledger is never touched. okV = mutated source + a PASSING verify (clears Gate 1).
   mkdirSync(TMP, { recursive: true });
@@ -133,6 +144,12 @@ function hooksSuite() {
   writeFileSync(g3Ledger, JSON.stringify({ sessionId: 'GK3', ts: stamp(), items: [{ id: 1, desc: 'd', done: true, greatness: { passed: true, evidence: 'e' } }] }));
   add('gatekeeper-greatness-allows-recorded-pass', gatekeeper(okV, false, 'GK3').trim() === '', 'expected allow: greatness pass recorded');
   add('gatekeeper-greatness-skips-on-no-mutation', gatekeeper([U('x'), TOOL('Edit', { file_path: '/x/README.md' }), TOOLID('g3', 'Bash', { command: 'npm test' }), RESULT('g3', '5 passed, 0 failed')], false, 'GK3').trim() === '', 'expected allow: a recorded real greatness pass clears the gate even with no mutation this turn');
+
+  // ── F8 (audit 2026-06-17): the greatness stamp is cross-validated against REAL verification in the
+  // session transcript. Confident evidence TEXT but ZERO verify events anywhere = a rubber stamp. ──
+  writeFileSync(g3Ledger, JSON.stringify({ sessionId: 'GK3', ts: stamp(), items: [{ id: 1, desc: 'd', done: true, greatness: { passed: true, evidence: 'looks great, shipped it' } }] }));
+  add('gatekeeper-greatness-needs-transcript-verify', gatekeeper([U('x'), TOOL('Bash', { command: 'echo done' })], false, 'GK3').includes('GREATNESS GATE'), 'expected block: a greatness stamp with NO real verification anywhere in the transcript is a rubber-stamp (F8)');
+  add('gatekeeper-greatness-clears-with-transcript-verify', gatekeeper([U('x'), TOOLID('vf', 'Bash', { command: 'npm test' }), RESULT('vf', '5 passed, 0 failed')], false, 'GK3').trim() === '', 'expected allow: the same greatness stamp backed by a real passing verify in the transcript clears (F8)');
 
   // ── resilience hardening (audit 2026-06-15): greatness gate must fire WITHOUT this-turn source edit + reject rubber-stamps + catch Bash edits ──
   // FIX A — greatness gate fires on a non-editing closing turn (the dominant early-stop hole).
@@ -168,11 +185,14 @@ function hooksSuite() {
   add('gatekeeper-credits-forge-test', gatekeeper([U('fix Vault.sol'), TOOL('Edit', { file_path: '/c/Vault.sol' }), TOOLID('vf', 'Bash', { command: 'forge test' }), RESULT('vf', '[PASS] testWithdraw() (gas: 1234)')], false).trim() === '', 'expected allow: forge test (Foundry) is a valid contract verification');
   add('gatekeeper-credits-hardhat-test', gatekeeper([U('fix Vault.sol'), TOOL('Edit', { file_path: '/c/Vault.sol' }), TOOLID('vh', 'Bash', { command: 'npx hardhat test' }), RESULT('vh', '5 passing (2s)')], false).trim() === '', 'expected allow: npx hardhat test is a valid contract verification');
   // L1 — router APPENDS to the session ledger across prompts (does not clobber the open deliverable).
+  // Under FIX E (2026-06-17) a fresh substantial task decomposes into N per-phase items; a follow-up
+  // prompt must carry ALL of them forward and append exactly one more (no clobber, any N).
   process.env.AURA_PE_FAST = '1'; process.env.AURA_LEDGER_DIR = join(TMP, 'l1-ledger');
   run(ROUTER, JSON.stringify({ prompt: 'build the auth feature now', session_id: 'L1S' }));
+  let n1 = 0; try { n1 = JSON.parse(readFileSync(join(TMP, 'l1-ledger', 'L1S.json'), 'utf8')).items.filter(x => !x.done).length; } catch {}
   run(ROUTER, JSON.stringify({ prompt: 'now add the payments module', session_id: 'L1S' }));
-  let l1ok = false; try { const led = JSON.parse(readFileSync(join(TMP, 'l1-ledger', 'L1S.json'), 'utf8')); l1ok = led.items.length === 2 && led.items.filter(x => !x.done).length === 2; } catch {}
-  add('router-ledger-appends-not-overwrites', l1ok, 'expected the router to carry forward the open deliverable + append the new one (2 open items), not overwrite');
+  let l1ok = false; try { const led = JSON.parse(readFileSync(join(TMP, 'l1-ledger', 'L1S.json'), 'utf8')); l1ok = n1 >= 1 && led.items.filter(x => !x.done).length === n1 + 1; } catch {}
+  add('router-ledger-appends-not-overwrites', l1ok, 'expected the router to carry forward ALL open items + append exactly one new (no clobber), under FIX E per-phase decomposition');
   delete process.env.AURA_LEDGER_DIR;
 
   // ledger.mjs `great` records the pass AND marks done.
@@ -366,7 +386,9 @@ function hooksSuite() {
   add('billion-watchdog-respects-cap', gatekeeper([U('x')], true, 'BWA').trim() === '', 'expected allow once the nudge budget cap is exhausted');
   writeFileSync(bwFlag, JSON.stringify({ sessionId: 'BWA', ts: stamp() }));
   writeFileSync(join(bwLdir, 'BWA.json'), JSON.stringify({ sessionId: 'BWA', ts: stamp(), items: [{ id: 1, desc: 'd', done: true, greatness: { passed: true, evidence: 'e' } }] }));
-  add('billion-watchdog-needs-open-objectives', gatekeeper([U('x')], true, 'BWA').trim() === '', 'expected allow when every objective is closed');
+  // F8 (2026-06-17): a greatness stamp now requires a real verify in the transcript to clear Gate 3,
+  // so the "all objectives closed → allow" fixture carries a passing verify (closed AND verified).
+  add('billion-watchdog-needs-open-objectives', gatekeeper([U('x'), TOOLID('bv', 'Bash', { command: 'npm test' }), RESULT('bv', '5 passed, 0 failed')], true, 'BWA').trim() === '', 'expected allow when every objective is closed (greatness backed by a real verify, F8)');
   add('billion-watchdog-other-session-immune', gatekeeper([U('x')], true, 'BWB').trim() === '', 'expected allow for a session that did not arm billion');
   delete process.env.AURA_BILLION_FLAG;
   delete process.env.AURA_LEDGER_DIR;
@@ -436,6 +458,26 @@ function hooksSuite() {
   } catch (e) { add('drift-all-helper-pairs', false, 'mirror scan failed: ' + e.message); }
   add('drift-prompt-engine-copies', sameFile(join(CLAUDE_H, 'prompt-engine.mjs'), PROMPT_ENGINE), 'prompt-engine copies DRIFTED');
   add('drift-eval-cases-copies', sameFile(CASES, join(HOME, 'auramaxing', 'evals', 'cases', 'router.jsonl')), 'eval-cases copies DRIFTED');
+
+  // ── L6 (audit 2026-06-17): handoff-aware ledger migration — after auto-compact the new session id
+  // must INHERIT the predecessor's OPEN items, else Gate 2/3 silently fail-open across the handoff. ──
+  const LEDGER_CLI = join(CLAUDE_H, 'ledger.mjs');
+  const migDir = join(TMP, 'mig'); mkdirSync(migDir, { recursive: true });
+  writeFileSync(join(migDir, 'FROM.json'), JSON.stringify({ sessionId: 'FROM', ts: Math.floor(Date.now() / 1000), items: [{ id: 1, desc: 'open work', done: false }, { id: 2, desc: 'done work', done: true }] }));
+  try { execSync(`node "${LEDGER_CLI}" migrate FROM TO`, { env: { ...process.env, AURA_LEDGER_DIR: migDir }, timeout: 5000 }); } catch {}
+  let mig = {}; try { mig = JSON.parse(readFileSync(join(migDir, 'TO.json'), 'utf8')); } catch {}
+  add('ledger-migrate-carries-open-items', mig.sessionId === 'TO' && (mig.items || []).some(x => x.desc === 'open work' && !x.done), 'expected L6: migrate re-stamps the predecessor OPEN items onto the successor session');
+  add('ledger-migrate-drops-done-items', !((mig.items || []).some(x => x.desc === 'done work')), 'expected L6: already-done items are history, not carried across the handoff');
+
+  // ── FIX E (audit 2026-06-17): the router decomposes a FRESH substantial action task into PER-PHASE
+  // ledger items (incl. the greatness gate) instead of one generic blob — both prior audits' top ask. ──
+  const fixeDir = join(TMP, 'fixe'); mkdirSync(fixeDir, { recursive: true });
+  let fixe = {};
+  try {
+    execSync(`node "${ROUTER}"`, { input: JSON.stringify({ prompt: 'build a complete new payments dashboard with auth, error states and tests', session_id: 'FIXE' }), env: { ...process.env, AURA_LEDGER_DIR: fixeDir }, encoding: 'utf8', timeout: 8000 });
+    fixe = JSON.parse(readFileSync(join(fixeDir, 'FIXE.json'), 'utf8'));
+  } catch {}
+  add('fixe-router-per-phase-ledger', (fixe.items || []).length >= 4 && (fixe.items || []).some(x => /GREATNESS GATE/.test(x.desc)) && (fixe.items || []).some(x => /Phase 05 TEST/.test(x.desc)), 'expected FIX E: a fresh substantial action task is decomposed into per-phase ledger items incl. a greatness item');
 
   try { rmSync(TMP, { recursive: true, force: true }); } catch {}
   return checks;

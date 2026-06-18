@@ -190,22 +190,16 @@ there is no CLI equivalent or the MCP provides a unique capability.
 **Obsidian Skills (knowledge management):**
 - `~/.claude/skills/obsidian/` — markdown notes, JSON Canvas, CLI workflows
 
-**MCP Servers (use ONLY when CLI can't do it):**
+**MCP Servers — the REAL roster (use ONLY when CLI can't do it):**
 - `mcp__context7__*` — framework docs (no CLI equivalent, MCP is correct here)
 - `mcp__shadcn__*` — UI component registry (no CLI equivalent)
-- `mcp__sentry__*` — error monitoring (SSE connection, needs MCP)
-- `mcp__supabase__*` — database operations (needs MCP for auth)
-- `mcp__github__*` — PR/issue management (prefer `gh` CLI when possible)
-- `mcp__figma__*` — design file reading (no CLI equivalent)
-- `mcp__n8n__*` — workflow automation (needs MCP for API bridge)
-- `sequential-thinking` — structured reasoning (MCP-only capability)
+- `mcp__magicuidesign-mcp__*` — MagicUI component registry
+- `mcp__designlang__*` — design-token extraction (replaces Figma MCP)
+- `mcp__deepwiki__*` — AI docs for any GitHub repo without cloning
+- `mcp__chrome-devtools__*` — CDP browser fallback (CLI/browser-tab.mjs first)
+- claude.ai connectors (`mcp__claude_ai_*`): Supabase / Stripe / Notion / Google Drive — interactive-auth namespace, may be absent headless
 
-**Token-required (add API key once):**
-- `mcp__supabase__*` — database, auth, storage, RLS policies, migrations
-- `mcp__github__*` — PRs, issues, releases, branch management
-- `mcp__firecrawl__*` — scrape any URL into clean markdown/structured data
-- `mcp__n8n__*` — build and manage automation workflows from natural language
-- `mcp__figma__*` — read Figma designs, generate matching code
+**REMOVED — do NOT route to these (they do not exist):** sentry · supabase MCP · github MCP (use `gh` CLI) · figma (use designlang) · n8n · firecrawl MCP (use `firecrawl` CLI) · sequential-thinking (project-scoped only) · serena · codegraph.
 
 ## Agent Teams & Swarm
 

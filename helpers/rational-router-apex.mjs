@@ -17,7 +17,7 @@
  */
 
 import { spawn, execSync } from 'child_process';
-import { writeFileSync, readFileSync, existsSync, mkdirSync, statSync, unlinkSync } from 'fs';
+import { writeFileSync, readFileSync, renameSync, existsSync, mkdirSync, statSync, unlinkSync } from 'fs';
 import { join, dirname } from 'path';
 import { homedir } from 'os';
 
@@ -864,12 +864,34 @@ async function main() {
         }
       } catch { /* no prior ledger → fresh */ }
       const nextId = carried.reduce((m, x) => Math.max(m, x.id || 0), 0) + 1;
-      const newItem = { id: nextId, desc: `Deliver to 100/100 WITH evidence (RUN + paste output) + global audit + ABSOLUTE GREATNESS GATE (3× YES) → close with \`ledger.mjs great ${nextId} "<evidence>" --session ${sessionId}\`: ${deliverable}`, done: false };
-      writeFileSync(ledgerFile, JSON.stringify({
-        sessionId,
-        ts: Math.floor(Date.now() / 1000),
-        items: [...carried, newItem],
-      }, null, 2));
+      // FIX E (audit 2026-06-17) — decompose a FRESH substantial task into PER-PHASE ledger items
+      // instead of one generic blob, so Gate 2 forces each phase of the Absolute Perfection Loop to
+      // actually close (the top recommendation of both prior audits). The final item is the ABSOLUTE
+      // GREATNESS GATE — Gate 3 (now transcript-cross-validated, F8) blocks turn-end until it is
+      // `great`-stamped. Growth is bounded: only a fresh task (no carried open items) decomposes;
+      // a continuation appends a single item; small tasks (<50) stay single-item. So a multi-prompt
+      // session can't balloon into dozens of forced phases.
+      let items;
+      if (carried.length === 0 && complexity >= 50) {
+        const phaseDescs = [
+          `Phase 03-04 BUILD (root-cause, no placeholders) + tests ≥35% cov — ${deliverable}`,
+          `Phase 05 TEST+VERIFY — RUN tests/build/typecheck/lint, PASTE passing output — ${deliverable}`,
+          `Phase 06 AUDIT — /review + /cso (+ cross-model /codex), quantify the gaps — ${deliverable}`,
+          `Phase 07 IMPROVE — implement every audit finding, re-verify to 100/100 — ${deliverable}`,
+        ];
+        const phaseItems = phaseDescs.map((desc, i) => ({ id: nextId + i, desc, done: false }));
+        const greatId = nextId + phaseItems.length;
+        phaseItems.push({ id: greatId, desc: `Phase 08 ABSOLUTE GREATNESS GATE (3× YES with evidence) → close with \`ledger.mjs great ${greatId} "<evidence>" --session ${sessionId}\`: ${deliverable}`, done: false });
+        items = phaseItems;
+      } else {
+        const newItem = { id: nextId, desc: `Deliver to 100/100 WITH evidence (RUN + paste output) + global audit + ABSOLUTE GREATNESS GATE (3× YES) → close with \`ledger.mjs great ${nextId} "<evidence>" --session ${sessionId}\`: ${deliverable}`, done: false };
+        items = [...carried, newItem];
+      }
+      // F7 atomic write — the gatekeeper reads this from another process on every Stop.
+      const ledgerPayload = JSON.stringify({ sessionId, ts: Math.floor(Date.now() / 1000), items }, null, 2);
+      const tmpLedger = `${ledgerFile}.tmp.${process.pid}`;
+      try { writeFileSync(tmpLedger, ledgerPayload); renameSync(tmpLedger, ledgerFile); }
+      catch { writeFileSync(ledgerFile, ledgerPayload); }
     }
   } catch { /* non-blocking */ }
   // GOAL LOOP (visible) — turn EVERY action task into a /goal-focused loop the user can watch.

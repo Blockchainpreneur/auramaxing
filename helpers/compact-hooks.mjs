@@ -14,6 +14,7 @@ const SDR_PATH = join(AUR, 'sdr-active.md');
 const NEXT_ACTION = join(AUR, 'next-action.txt');
 const PREDICTION = join(AUR, 'prompt-cache', 'session-prediction.txt');
 const HANDOFF = join(AUR, 'pending-handoff.json');
+const LINEAGE = join(AUR, 'ledger-lineage.json'); // L6 — links pre-compact session → post-compact session
 
 // Pull the important state staged by the threshold monitor + intent-predictor so the
 // post-compact context can AUTO-RESUME the big task with zero user action.
@@ -122,6 +123,8 @@ Read any files listed above before making changes.
 
 async function preCompact(input) {
   mkdirSync(AUR, { recursive: true });
+  // L6 — stamp the PRE-compact session so PostCompact can migrate its OPEN ledger to the new session.
+  try { if (input && input.session_id) writeFileSync(LINEAGE, JSON.stringify({ from: input.session_id, ts: Math.floor(Date.now() / 1000) })); } catch {}
   const mem = recentFiles(MEMORY_DIR, '.json', 5), learns = recentFiles(LEARNINGS_DIR, '.jsonl', 3);
   const model = input.model || process.env.CLAUDE_MODEL || '';
   writeFileSync(SDR_PATH, buildSDR(mem, learns, gitDiffStat(), model) + buildResumeBlock());
@@ -141,7 +144,17 @@ async function preCompact(input) {
   } catch {}
 }
 
-function postCompact() {
+function postCompact(input) {
+  // L6 — migrate the predecessor session's OPEN ledger onto the new (post-compact) session id, so the
+  // completeness/greatness gates survive the handoff instead of silently fail-opening on a fresh id.
+  try {
+    const to = input && input.session_id;
+    let lin = {}; try { lin = JSON.parse(readSafe(LINEAGE) || '{}'); } catch {}
+    if (to && lin.from && lin.from !== to && (Math.floor(Date.now() / 1000) - (lin.ts || 0)) < 24 * 3600) {
+      const ledgerCli = join(HOME, '.claude', 'helpers', 'ledger.mjs');
+      if (existsSync(ledgerCli)) { try { execSync(`node "${ledgerCli}" migrate "${lin.from}" "${to}"`, { timeout: 1500 }); } catch {} }
+    }
+  } catch {}
   try {
     if (existsSync(SDR_PATH)) {
       console.log('[MAXXING-SDR]');
@@ -156,7 +169,7 @@ async function main() {
   try {
     const input = await readStdin();
     const ht = (input.hook_type || input.hookType || input.type || '').toLowerCase();
-    if (ht.includes('post')) postCompact(); else await preCompact(input);
+    if (ht.includes('post')) postCompact(input); else await preCompact(input);
   } catch {}
   clearTimeout(timeout);
   process.exit(0);

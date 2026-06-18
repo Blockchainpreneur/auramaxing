@@ -18,7 +18,11 @@ const LEARNINGS_DIR = join(AUR, 'learnings');
 const HANDOFF_PATH = join(AUR, 'pending-handoff.json');
 const SDR_PATH = join(AUR, 'sdr-active.md');
 const NB_ID_FILE = join(AUR, 'nlm-notebook-id');
-const FLAG_PATH = `/tmp/auramaxing-handoff-${process.ppid}.flag`;
+// Fire-once flag for the 40% handoff. Defaults to a ppid path, but main() re-keys it to the real
+// session_id when available (audit 2026-06-17): ppid is NOT a stable session identity — the hook's
+// parent process can differ or recur across a session's invocations, so a ppid key could double-fire
+// or miss the handoff. session_id is the correct per-session key; ppid stays as the fallback.
+let FLAG_PATH = `/tmp/auramaxing-handoff-${process.ppid}.flag`;
 const THRESHOLD_USED_PCT = Number(process.env.AURA_CTX_THRESHOLD_PCT || 55);
 const SOFT_THRESHOLD_PCT = Number(process.env.AURA_CTX_SOFT_THRESHOLD_PCT || 45);
 
@@ -164,6 +168,9 @@ async function main() {
       if (raw) input = JSON.parse(raw);
     }
   } catch { process.exit(0); }
+
+  // Re-key the fire-once flag to the SESSION (sanitized) when we have it; ppid is only a fallback.
+  if (input.session_id) FLAG_PATH = `/tmp/auramaxing-handoff-${String(input.session_id).replace(/[^\w.-]/g, '')}.flag`;
 
   // Context % detection — UserPromptSubmit does NOT receive context_window in stdin,
   // so statusline.sh persists the % to ~/.auramaxing/last-ctx.json on every update.

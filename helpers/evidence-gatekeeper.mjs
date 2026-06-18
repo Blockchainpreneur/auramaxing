@@ -26,7 +26,7 @@
  *   - BILLION mode keeps its own dedicated watchdog (separate cap + message); not double-counted here.
  *   - Only gates real SOURCE files; docs/markdown/json/config excluded.
  */
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import { readFileSync, writeFileSync, renameSync, existsSync, mkdirSync } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
 
@@ -68,28 +68,53 @@ async function readStdin() {
 
 const text = (c) => (typeof c === 'string' ? c : JSON.stringify(c || ''));
 
-// Stable-ish key for the CURRENT user prompt, so the nudge counter auto-resets when the prompt changes.
-function turnKeyOf(line, idx) {
+// Stable key for the CURRENT user prompt, so the nudge counter auto-resets when the prompt changes.
+// F5 (audit 2026-06-17) — the old key was hash(prompt[:160]) + LINE INDEX. Two flaws: (1) the line
+// index resets after auto-compact (transcript rewritten) → the counter spuriously reset mid-task;
+// (2) idx-in-hash made distinct prompts at the same index collide. Fix: prefer the transcript line's
+// STABLE `uuid` (present in real Claude Code transcript lines, survives line shifts + compaction),
+// scoped by session_id. Fall back to a CONTENT-ONLY hash (no idx) so compaction no longer resets it.
+function turnKeyOf(line, idx, sessionId) {
+  const sid = sessionId || '';
   try {
     const o = JSON.parse(line);
-    const t = text(o.message?.content ?? o.content).slice(0, 160);
-    let h = 0; const s = idx + '|' + t;
+    const uuid = o.uuid || o.message?.id || o.id;
+    if (uuid) return sid + '|' + uuid;                       // stable per-prompt identity
+    const t = text(o.message?.content ?? o.content).slice(0, 200);
+    let h = 0; const s = sid + '|' + t;
     for (let i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) | 0; }
     return String(h >>> 0);
-  } catch { return String(idx); }
+  } catch { return sid + '|' + idx; }
 }
 
-function analyzeTurn(transcriptPath) {
+// A genuine user prompt's content is a STRING (or an array carrying a non-tool_result block). A pure
+// tool-result carrier (the `user` line Claude Code emits to deliver tool outputs) is NOT a prompt.
+// F5 — detect this STRUCTURALLY, not by `text(...).includes('tool_result')`: the substring check
+// false-positived on a real prompt that merely MENTIONED the words "tool_result".
+function isToolResultCarrier(content) {
+  return Array.isArray(content) && content.length > 0 && content.every(c => c && c.type === 'tool_result');
+}
+
+// F7 (audit 2026-06-17) — atomic state write (temp + rename). A bare writeFileSync of the nudge/
+// billion JSON could be read half-written by a concurrent hook process of the same turn → JSON.parse
+// throws → fail-open (the gate silently disarms). temp+rename is atomic on a single filesystem.
+// Fail-safe: any error falls back to a best-effort direct write and never throws.
+function writeAtomic(p, data) {
+  try { const tmp = `${p}.tmp.${process.pid}`; writeFileSync(tmp, data); renameSync(tmp, p); }
+  catch { try { writeFileSync(p, data); } catch {} }
+}
+
+function analyzeTurn(transcriptPath, sessionId) {
   const raw = readFileSync(transcriptPath, 'utf8');
   const lines = raw.split('\n').filter(Boolean);
-  // Find the last GENUINE user prompt (type user, content not a tool_result).
+  // Find the last GENUINE user prompt (type user, content not a pure tool_result carrier).
   let start = 0;
   for (let i = lines.length - 1; i >= 0; i--) {
     let o; try { o = JSON.parse(lines[i]); } catch { continue; }
     if ((o.type || o.role) !== 'user') continue;
-    if (!text(o.message?.content ?? o.content).includes('tool_result')) { start = i; break; }
+    if (!isToolResultCarrier(o.message?.content ?? o.content)) { start = i; break; }
   }
-  const turnKey = turnKeyOf(lines[start] || '', start);
+  const turnKey = turnKeyOf(lines[start] || '', start, sessionId);
   const mutated = [];
   const verifyIds = [];           // tool_use ids of verify Bash commands this turn
   const verifyPos = {};           // tool_use_id -> line index (for STALE-VERIFY ordering, F-C)
@@ -168,8 +193,43 @@ function openLedger(sessionId) {
   } catch { return null; }
 }
 
+// F8 (audit 2026-06-17) — cross-validate a greatness stamp against REAL verification in the SESSION
+// transcript. `ledger.mjs great` evidence is free text, so a bare "ok" used to satisfy Gate 3. A
+// greatness pass is only credible if the session ACTUALLY RAN a real verification (test/build/lint/
+// typecheck runner, or a verify Skill) that did not fail. With ZERO real verify anywhere in the
+// transcript, the stamp is a rubber-stamp → Gate 3 keeps blocking. Fail-open: an unreadable/oversized
+// transcript returns true (assume verified — never wedge a turn on an IO/parse problem).
+function sessionHasRealVerification(transcriptPath) {
+  try {
+    if (!transcriptPath || !existsSync(transcriptPath)) return true;
+    const lines = readFileSync(transcriptPath, 'utf8').split('\n').filter(Boolean);
+    const verifyIds = []; const resultById = {}; const errorById = {}; let skillVerified = false;
+    for (const ln of lines) {
+      let o; try { o = JSON.parse(ln); } catch { continue; }
+      if (o.isSidechain) continue;                               // subagent lines don't credit the parent
+      const content = o.message?.content ?? o.content;
+      if (!Array.isArray(content)) continue;
+      for (const item of content) {
+        if (!item) continue;
+        if (item.type === 'tool_result' && item.tool_use_id) {
+          resultById[item.tool_use_id] = text(item.content);
+          if (item.is_error === true) errorById[item.tool_use_id] = true;
+          continue;
+        }
+        if (item.type !== 'tool_use') continue;
+        const name = item.name || '', inp = item.input || {};
+        if (name === 'Bash' && typeof inp.command === 'string' && VERIFY_CMD.test(inp.command)) verifyIds.push(item.id);
+        if (name === 'Skill' && VERIFY_SKILL.has((inp.skill || '').toLowerCase())) skillVerified = true;
+      }
+    }
+    if (skillVerified) return true;
+    // at least one verify command whose captured result is NOT a failure (uncaptured result leans OK).
+    return verifyIds.some(id => !(errorById[id] === true || (resultById[id] != null && isFail(resultById[id]))));
+  } catch { return true; }                                       // fail-open
+}
+
 // Gate 3 helper — done items lacking a recorded Absolute-Greatness pass, for THIS session, fresh.
-function greatnessPending(sessionId) {
+function greatnessPending(sessionId, transcriptPath) {
   try {
     const p = ledgerPath(sessionId);
     if (!existsSync(p)) return [];
@@ -179,15 +239,19 @@ function greatnessPending(sessionId) {
     if (l.ts && (Math.floor(Date.now() / 1000) - l.ts) > STALE_SEC) return [];
     // A `great` close counts ONLY with real evidence — bare `done`, empty, or the ledger.mjs
     // default placeholder "(no evidence given)" do NOT satisfy greatness (audit 2026-06-15, hole H1/B).
+    // F8: AND the stamp must be backed by a real verification event in the session transcript — a
+    // confident-sounding evidence string with no test/build run anywhere is a rubber stamp.
+    const verifiedSession = sessionHasRealVerification(transcriptPath);
     const hasRealGreatness = (x) => x.greatness && x.greatness.passed &&
       typeof x.greatness.evidence === 'string' && x.greatness.evidence.trim().length > 0 &&
-      x.greatness.evidence.trim() !== '(no evidence given)';
+      x.greatness.evidence.trim() !== '(no evidence given)' &&
+      verifiedSession;
     return l.items.filter(x => x && x.done && !hasRealGreatness(x));
   } catch { return []; }
 }
 
 // Highest-priority FAILING gate → its block message (or null if every gate passes).
-function failingGateMessage(sessionId, mutated, verified, ranButFailed) {
+function failingGateMessage(sessionId, transcriptPath, mutated, verified, ranButFailed) {
   // Gate 1 — source changed without PASSING verification.
   if (mutated.length > 0 && !verified) {
     const sample = mutated.slice(0, 6).map(f => '  - ' + f.replace(homedir(), '~')).join('\n');
@@ -218,7 +282,7 @@ function failingGateMessage(sessionId, mutated, verified, ranButFailed) {
   // wrap let a bare-`done` item end the turn on any non-editing closing turn — the dominant
   // resilience hole (audit 2026-06-15: greatness "almost never fired"). Fail-open preserved
   // (no/stale/wrong-session ledger → greatnessPending returns []).
-  const pending = greatnessPending(sessionId);
+  const pending = greatnessPending(sessionId, transcriptPath);
   if (pending.length) {
     const items = pending.slice(0, 8).map(x => `  [${x.id}] ${x.desc}`).join('\n');
     return ['ABSOLUTE GREATNESS GATE — do NOT stop. The deliverable is marked done WITHOUT a real greatness pass (Phase 08):',
@@ -247,7 +311,7 @@ function gkNudge(sessionId, turnKey) {
     try { st = JSON.parse(readFileSync(fp, 'utf8')) || {}; } catch {}
     if (st.turnKey !== turnKey) st = { turnKey, count: 0 };
     st.count = (st.count || 0) + 1;
-    try { mkdirSync(dir, { recursive: true }); writeFileSync(fp, JSON.stringify(st)); } catch {}
+    try { mkdirSync(dir, { recursive: true }); writeAtomic(fp, JSON.stringify(st)); } catch {}
     if (st.count > cap) return null;                     // budget exhausted → allow
     return { count: st.count, cap };
   } catch { return null; }                               // any error → allow (never wedge)
@@ -278,7 +342,7 @@ function billionNudge(sessionId) {
     const count = (f.nudges || 0) + 1;
     if (count > cap) return null;                       // budget cap → allow the stop
     f.nudges = count;
-    writeFileSync(bf, JSON.stringify(f));
+    writeAtomic(bf, JSON.stringify(f));
     return { count, cap, open };
   } catch { return null; }
 }
@@ -293,9 +357,9 @@ async function main() {
     if (!tp || !existsSync(tp)) ALLOW();                  // can't inspect → fail-open
 
     let mutated, verified, ranButFailed, turnKey;
-    try { ({ mutated, verified, ranButFailed, turnKey } = analyzeTurn(tp)); } catch { ALLOW(); }
+    try { ({ mutated, verified, ranButFailed, turnKey } = analyzeTurn(tp, sessionId)); } catch { ALLOW(); }
 
-    const msg = failingGateMessage(sessionId, mutated, verified, ranButFailed);
+    const msg = failingGateMessage(sessionId, tp, mutated, verified, ranButFailed);
     if (!msg) ALLOW();                                    // every gate passes → stop is allowed
 
     // ── BILLION mode: dedicated watchdog owns the re-nudge loop (separate cap + message) ──

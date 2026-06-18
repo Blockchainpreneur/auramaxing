@@ -16,7 +16,7 @@
  *   ledger.mjs clear                                       # close the ledger (no open items)
  *   ledger.mjs status                                      # print current state (default)
  */
-import { readFileSync, writeFileSync, mkdirSync } from 'fs';
+import { readFileSync, writeFileSync, renameSync, mkdirSync } from 'fs';
 import { homedir } from 'os';
 import { join, dirname } from 'path';
 
@@ -46,7 +46,16 @@ const LP = resolveLP();
 const now = () => Math.floor(Date.now() / 1000);
 
 function load() { try { return JSON.parse(readFileSync(LP, 'utf8')); } catch { return null; } }
-function save(o) { try { mkdirSync(dirname(LP), { recursive: true }); } catch {} writeFileSync(LP, JSON.stringify(o, null, 2)); }
+// F7 (audit 2026-06-17) — atomic write (temp+rename). The gatekeeper reads this file from a separate
+// process on every Stop; a non-atomic writeFileSync could be observed half-written → JSON.parse throws
+// → the completeness/greatness gate silently fail-opens. temp+rename is atomic on one filesystem.
+function writeJsonAtomic(file, o) {
+  try { mkdirSync(dirname(file), { recursive: true }); } catch {}
+  const data = JSON.stringify(o, null, 2);
+  try { const tmp = `${file}.tmp.${process.pid}`; writeFileSync(tmp, data); renameSync(tmp, file); }
+  catch { try { writeFileSync(file, data); } catch {} }
+}
+function save(o) { writeJsonAtomic(LP, o); }
 
 const [cmd, ...args] = argvRaw;
 let l = load() || { sessionId: null, ts: now(), items: [] };
@@ -72,6 +81,30 @@ switch (cmd) {
                   if (it) { it.greatness = { passed: true, evidence: args.slice(1).join(' ') || '(no evidence given)', ts: now() }; it.done = true; }
                   l.ts = now(); save(l); break; }
   case 'clear': { l = { sessionId: l.sessionId, ts: now(), items: [] }; save(l); break; }
+  // L6 (audit 2026-06-17) — handoff-aware migration. After auto-compact a NEW session_id is assigned;
+  // the gatekeeper is STRICTLY session-scoped, so the pre-compact ledger is orphaned and Gate 2/3
+  // silently fail-open across the handoff. `migrate <fromSid> <toSid>` re-stamps the predecessor's
+  // still-OPEN items onto the successor session (done items are history, dropped). Called by the
+  // PostCompact hook with the lineage staged at PreCompact. Isolation-safe: only the explicit
+  // predecessor is adopted — a random concurrent session is never touched.
+  case 'migrate': {
+    const from = args[0] || '', to = args[1] || '';
+    if (from && to && from !== to) {
+      try {
+        const src = JSON.parse(readFileSync(join(LDIR, `${from}.json`), 'utf8'));
+        if (src && src.sessionId === from && Array.isArray(src.items)) {
+          const toFile = join(LDIR, `${to}.json`);
+          let dst = { sessionId: to, ts: now(), items: [] };
+          try { const ex = JSON.parse(readFileSync(toFile, 'utf8')); if (ex && ex.sessionId === to && Array.isArray(ex.items)) dst = ex; } catch {}
+          let mid = dst.items.reduce((m, x) => Math.max(m, x.id || 0), 0);
+          for (const it of src.items) if (it && !it.done) dst.items.push({ ...it, id: ++mid });
+          dst.ts = now();
+          writeJsonAtomic(toFile, dst);
+        }
+      } catch {}
+    }
+    break;
+  }
   case 'status': default: break;
 }
 
