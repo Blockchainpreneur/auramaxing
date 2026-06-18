@@ -9,9 +9,8 @@
 #   opts: SWARM_N=4 (workers)  SWARM_MEM=3G (per-task cap)  SWARM_TIMEOUT=600 (s)  SWARM_RETRIES=2
 set -euo pipefail
 
-HOST="${AURA_FLEET_HOST:-}"
-[ -z "$HOST" ] && { echo "set AURA_FLEET_HOST=root@<box-ip> first"; exit 1; }
 . "$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)/lib.sh"   # shared SSH hardening + excludes + name helpers (DRY)
+HOST="$(aura_resolve_host)" || { aura_box_unconfigured; exit 1; }   # beacon/AURA_FLEET_HOST → never the burned box
 aura_require_host "$HOST"
 PROJ="${1:?usage: swarm.sh <project-dir> <tasks-file>}"
 TASKS="${2:?usage: swarm.sh <project-dir> <tasks-file>}"

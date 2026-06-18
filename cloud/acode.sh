@@ -10,7 +10,7 @@
 set -uo pipefail
 . "$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)/lib.sh"   # script-relative → works at any install path
 
-HOST="${AURA_FLEET_HOST:?set AURA_FLEET_HOST=root@<box-ip>}"; aura_require_host "$HOST"
+HOST="$(aura_resolve_host)" || { aura_box_unconfigured; exit 1; }; aura_require_host "$HOST"   # beacon/AURA_FLEET_HOST → never the burned box
 TUNNEL="-R 9222:localhost:9222"   # expose the Mac's CDP Chrome (:9222) to the box session
 
 if [ "${DRY_RUN:-0}" != "1" ] && ! aura_box_reachable "$HOST"; then

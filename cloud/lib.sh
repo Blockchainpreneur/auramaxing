@@ -66,3 +66,32 @@ aura_require_posint() { aura_require_int "$1" "$2"; [ "$2" -ge 1 ] || { echo "�
 aura_require_mem() { printf '%s' "$2" | grep -qE '^[0-9]+[KMGkmg]?$' || { echo "✗ $1 must look like 3G/512M, got: '$2'" >&2; exit 2 ;}; }
 # aura_require_host VALUE — reject an AURA_FLEET_HOST ssh could misread as an option (leading '-') or with spaces.
 aura_require_host() { case "$1" in ''|-*|*[[:space:]]*) echo "✗ AURA_FLEET_HOST unsafe/empty: '$1' (want user@host, no leading '-'/spaces)" >&2; exit 2 ;; esac; }
+
+# aura_resolve_host — SINGLE source of truth for the fleet target (2026-06-16). Resolution order:
+#   1. AURA_FLEET_HOST (explicit user@host) — wins.
+#   2. The REX beacon (REX_BEACON_URL + REX_BEACON_TOKEN) — the new box registers there; resolve its host.
+#   3. nothing → return 1 (delegation DISABLED).
+# NEVER falls back to a hardcoded IP. The old Hetzner box was decommissioned: its IP is in git history
+# ("burned"), so auto-connecting to it is a security risk. Prints the resolved user@host on stdout.
+aura_resolve_host() {
+  local h="${AURA_FLEET_HOST:-}"
+  if [ -z "$h" ] && [ -n "${REX_BEACON_URL:-}" ] && [ -n "${REX_BEACON_TOKEN:-}" ]; then
+    h="$(bash "$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)/beacon.sh" resolve 2>/dev/null || true)"
+  fi
+  [ -n "$h" ] || return 1
+  case "$h" in -*|*[[:space:]]*) return 1 ;; esac   # same safety guard as aura_require_host
+  printf '%s' "$h"
+}
+
+# aura_box_unconfigured — standard "delegation disabled" guidance (stderr). Print when aura_resolve_host fails.
+aura_box_unconfigured() {
+  cat >&2 <<'MSG'
+✗ box delegation is DISABLED — no fleet target configured.
+  The old Hetzner box was decommissioned (its IP was exposed in git history → treated as burned).
+  Reactivate the NEW box by configuring its beacon, then retry:
+    export REX_BEACON_URL="https://<your-vercel-beacon>"
+    export REX_BEACON_TOKEN="<token>"
+  (Or pin a direct host: export AURA_FLEET_HOST="user@host".)
+  Until then, heavy compute runs LOCALLY.
+MSG
+}

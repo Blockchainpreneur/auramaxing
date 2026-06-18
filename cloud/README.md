@@ -6,9 +6,22 @@ Claude Code session stays **LOCAL on the Mac** (full files + CDP browser + MAXIN
 
 Why: your Mac is 8GB. The box absorbs the RAM-heavy parallel sub-work so the laptop never thrashes.
 
-> **Current production box:** Hetzner **cpx42** (8 vCPU / 16 GB x86, Ubuntu 24.04) at
-> `AURA_FLEET_HOST=root@<ip>` — **paid (~€29.99/mo)**, already provisioned. Power it off when idle.
-> (The provisioner is vendor-neutral — any Ubuntu x86/ARM box works, incl. Oracle's free A1 shape.)
+> **⚠️ The old Hetzner box was DECOMMISSIONED** — its IP was committed to git history, so it is
+> treated as **burned** and is never auto-connected (the hardcoded fallback + the `ssh aura-box`
+> alias were removed). Delegation is **OFF by default** and degrades to local compute.
+>
+> **Reactivate the new box via the REX beacon** (no static IP — the box registers with a Vercel
+> beacon and is resolved dynamically):
+> ```sh
+> export REX_BEACON_URL="https://<your-vercel-beacon>"
+> export REX_BEACON_TOKEN="<token>"        # both, e.g. synced from Vercel env
+> bash ~/auramaxing/cloud/beacon.sh health   # verify the beacon + box are up
+> ```
+> `cloud/beacon.sh` calls `GET /resolve → {"host":"user@ip"}`, `GET /health`, `POST /dispatch`
+> (Bearer-token auth; paths overridable via `REX_BEACON_*_PATH`). `cloud/lib.sh`'s
+> `aura_resolve_host()` wires it into fleet/swarm/acode/orchestra/nightly. **Direct-host fallback:**
+> `export AURA_FLEET_HOST="user@host"` (wins over the beacon). The provisioner is vendor-neutral —
+> any Ubuntu x86/ARM box works.
 
 ---
 

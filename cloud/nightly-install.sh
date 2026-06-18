@@ -19,9 +19,10 @@
 
 set -euo pipefail
 
-HOST="${AURA_FLEET_HOST:-root@178.104.225.194}"
-SSH_OPTS="-o StrictHostKeyChecking=accept-new -o BatchMode=yes -o ConnectTimeout=10"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+. "$SCRIPT_DIR/lib.sh"   # aura_resolve_host (beacon/AURA_FLEET_HOST → never the burned box)
+HOST="$(aura_resolve_host)" || { aura_box_unconfigured; exit 1; }
+SSH_OPTS="-o StrictHostKeyChecking=accept-new -o BatchMode=yes -o ConnectTimeout=10"
 
 GH_TOKEN_ARG=""
 UNINSTALL=0

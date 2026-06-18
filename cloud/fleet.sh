@@ -10,9 +10,8 @@
 #   or:   fleet.sh <project-dir> --file tasks.txt    (one subtask per line)
 set -euo pipefail
 
-HOST="${AURA_FLEET_HOST:-}"
-[ -z "$HOST" ] && { echo "set AURA_FLEET_HOST=root@<box-ip> first (see ~/auramaxing/cloud/README.md)"; exit 1; }
 . "$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)/lib.sh"   # script-relative → works at any install path
+HOST="$(aura_resolve_host)" || { aura_box_unconfigured; exit 1; }   # beacon/AURA_FLEET_HOST → never the burned box
 aura_require_host "$HOST"
 
 PROJ="${1:?usage: fleet.sh <project-dir> <subtasks...>}"; shift

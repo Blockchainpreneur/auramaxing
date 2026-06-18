@@ -6,7 +6,7 @@
 # Called by acode (TTL-gated). Safe to run standalone:  bash box-sync-env.sh
 set -uo pipefail
 . "$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)/lib.sh"   # script-relative → works at any install path
-HOST="${AURA_FLEET_HOST:?set AURA_FLEET_HOST=root@<box-ip>}"
+HOST="$(aura_resolve_host)" || { aura_box_unconfigured; exit 1; }   # beacon/AURA_FLEET_HOST → never the burned box
 R() { rsync -az -e "ssh $AURA_SSH_OPTS" "$@" 2>/dev/null; }
 
 echo "▸ syncing AURAMAXING env → box (autopilot + memory; one-time-ish, then incremental)…"

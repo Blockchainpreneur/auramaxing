@@ -9,7 +9,8 @@
 
 set -uo pipefail
 
-HOST="${AURA_FLEET_HOST:-root@178.104.225.194}"
+. "$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)/lib.sh"   # aura_resolve_host (beacon/AURA_FLEET_HOST → never the burned box)
+HOST="$(aura_resolve_host)" || { aura_box_unconfigured; exit 1; }
 SSH_OPTS="-o StrictHostKeyChecking=accept-new -o BatchMode=yes -o ConnectTimeout=3"
 LOCAL_DIR="$HOME/.auramaxing/nightly"
 mkdir -p "$LOCAL_DIR"
