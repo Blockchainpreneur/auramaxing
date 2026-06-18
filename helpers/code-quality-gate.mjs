@@ -78,19 +78,48 @@ const DATA_DIR = join(cwd, '.claude-flow', 'data');
 const LOG_PATH = join(DATA_DIR, 'quality-issues.json');
 const MAX_LOG  = 100;
 
+// ── Secret precision (F-A, audit 2026-06-15) ─────────────────────────────────
+// The generic `name = "value"` secret pattern used to BLOCK any 8+ char quoted value
+// assigned to password/token/secret/api_key — which false-positived on test fixtures,
+// placeholders, mock data, and docs (it even blocked this audit's own memo). pii-redactor
+// is the hard gate for real secrets; this rule is now surgical: HIGH-confidence only.
+//   - Vendor-prefixed keys (sk-ant…, ghp_…, pk_live_…) and PEM private keys → ALWAYS block.
+//   - Generic name=value → block ONLY when the value looks like a REAL secret (entropy +
+//     mixed classes, not a placeholder, not an env/template ref) AND the file is not a
+//     test / fixture / mock / example / doc file.
+const SECRET_EXEMPT_FILE = /(?:\.(?:test|spec)\.[jt]sx?$)|[\/.](?:tests?|__tests__|__mocks__|fixtures?|mocks?|examples?|samples?|stories|e2e|cypress|playwright)[\/.]|\.(?:md|mdx|markdown|txt|rst|story\.[jt]sx?)$|\.env\.(?:example|sample|template)$|\.sample$/i;
+// Common placeholder values that are NOT secrets even though they sit in a secret-shaped slot.
+const PLACEHOLDER_VALUE = /placeholder|example|change[_-]?me|changeit|your[_-]|my[_-]secret|dummy|fake|sample|redacted|\bmock\b|\btest\b|\bdemo\b|\bxxx+|^[*.\-_]+$|^(?:none|null|nil|undefined|todo|fixme|tbd|n\/?a|enter|insert|secret|password|passwd|token|apikey|api[_-]?key|hunter2|qwerty|admin|root|password\d*)$/i;
+function shannon(s) { const m = {}; for (const c of s) m[c] = (m[c] || 0) + 1; let h = 0; const n = s.length; for (const k in m) { const p = m[k] / n; h -= p * Math.log2(p); } return h; }
+function looksLikeRealSecret(rawValue) {
+  const val = String(rawValue).replace(/^['"`]|['"`]$/g, '').trim();
+  if (val.length < 8) return false;
+  if (/\$\{|\$\(|process\.env|import\.meta\.env|os\.environ|getenv|<[^>]+>|\{\{.*\}\}|%[A-Z_]+%/i.test(val)) return false; // env / template ref
+  if (PLACEHOLDER_VALUE.test(val)) return false;
+  const classes = (/[a-z]/.test(val) ? 1 : 0) + (/[A-Z]/.test(val) ? 1 : 0) + (/[0-9]/.test(val) ? 1 : 0) + (/[^A-Za-z0-9]/.test(val) ? 1 : 0);
+  const ent = shannon(val);
+  return (ent >= 3.2 && classes >= 2) || (val.length >= 32 && ent >= 3.0); // real-secret entropy signature
+}
+
 // ── Quality rules ─────────────────────────────────────────────────────────────
 const RULES = [
   {
     id: 'hardcoded-secret',
     severity: 'HIGH',
     description: 'Hardcoded secret / credential detected',
-    test: (code) => {
-      const patterns = [
-        /['"`](?:sk-ant|sk-|pk_live_|rk_live_|ghp_|glpat-|xox[baprs]-)[A-Za-z0-9_\-]{10,}['"`]/,
-        /(?:password|passwd|secret|api_key|apikey|token|auth_key)\s*[:=]\s*['"`][^'"`\s]{8,}['"`]/i,
-        /-----BEGIN (?:RSA |EC |DSA )?PRIVATE KEY-----/,
+    test: (code, filePath) => {
+      // ALWAYS block: real vendor-prefixed keys + PEM private keys (unambiguous, every file).
+      const ALWAYS = [
+        /['"`](?:sk-ant|sk-|pk_live_|rk_live_|sk_live_|ghp_|gho_|github_pat_|glpat-|xox[baprs]-|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_\-]{20,})[A-Za-z0-9_\-]{10,}['"`]/,
+        /-----BEGIN (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----/,
       ];
-      return patterns.some(p => p.test(code));
+      if (ALWAYS.some(p => p.test(code))) return true;
+      // Generic name=value: only a HIGH-confidence real secret in a NON-fixture/doc file blocks (F-A).
+      if (SECRET_EXEMPT_FILE.test(filePath || '')) return false;
+      const re = /(?:password|passwd|secret|api_key|apikey|token|auth_key|client_secret|private_key)\s*[:=]\s*(['"`][^'"`\s]{8,}['"`])/ig;
+      let m;
+      while ((m = re.exec(code)) !== null) { if (looksLikeRealSecret(m[1])) return true; }
+      return false;
     },
   },
   {

@@ -31,8 +31,22 @@ const HIGH_RULES = [
   { name: 'GitLab Token',   pattern: /\bglpat-[A-Za-z0-9_-]{20}\b/g,                                    placeholder: '[REDACTED:GITLAB_TOKEN]' },
   { name: 'Slack Token',    pattern: /\bxox[baprs]-[A-Za-z0-9-]{10,}\b/g,                               placeholder: '[REDACTED:SLACK_TOKEN]' },
   { name: 'Private Key',    pattern: /-----BEGIN (?:[A-Z]+ )?PRIVATE KEY-----/g,                        placeholder: '[REDACTED:PRIVATE_KEY]' },
-  { name: 'Eth Address',    pattern: /\b0x[0-9a-fA-F]{40}\b/g,                                          placeholder: '[REDACTED:WALLET_ADDR]' },
+  // NOTE: a public ETH/BTC/SOL ADDRESS is NOT a secret — it is meant to be shared (you give it
+  // out to RECEIVE funds). The old `0x[40hex]` HIGH-block made it impossible to write legit crypto
+  // code (every contract/token address blocked) while MISSING the actual secret. Removed (audit
+  // 2026-06-16, P-4). The real fund-controlling secret — a 64-hex PRIVATE KEY / seed — is caught by
+  // detectPrivateKeyHex below (P-6), which the old rules let through entirely.
 ];
+
+// P-6 (audit 2026-06-16): a raw 32-byte (64-hex) PRIVATE KEY controls the wallet — leaking it =
+// total loss of funds. The old gate blocked the harmless 40-hex *address* but never the key. A bare
+// 64-hex is ALSO a sha256 hash / git object, so blocking all 64-hex would false-positive on hashes;
+// we block ONLY when a key-ish identifier sits within ~40 chars before it (high-confidence secret),
+// and log-only otherwise. Covers `privateKey = "0x<64hex>"`, `WALLET_SECRET=<64hex>`, mnemonic/seed.
+// Context gap is [^\n]{0,40}? (any non-newline) so it survives JSON-stringified tool_input where the
+// quote is escaped (`= \"0x…`) — a stricter class missed the backslash and let the key through.
+const PRIVKEY_HEX = /(?:private|priv|secret|wallet|signer|deployer|mnemonic|seed|pk)[^\n]{0,40}?(?:0x)?[0-9a-fA-F]{64}\b/i;
+function detectPrivateKeyHex(text) { return PRIVKEY_HEX.test(text); }
 
 // MODIFY severity — redact value but allow tool to run
 const MODIFY_RULES = [
@@ -144,6 +158,8 @@ async function main() {
 
     // ── HIGH severity: block ─────────────────────────────────────────────────
     const highScan = scanRules(scanText, HIGH_RULES);
+    // P-6: context-flagged 64-hex private key joins the HIGH block set (the secret that controls funds).
+    if (detectPrivateKeyHex(scanText)) highScan.found.push({ type: 'Private Key (hex)', count: 1 });
     if (highScan.found.length > 0) {
       writeLog(toolName, highScan.found, scanText.length);
       const types = highScan.found.map(f => f.type).join(', ');
@@ -159,26 +175,19 @@ async function main() {
       process.exit(0);
     }
 
-    // ── MODIFY severity: redact and allow ────────────────────────────────────
-    const modScan = scanRules(scanText, MODIFY_RULES);
-    if (modScan.found.length > 0) {
-      writeLog(toolName, modScan.found, scanText.length);
-      const types = modScan.found.map(f => f.type).join(', ');
-      process.stderr.write(`[PII Shield] REDACTED — ${types}\n`);
-      // Reconstruct the tool_input with redacted content
-      let redactedInput;
-      try {
-        redactedInput = typeof payload.tool_input === 'string'
-          ? modScan.text
-          : JSON.parse(modScan.text);
-      } catch {
-        redactedInput = modScan.text;
-      }
-      process.stdout.write(JSON.stringify({
-        decision:   'modify',
-        tool_input: redactedInput,
-      }));
-      process.exit(0);
+    // ── WARN severity: detect + warn, but NEVER mutate the code (audit 2026-06-16, P-3) ──────
+    // These patterns (email, phone, $amount, BTC/SOL public addresses) used to `decision:modify`,
+    // SILENTLY REWRITING the user's source on disk — e.g. `price = "$1,000.00"` → `[REDACTED:LARGE_AMOUNT]`,
+    // a contact email → `[REDACTED:EMAIL]`, a public address → placeholder. In a money app that is
+    // catastrophic data corruption, and these values are legit code content (public addresses, pricing,
+    // support emails), NOT secrets. Now: log + a VISIBLE stderr warning, then APPROVE unchanged. Real
+    // secrets are already hard-blocked above; this layer must never corrupt the loop's output.
+    const warnScan = scanRules(scanText, MODIFY_RULES);
+    if (warnScan.found.length > 0) {
+      writeLog(toolName, warnScan.found, scanText.length);
+      const types = warnScan.found.map(f => f.type).join(', ');
+      process.stderr.write(`\x1b[33m[PII Shield] heads-up\x1b[0m — ${types} present in ${toolName} input (NOT modified; real secrets are blocked separately). If this is real user PII headed for a public repo, handle it deliberately.\n`);
+      // Fall through to approve — do NOT modify.
     }
 
     // ── LOG-ONLY: mnemonic seed check ────────────────────────────────────────

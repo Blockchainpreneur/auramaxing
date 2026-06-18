@@ -35,13 +35,19 @@ if (process.env.AURA_GATEKEEPER_OFF === '1') ALLOW();
 const timeout = setTimeout(ALLOW, Number(process.env.AURA_GK_TIMEOUT_MS) || 4500);
 
 // Source extensions that warrant verification when changed. Docs/config intentionally excluded.
-const SRC = /\.(tsx?|jsx?|mjs|cjs|vue|svelte|py|go|rs|rb|java|kt|swift|c|cc|cpp|h|hpp|php|css|scss|sql)$/i;
+// Money/crypto coverage (audit 2026-06-16, G-1): smart contracts (.sol Solidity, .vy Vyper,
+// .move, .cairo) + modern TS module variants (.mts/.cts) + DB money-models (.prisma) were
+// ESCAPING the gate — a contract/schema edit could end the turn with ZERO verification. Added.
+const SRC = /\.(tsx?|mtsx?|ctsx?|jsx?|mjs|cjs|vue|svelte|astro|py|go|rs|rb|java|kt|swift|c|cc|cpp|h|hpp|php|css|scss|sql|sol|vy|move|cairo|prisma)$/i;
 // Source edits made through the SHELL (sed -i / tee / >|>> redirection into a code file) — so Gate 1/3
 // can't be escaped by writing code via Bash instead of the Edit/Write tools (audit 2026-06-15, hole H3).
 const BASH_SRC_WRITE = /\b(?:sed\s+-i\b|tee\b)[^|;&\n]*\.(?:tsx?|jsx?|mjs|cjs|vue|svelte|py|go|rs|rb|java|kt|swift|c|cc|cpp|h|hpp|php|css|scss|sql)\b|[>]{1,2}\s*['"]?[^\s'"|;&]+\.(?:tsx?|jsx?|mjs|cjs|vue|svelte|py|go|rs|rb|java|kt|swift|c|cc|cpp|h|hpp|php|css|scss|sql)\b/i;
 // Real test/build/lint RUNNERS. Generic verbs match ONLY at command position behind a real runner,
 // so `echo test`, `cat tests/x`, `ls test/` do not pass the gate.
-const VERIFY_CMD = /\b(vitest|jest|pytest|playwright|tsc|eslint|ruff|mypy|pyright|rspec|phpunit)\b|\bcargo\s+(test|check|clippy)\b|\bgo\s+test\b|\bdotnet\s+test\b|\bdeno\s+(test|check)\b|\bnode\s+--(check|test)\b|(?:^|[;&|]\s*)(?:npm|yarn|pnpm|bun|make)\s+(?:run\s+)?(?:test|build|lint|type-?check|check)\b|\bevals?\/run\.mjs\b/i;
+// Real test/build/lint RUNNERS. Includes smart-contract toolchains (audit 2026-06-16, G-1 follow-up):
+// Foundry `forge test`, `hardhat test`/`npx hardhat test`, Solana `anchor test`, `truffle test` — without
+// these the gate would NOT credit a crypto dev who DID test their contract, and false-block the loop.
+const VERIFY_CMD = /\b(vitest|jest|pytest|playwright|tsc|eslint|ruff|mypy|pyright|rspec|phpunit)\b|\bcargo\s+(test|check|clippy)\b|\bgo\s+test\b|\bdotnet\s+test\b|\bdeno\s+(test|check)\b|\bnode\s+--(check|test)\b|(?:^|[;&|]\s*)(?:npm|yarn|pnpm|bun|make)\s+(?:run\s+)?(?:test|build|lint|type-?check|check)\b|\b(?:forge|hardhat|anchor|truffle)\s+(?:test|build|check|coverage)\b|\bnpx\s+(?:hardhat|truffle)\b|\bevals?\/run\.mjs\b/i;
 // gstack/skills that count as verification.
 const VERIFY_SKILL = new Set(['qa', 'qa-only', 'review', 'cso', 'verify', 'investigate', 'design-review', 'benchmark', 'canary']);
 // Failure signals inside a verify command's RESULT.
@@ -86,9 +92,11 @@ function analyzeTurn(transcriptPath) {
   const turnKey = turnKeyOf(lines[start] || '', start);
   const mutated = [];
   const verifyIds = [];           // tool_use ids of verify Bash commands this turn
+  const verifyPos = {};           // tool_use_id -> line index (for STALE-VERIFY ordering, F-C)
   const resultById = {};          // tool_use_id -> result text
   const errorById = {};           // tool_use_id -> is_error:true (authoritative fail bit, F2)
-  let skillVerified = false;
+  let lastMutatePos = -1;         // line index of the LAST source mutation this turn (F-C)
+  let skillVerifyPos = -1;        // line index of the last verifying Skill call (F-C)
   for (let i = start; i < lines.length; i++) {
     let o; try { o = JSON.parse(lines[i]); } catch { continue; }
     if (o.isSidechain) continue;  // subagent/sidechain lines must NOT credit the PARENT's gate (F9)
@@ -106,13 +114,13 @@ function analyzeTurn(transcriptPath) {
       const inp = item.input || {};
       if (name === 'Edit' || name === 'Write' || name === 'MultiEdit' || name === 'NotebookEdit') {
         const fp = inp.file_path || inp.notebook_path || '';
-        if (SRC.test(fp)) mutated.push(fp);
+        if (SRC.test(fp)) { mutated.push(fp); lastMutatePos = i; }
       }
       if (name === 'Bash' && typeof inp.command === 'string') {
-        if (VERIFY_CMD.test(inp.command)) verifyIds.push(item.id);
-        if (BASH_SRC_WRITE.test(inp.command)) mutated.push('bash-edit:' + inp.command.slice(0, 60));
+        if (VERIFY_CMD.test(inp.command)) { verifyIds.push(item.id); verifyPos[item.id] = i; }
+        if (BASH_SRC_WRITE.test(inp.command)) { mutated.push('bash-edit:' + inp.command.slice(0, 60)); lastMutatePos = i; }
       }
-      if (name === 'Skill' && VERIFY_SKILL.has((inp.skill || '').toLowerCase())) skillVerified = true;
+      if (name === 'Skill' && VERIFY_SKILL.has((inp.skill || '').toLowerCase())) skillVerifyPos = i;
       // Task/Agent intentionally NOT counted: spawning an agent is an utterance, not an outcome.
     }
   }
@@ -121,10 +129,21 @@ function analyzeTurn(transcriptPath) {
   // are green (the old `some(!isFail)` let one green mask a red). An UNCAPTURED result still leans OK
   // (Stop fires after results land; preserves fail-open for the not-yet-flushed edge).
   const vFailed = (id) => errorById[id] === true || (resultById[id] != null && isFail(resultById[id]));
-  const anyFailed = verifyIds.some(vFailed);
-  const anyOk = verifyIds.some(id => !vFailed(id));
-  const cmdVerified = anyOk && !anyFailed;
-  const ranButFailed = verifyIds.length > 0 && anyFailed;
+  // STALE-VERIFY GUARD (F-C audit 2026-06-15 + F-RED audit 2026-06-16): a verify — RED or GREEN — only
+  // counts if it ran STRICTLY AFTER the last source mutation. A check that predates your latest edit
+  // reflects OLD code: a stale GREEN must not clear the gate (F-C), and SYMMETRICALLY a stale RED must
+  // not wedge it (F-RED). The old `anyFailed = some(vFailed)` scanned ALL verifies, so once anything went
+  // red the turn could never clear even after a genuine red→edit→green recovery — bounded only by the
+  // nudge cap. Restricting BOTH sides to `> lastMutatePos` is masking-SAFE: the green-masks-red attack
+  // (real test red → trivial test green, with NO edit between) keeps the red AFTER lastMutatePos, so red
+  // still dominates within the post-mutation window. Only a real red→EDIT→green (you fixed and re-ran)
+  // clears. `>` excludes same-line parallel calls (they run against pre-edit state).
+  const afterEdit = (id) => verifyPos[id] > lastMutatePos;
+  const anyFailedAfter = verifyIds.some(id => afterEdit(id) && vFailed(id));   // red dominates the post-edit window
+  const anyOkAfter     = verifyIds.some(id => afterEdit(id) && !vFailed(id));
+  const skillVerified  = skillVerifyPos > lastMutatePos;   // skill verification must also post-date the edit
+  const cmdVerified = anyOkAfter && !anyFailedAfter;
+  const ranButFailed = anyFailedAfter;                     // a POST-edit red is the only "ran but failed"
   return { mutated: [...new Set(mutated)], verified: cmdVerified || skillVerified, ranButFailed, turnKey };
 }
 

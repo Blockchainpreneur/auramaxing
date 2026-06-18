@@ -153,10 +153,20 @@ function hooksSuite() {
   add('gatekeeper-detects-vitest-x', gatekeeper([...editNoVerify, TOOLID('vr', 'Bash', { command: 'vitest run' }), RESULT('vr', '× src/x.test.ts > does y')], false).includes('"block"'), 'expected block: vitest × marks a failed test');
   // F2 — is_error:true on the tool_result is authoritative even when the text looks clean.
   add('gatekeeper-is-error-blocks', gatekeeper([...editNoVerify, TOOLID('ve', 'Bash', { command: 'npm test' }), JSON.stringify({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 've', content: 'ok', is_error: true }] } })], false).includes('"block"'), 'expected block: tool_result is_error:true is a failed verify regardless of text');
-  // F4 — a RED verify is NOT masked by a green one in the same turn.
-  add('gatekeeper-red-dominates-green', gatekeeper([...editNoVerify, TOOLID('vp', 'Bash', { command: 'tsc' }), RESULT('vp', '0 errors'), TOOLID('vf', 'Bash', { command: 'npm test' }), RESULT('vf', '2 failed')], false).includes('"block"'), 'expected block: a failing verify dominates any passing one');
+  // F4 — a RED verify is NOT masked by a green one in the same turn (NO edit between → red still post-edit → blocks).
+  add('gatekeeper-red-dominates-green', gatekeeper([...editNoVerify, TOOLID('vp', 'Bash', { command: 'tsc' }), RESULT('vp', '0 errors'), TOOLID('vf', 'Bash', { command: 'npm test' }), RESULT('vf', '2 failed')], false).includes('"block"'), 'expected block: a failing verify dominates any passing one (masking stays closed)');
+  // F-RED (audit 2026-06-16) — a genuine red→EDIT(fix)→green recovery clears: the pre-fix red is STALE
+  // (predates the latest edit) and must not wedge the loop. Symmetric with F-C's stale-green rule.
+  add('gatekeeper-red-then-fix-then-green-clears', gatekeeper([U('fix'), TOOL('Edit', { file_path: '/x/a.ts' }), TOOLID('vr', 'Bash', { command: 'npm test' }), RESULT('vr', 'Tests: 2 failed'), TOOL('Edit', { file_path: '/x/a.ts' }), TOOLID('vg', 'Bash', { command: 'npm test' }), RESULT('vg', 'Tests: 5 passed, 0 failed')], false).trim() === '', 'expected allow: red→EDIT(fix)→green is a real recovery; a stale pre-edit red must not wedge the turn (F-RED)');
   // F9 — subagent/sidechain lines must not credit the parent gate.
   add('gatekeeper-sidechain-edit-ignored', gatekeeper([U('x'), JSON.stringify({ type: 'assistant', isSidechain: true, message: { role: 'assistant', content: [{ type: 'tool_use', name: 'Edit', input: { file_path: '/x/sub.ts' } }] } })], false).trim() === '', 'expected allow: a sidechain (subagent) source edit is not the parent turn mutation');
+  // G-1 (audit 2026-06-16) — money/crypto source MUST be verification-gated: smart contracts (.sol),
+  // DB money-models (.prisma), modern-TS (.mts) escaped the old SRC list; and the contract test runners
+  // (forge/hardhat/anchor/truffle) must COUNT as verification or a tested contract gets false-blocked.
+  add('gatekeeper-gates-solidity', gatekeeper([U('fix Vault.sol'), TOOL('Edit', { file_path: '/c/Vault.sol' })], false).includes('"block"'), 'expected block: an unverified .sol smart-contract edit must be gated');
+  add('gatekeeper-gates-prisma', gatekeeper([U('add balance'), TOOL('Edit', { file_path: '/db/schema.prisma' })], false).includes('"block"'), 'expected block: an unverified .prisma money-model edit must be gated');
+  add('gatekeeper-credits-forge-test', gatekeeper([U('fix Vault.sol'), TOOL('Edit', { file_path: '/c/Vault.sol' }), TOOLID('vf', 'Bash', { command: 'forge test' }), RESULT('vf', '[PASS] testWithdraw() (gas: 1234)')], false).trim() === '', 'expected allow: forge test (Foundry) is a valid contract verification');
+  add('gatekeeper-credits-hardhat-test', gatekeeper([U('fix Vault.sol'), TOOL('Edit', { file_path: '/c/Vault.sol' }), TOOLID('vh', 'Bash', { command: 'npx hardhat test' }), RESULT('vh', '5 passing (2s)')], false).trim() === '', 'expected allow: npx hardhat test is a valid contract verification');
   // L1 — router APPENDS to the session ledger across prompts (does not clobber the open deliverable).
   process.env.AURA_PE_FAST = '1'; process.env.AURA_LEDGER_DIR = join(TMP, 'l1-ledger');
   run(ROUTER, JSON.stringify({ prompt: 'build the auth feature now', session_id: 'L1S' }));
@@ -216,6 +226,13 @@ function hooksSuite() {
   add('pii-blocks-secret', piiBlk.includes('"block"'), 'expected pii-redactor to BLOCK a hardcoded sk_live_ secret');
   add('pii-block-dual-format', piiBlk.includes('permissionDecision') && piiBlk.includes('deny'), 'expected dual-format block (hookSpecificOutput.permissionDecision:deny) so every CLI version honors it');
   add('pii-allows-clean-code', !run(PII, JSON.stringify({ tool_name: 'Write', tool_input: { file_path: '/x/a.ts', content: 'export const sum = (a, b) => a + b;' } })).includes('"block"'), 'expected pii-redactor to allow clean code');
+  // P-3/P-4/P-6 (audit 2026-06-16) — the money/crypto gate must protect FUNDS without sabotaging legit code.
+  const ETH_ADDR = '0x' + 'A0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
+  add('pii-allows-public-eth-address', !run(PII, JSON.stringify({ tool_name: 'Write', tool_input: { file_path: '/x/t.ts', content: 'export const USDC = "' + ETH_ADDR + '";' } })).includes('"block"'), 'expected allow: a PUBLIC eth/contract address is not a secret (P-4 — old gate blocked all crypto code)');
+  add('pii-no-modify-dollar-amount', run(PII, JSON.stringify({ tool_name: 'Write', tool_input: { file_path: '/x/p.ts', content: 'export const price = "$1,000.00";' } })).includes('"approve"'), 'expected approve, NOT silent modify, of a $ amount in money code (P-3 — old gate corrupted it to [REDACTED])');
+  add('pii-no-modify-email', run(PII, JSON.stringify({ tool_name: 'Write', tool_input: { file_path: '/x/c.ts', content: 'export const SUPPORT = "help@acme.com";' } })).includes('"approve"'), 'expected approve, NOT silent modify, of a support email in code (P-3)');
+  add('pii-blocks-hex-privatekey', run(PII, JSON.stringify({ tool_name: 'Write', tool_input: { file_path: '/x/w.ts', content: 'const privateKey = "0x' + 'a'.repeat(64) + '";' } })).includes('"block"'), 'expected block: a context-flagged 64-hex PRIVATE KEY controls funds (P-6 — old gate missed it entirely)');
+  add('pii-allows-sha256-hash', !run(PII, JSON.stringify({ tool_name: 'Write', tool_input: { file_path: '/x/h.ts', content: 'const fileHash = "' + 'a'.repeat(64) + '";' } })).includes('"block"'), 'expected allow: a bare 64-hex sha256/git hash is not a private key (P-6 no false-positive)');
 
   const post = run(COMPACT, JSON.stringify({ hook_type: 'PostCompact' }));
   add('compact-auto-resume', post.includes('AUTO-RESUMED') && post.includes('MAXXING-SDR'), 'compact PostCompact missing AUTO-RESUMED marker');
