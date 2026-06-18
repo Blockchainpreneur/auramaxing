@@ -242,11 +242,22 @@ function greatnessPending(sessionId, transcriptPath) {
     // F8: AND the stamp must be backed by a real verification event in the session transcript — a
     // confident-sounding evidence string with no test/build run anywhere is a rubber stamp.
     const verifiedSession = sessionHasRealVerification(transcriptPath);
+    // CONVERGENT REFINEMENT (2026-06-18) — a `refineRequired` deliverable (router-created action
+    // deliverables) only counts as great once it has run ≥AURA_GK_MIN_REFINE refinement rounds, i.e.
+    // the refinement loop reached CONVERGENCE (a round with nothing left to improve), not a one-shot
+    // "100/100". Items without the flag are unaffected (backward-compatible). Fail-open preserved.
+    const MIN_REFINE = Math.max(1, parseInt(process.env.AURA_GK_MIN_REFINE || '2', 10) || 2);
+    const converged = (x) => !x.refineRequired || (Array.isArray(x.refinements) && x.refinements.length >= MIN_REFINE);
     const hasRealGreatness = (x) => x.greatness && x.greatness.passed &&
       typeof x.greatness.evidence === 'string' && x.greatness.evidence.trim().length > 0 &&
       x.greatness.evidence.trim() !== '(no evidence given)' &&
-      verifiedSession;
-    return l.items.filter(x => x && x.done && !hasRealGreatness(x));
+      verifiedSession &&
+      converged(x);
+    // Gate 3 applies to DELIVERABLE items. A per-phase sub-step (router FIX E items 03-07) is closed
+    // with `done`, not `great`, and opts out via `greatRequired:false` — without this exclusion the
+    // multi-item per-phase ledger would wedge (every done-non-great phase step looked "ungreat").
+    // Default (no flag) stays gated → backward-compatible with single-deliverable ledgers + all fixtures.
+    return l.items.filter(x => x && x.done && x.greatRequired !== false && !hasRealGreatness(x));
   } catch { return []; }
 }
 
@@ -284,14 +295,23 @@ function failingGateMessage(sessionId, transcriptPath, mutated, verified, ranBut
   // (no/stale/wrong-session ledger → greatnessPending returns []).
   const pending = greatnessPending(sessionId, transcriptPath);
   if (pending.length) {
+    const MIN_REFINE = Math.max(1, parseInt(process.env.AURA_GK_MIN_REFINE || '2', 10) || 2);
     const items = pending.slice(0, 8).map(x => `  [${x.id}] ${x.desc}`).join('\n');
-    return ['ABSOLUTE GREATNESS GATE — do NOT stop. The deliverable is marked done WITHOUT a real greatness pass (Phase 08):',
-      items, '',
+    const needRefine = pending.filter(x => x.refineRequired && !(Array.isArray(x.refinements) && x.refinements.length >= MIN_REFINE));
+    const refineBlock = needRefine.length ? '\n' + [
+      `CONVERGENT REFINEMENT (required — ${needRefine.length} item(s) not yet converged): a deliverable ships ONLY at the ceiling of refinement, PROVEN not asserted.`,
+      '  • Run the refinement loop: each round, IMPROVE one axis (correctness · robustness/edge-cases · clarity · performance · design) and record it:',
+      `      node ~/.claude/helpers/ledger.mjs refine <id> "round N: <what improved>" --session ${sessionId || ''}`,
+      `  • LOOP until a full round yields ZERO material improvement (CONVERGENCE). Need ≥${MIN_REFINE} recorded rounds; the LAST states "converged — thesis: <why this IS the maximum-refinement version>".`,
+      '  • Only THEN take the greatness pass below (its evidence = the proven max-refinement thesis).',
+    ].join('\n') + '\n' : '';
+    return ['ABSOLUTE GREATNESS GATE — do NOT stop. The deliverable is marked done WITHOUT a proven greatness + convergence pass (Phase 08):',
+      items, refineBlock,
       'Closing with bare `done` (or empty / "(no evidence given)" evidence) does NOT satisfy the gate. Answer all THREE, each YES with EVIDENCE:',
       '  Q1. Does it meet/exceed the 20x hypothesis (measurable evidence)?',
       '  Q2. Would the 3 best-in-class references consider this competitive or better?',
       '  Q3. Is it production-ready RIGHT NOW (not "needs polish", not "MVP-fine")?',
-      `Then record the pass with REAL evidence:  node ~/.claude/helpers/ledger.mjs great <id> "<specific evidence>" --session ${sessionId || ''}`,
+      `Then record the pass with REAL evidence:  node ~/.claude/helpers/ledger.mjs great <id> "<convergence thesis + evidence>" --session ${sessionId || ''}`,
       'Kill-switch: AURA_GATEKEEPER_OFF=1.'].join('\n');
   }
   return null;

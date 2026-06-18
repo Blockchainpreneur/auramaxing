@@ -74,6 +74,15 @@ switch (cmd) {
   }
   case 'add':   { l.items.push({ id: nextId(), desc: args.join(' '), done: false }); l.ts = now(); save(l); break; }
   case 'done':  { const it = l.items.find(x => x.id === Number(args[0])); if (it) it.done = true; l.ts = now(); save(l); break; }
+  // CONVERGENT REFINEMENT (2026-06-18) — record ONE refinement round on an item. The deliverable
+  // enters an infinite refinement loop and only closes when a round yields NO further improvement
+  // (convergence). Gate 3 refuses to accept a `great` close on a `refineRequired` item until at
+  // least AURA_GK_MIN_REFINE rounds are recorded — so "max refinement" is PROVEN, not asserted.
+  //   ledger.mjs refine <id> "<what improved this round / 'converged: nothing left to improve'>"
+  case 'refine': { const it = l.items.find(x => x.id === Number(args[0]));
+                   if (it) { if (!Array.isArray(it.refinements)) it.refinements = [];
+                             it.refinements.push({ round: it.refinements.length + 1, delta: args.slice(1).join(' ') || '(unspecified)', ts: now() }); }
+                   l.ts = now(); save(l); break; }
   // ABSOLUTE GREATNESS GATE (Phase 08) — records the 3-YES pass + evidence and marks done.
   // This is the ONLY honest way to close a substantial code deliverable: Gate 3 in the
   // gatekeeper blocks turn-end while a done item lacks a `greatness` record.

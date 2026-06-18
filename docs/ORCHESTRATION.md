@@ -70,15 +70,21 @@ evidence is FALSE.**
 - **07 · Implement improvements + re-test + verify** → implement *every* directive item to its
   criterion (no cherry-picking) · re-run `/qa` from scratch (catch regressions) · **20x
   hypothesis: binary PASS/FAIL** — NO ⇒ return to Phase 06. **VERIFY GATE.**
-- **08 · Final audit of the detail — ABSOLUTE GREATNESS GATE** → final `/review` (a verification
-  run; new Critical/High here means Phase 07 was incomplete) + `/codex`, then the **three binary
-  questions, all must be YES with evidence:**
+- **08 · Final audit of the detail — CONVERGENT REFINEMENT → ABSOLUTE GREATNESS GATE.** A working
+  100/100 is the *entry* to Phase 08, not the exit. The deliverable enters an **infinite refinement
+  loop** and ships ONLY at **convergence**: each round push exactly one axis harder (correctness ·
+  robustness/edge-cases · clarity · performance · security · design/taste) and record it
+  (`ledger.mjs refine <id> "round N: <what improved>"`); **loop until a full round yields ZERO
+  material improvement** and an adversarial skeptic cannot name a further improvement — that is the
+  **max-refinement thesis, proven not asserted**. Then run final `/review` (new Critical/High here
+  means Phase 07 was incomplete) + `/codex`, then the **three binary questions, all YES with evidence:**
   - **Q1** — Does it meet/exceed the 20x hypothesis (measurable evidence)?
   - **Q2** — Would the 3 best-in-class references consider this competitive or better?
   - **Q3** — Is it production-ready *right now* (not "needs polish", not "good for an MVP")?
-  Any NO ⇒ write a new Improvement Directive and **return to Phase 06**. No shortcut, no
-  exception, "close enough" is not an accepted answer. All YES ⇒ log to memory, mark done,
-  advance to the next detail. **Record the pass: `node ~/.claude/helpers/ledger.mjs great <id> "<evidence>"`.**
+  Any NO — or any refinement axis a critic could still push — ⇒ new Improvement Directive and
+  **return to Phase 06**. "Close enough" / "I think it's good" without a convergence proof is not an
+  accepted answer. All YES + converged ⇒ log to memory, mark done, advance. **Record the pass (evidence
+  = the proven max-refinement thesis): `node ~/.claude/helpers/ledger.mjs great <id> "<thesis + evidence>"`.**
 
 **TIER 3 — SHIP + FINAL AUDIT (Phases 09–11).**
 - **09 · Whole-app review + release prep** → system-level `/review` (does Feature A break B?) ·
@@ -95,9 +101,13 @@ evidence is FALSE.**
 - **Gate 1 (evidence)** — the evidence-gatekeeper Stop hook blocks turn-end if source changed
   without a *passing* verification. Enforces Zero-Tolerance #4/#5.
 - **Gate 2 (completion ledger)** — blocks turn-end while the session ledger has open deliverables.
-- **Gate 3 (Absolute Greatness)** — blocks turn-end once when code changed and the deliverable
-  was marked done *without* a recorded greatness pass; clears via `ledger.mjs great <id> "<evidence>"`.
-  Enforces Phase 08 / Zero-Tolerance #1/#2.
+- **Gate 3 (Absolute Greatness + Convergent Refinement)** — blocks turn-end while a done deliverable
+  lacks a *real* greatness pass (evidence cross-validated against an actual verify event in the
+  transcript), and — for `refineRequired` deliverables (every router-created action deliverable) —
+  until **≥`AURA_GK_MIN_REFINE` (default 2) refinement rounds** are recorded, i.e. the refinement loop
+  reached convergence. Per-phase sub-steps opt out via `greatRequired:false`. Clears via
+  `ledger.mjs refine <id> "…"` (×N) then `ledger.mjs great <id> "<thesis + evidence>"`. Enforces
+  Phase 08 / Zero-Tolerance #1/#2. (Fail-open + bounded by the nudge cap — can never wedge a turn.)
 - The rest (phase ordering, moat research, 20x hypotheses, `/qa`+`/review`+`/cso` per detail) is
   doctrine the router injects and the agent must self-apply — the gates are the backstop, not the whole loop.
 

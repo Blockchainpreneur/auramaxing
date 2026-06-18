@@ -17,7 +17,7 @@
  */
 
 import { spawn, execSync } from 'child_process';
-import { writeFileSync, readFileSync, renameSync, existsSync, mkdirSync, statSync, unlinkSync } from 'fs';
+import { writeFileSync, writeSync, readFileSync, renameSync, existsSync, mkdirSync, statSync, unlinkSync } from 'fs';
 import { join, dirname } from 'path';
 import { homedir } from 'os';
 
@@ -701,7 +701,7 @@ async function main() {
       if (result.startsWith('UPGRADE_AVAILABLE')) {
         const [, local, remote] = result.split(' ');
         // Inject blocking update directive — Claude MUST use AskUserQuestion before proceeding
-        process.stdout.write([
+        writeSync(1,[
           `[AURAMAXING UPDATE]`,
           `AURAMAXING v${remote} is available (you are on v${local}).`,
           `BEFORE doing anything else — before routing, before answering — use the AskUserQuestion tool:`,
@@ -763,7 +763,7 @@ async function main() {
         encoding: 'utf8', timeout: 2200,
         env: process.env,
       }).trim();
-      if (enriched) process.stdout.write(enriched + '\n');
+      if (enriched) writeSync(1, enriched + '\n');
     }
   } catch {}
 
@@ -780,7 +780,7 @@ async function main() {
   const loadBar = [
     `▸ Aura · ${primary.label} · ${tier}`,
   ].join('\n');
-  process.stdout.write(`[AURAMAXING DISPLAY]\n${loadBar}\n[/AURAMAXING DISPLAY]\n`);
+  writeSync(1,`[AURAMAXING DISPLAY]\n${loadBar}\n[/AURAMAXING DISPLAY]\n`);
 
   // ── Directives → Claude reads but does NOT render ─────────────────────────
   // Try compressed enrichments first (pre-computed by pipeline), fall back to static
@@ -879,12 +879,16 @@ async function main() {
           `Phase 06 AUDIT — /review + /cso (+ cross-model /codex), quantify the gaps — ${deliverable}`,
           `Phase 07 IMPROVE — implement every audit finding, re-verify to 100/100 — ${deliverable}`,
         ];
-        const phaseItems = phaseDescs.map((desc, i) => ({ id: nextId + i, desc, done: false }));
+        // Phase steps 03-07 close with `done` (Gate 2), NOT greatness → greatRequired:false so Gate 3
+        // never treats a done sub-step as "ungreat" (would otherwise wedge the multi-item ledger).
+        const phaseItems = phaseDescs.map((desc, i) => ({ id: nextId + i, desc, done: false, greatRequired: false }));
         const greatId = nextId + phaseItems.length;
-        phaseItems.push({ id: greatId, desc: `Phase 08 ABSOLUTE GREATNESS GATE (3× YES with evidence) → close with \`ledger.mjs great ${greatId} "<evidence>" --session ${sessionId}\`: ${deliverable}`, done: false });
+        // The DELIVERABLE item: refineRequired → must run the CONVERGENT REFINEMENT loop (refine until a
+        // round yields nothing) BEFORE the greatness pass. Ships only at the proven ceiling of refinement.
+        phaseItems.push({ id: greatId, desc: `Phase 08 — first CONVERGE: \`ledger.mjs refine ${greatId} "round N: <improvement>" --session ${sessionId}\` LOOP until a round yields zero improvement; then ABSOLUTE GREATNESS GATE (3× YES) → \`ledger.mjs great ${greatId} "<max-refinement thesis + evidence>" --session ${sessionId}\`: ${deliverable}`, done: false, refineRequired: true });
         items = phaseItems;
       } else {
-        const newItem = { id: nextId, desc: `Deliver to 100/100 WITH evidence (RUN + paste output) + global audit + ABSOLUTE GREATNESS GATE (3× YES) → close with \`ledger.mjs great ${nextId} "<evidence>" --session ${sessionId}\`: ${deliverable}`, done: false };
+        const newItem = { id: nextId, desc: `CONVERGE then deliver — refine to the ceiling: \`ledger.mjs refine ${nextId} "round N: <improvement>" --session ${sessionId}\` LOOP until no further refinement; 100/100 WITH evidence + global audit + ABSOLUTE GREATNESS GATE (3× YES) → \`ledger.mjs great ${nextId} "<max-refinement thesis + evidence>" --session ${sessionId}\`: ${deliverable}`, done: false, refineRequired: true };
         items = [...carried, newItem];
       }
       // F7 atomic write — the gatekeeper reads this from another process on every Stop.
@@ -899,6 +903,7 @@ async function main() {
   if (complexity >= 30 && (ultramax || ACTION_VERBS.test(prompt))) {
     directives.push('GOAL LOOP (VISIBLE, MANDATORY): treat this prompt as a /goal. FIRST tool call of the turn = TaskCreate, PER-PHASE: one task for EVERY phase of the Absolute Perfection Loop that applies to this prompt (Tier 1: 00 foundation · 01 moat · 02 architecture → Tier 2 per atomic detail: 03 scope · 04 build · 05 test · 06 audit · 07 improve · 08 greatness gate → Tier 3: 09 ship review · 10 final audit · 11 retro+memory), each marked completed only with its gate evidence, so the user SEES the step list. The loop is IDENTICAL in normal and ULTRAMAX mode — only the model delegation changes. AUTO-INVOKE (the heart of the AURAMAXING autopilot): every phase COMPOSES AND CALLS its tools AUTOMATICALLY — gstack skills, MCP tools, subagents/fleet, Bash — per the task→tool table (~/auramaxing/docs/AUTOPILOT-FLOW.md + CAPABILITIES.md); never ask permission, never wait for input mid-loop, never DESCRIBE a tool call instead of MAKING it. As you work: set exactly one task in_progress, mark it completed with its evidence the moment its gate passes, then advance. Keep the list live (add steps as the loop discovers them); never finish with a step still in_progress. This visible list + the durable ledger are the two trackers — the turn ends only when every step is completed AND the ledger deliverable is marked done.');
     directives.push('ABSOLUTE PERFECTION LOOP (the constitution — full text: ~/auramaxing/docs/ORCHESTRATION.md §0.0): "boil the whole lake," loop ∞ until greatness. ⛔ ZERO-TOLERANCE (a violation VOIDS the result): (1) ship Critical/High bugs, (2) skip a gate because "looks fine", (3) merge without /review clean, (4) advance a phase unverified, (5) "done" without a passing /qa, (6) re-research a logged moat (query memory), (7) build before /plan-eng-review clears architecture, (8) deploy before /ship confirms coverage ≥35%. TIER 1 Foundation (00 /office-hours 6Q + /plan-ceo-review scope · 01 moat research + ≥3 "10x because Y" hypotheses · 02 /plan-eng-review architecture LOCK) → TIER 2 per ATOMIC detail (03 scope + 3 best-in-class refs + 20x hypothesis · 04 build to the hypothesis + tests ≥35% · 05 /qa + /browse screenshots + /codex · 06 /review + /cso + quantified moat gap → Improvement Directive · 07 implement all + re-/qa + 20x binary PASS/FAIL · 08 ABSOLUTE GREATNESS GATE) → TIER 3 (09 system /review + /ship + full /cso + /docs · 10 e2e /qa + moat final check · 11 /retro + memory). ABSOLUTE GREATNESS GATE = three binary YES-with-evidence: Q1 meets/exceeds the 20x hypothesis? Q2 competitive vs the 3 best-in-class refs? Q3 production-ready RIGHT NOW (not "needs polish"/"MVP-fine")? Any NO ⇒ return to Phase 06. All YES ⇒ record `node ~/.claude/helpers/ledger.mjs great <id> "<evidence>"` (Gate 3 blocks turn-end until you do). Depth scales with the task; the gates never relax.');
+    directives.push('CONVERGENT REFINEMENT LOOP (the delivery bar — STRICTER than 100/100): decompose the prompt into a SERIES OF DELIVERABLES; each enters an INFINITE refinement loop and SHIPS ONLY at the proven ceiling of refinement, never on the first "looks done". Per deliverable: (1) reach a working 100/100; (2) then KEEP refining — each round push exactly one axis harder (correctness · robustness/edge-cases · clarity/readability · performance · security · design/taste) and RECORD it: `node ~/.claude/helpers/ledger.mjs refine <id> "round N: <what improved>" --session <sid>`; (3) LOOP until a FULL round produces ZERO material improvement = CONVERGENCE; (4) the LAST round states the MAX-REFINEMENT THESIS — why this IS the maximal version — and you must be able to defend it as 100% proven (adversarial skeptic pass: if a critic could still improve it, you have NOT converged — keep looping). Only at convergence take the greatness pass, its evidence = that proven thesis. The evidence-gatekeeper ENFORCES this: a `refineRequired` deliverable will NOT close until ≥AURA_GK_MIN_REFINE refinement rounds are recorded (Gate 3). "I think it is good" without a convergence proof is a ZERO-TOLERANCE violation — refinement is not optional polish, it is the deliverable bar.');
   }
   // COMPACT loop for low-complexity actionable prompts (docs/retro/browse/small edits):
   // the loop applies to EVERY actionable prompt — depth scales, the discipline does not.
@@ -935,7 +940,7 @@ async function main() {
     directives.push(`CONTEXT: ${claudemdSegment.slice(0, 500)}`);
   }
 
-  process.stdout.write(`[AURAMAXING DIRECTIVE]\n${directives.join('\n')}\n[/AURAMAXING DIRECTIVE]\n`);
+  writeSync(1,`[AURAMAXING DIRECTIVE]\n${directives.join('\n')}\n[/AURAMAXING DIRECTIVE]\n`);
 
   process.exit(0);
 }

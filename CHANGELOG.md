@@ -5,6 +5,16 @@ All notable changes to Auramaxing are documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.20.0 — 2026-06-18
+
+**Convergent Refinement Loop — a stricter delivery bar than "100/100".** Every action-prompt deliverable now enters an *infinite refinement loop* and ships ONLY at proven convergence (a refinement round that yields zero material improvement), enforced with real gatekeeper teeth — not just doctrine. Eval **142→147/147** (+5 cases). Plus two latent bugs caught while hardening.
+
+- **New mechanism — `ledger.mjs refine <id> "<delta>"`** records numbered refinement rounds on a deliverable (`item.refinements[]`, atomic write).
+- **Gate 3 now enforces convergence.** A `refineRequired` deliverable will NOT close until ≥`AURA_GK_MIN_REFINE` (default 2) refinement rounds are recorded — the loop must reach convergence, with the greatness evidence stating the proven max-refinement thesis. Stacks on F8 (greatness already cross-validated against a real transcript verify). Fail-open + nudge-bounded preserved; backward-compatible (items without the flag are unchanged).
+- **Router marks its deliverables `refineRequired:true`** and emits the **CONVERGENT REFINEMENT LOOP** directive (decompose → refine each axis — correctness/robustness/clarity/perf/security/design — until a round finds nothing → prove the thesis against an adversarial skeptic → only then the greatness pass). New `[refinement-convergence]` prompt-engine principle + ORCHESTRATION §0.0 Phase 08 / Gate 3 doctrine.
+- **Bug (latent, from v1.19.0 FIX E): per-phase ledger could wedge Gate 3.** Gate 3 flagged *any* done item lacking greatness, so the per-phase sub-steps (closed with `done`, not `great`) blocked turn-end forever. Fixed: sub-steps carry `greatRequired:false` and are excluded from Gate 3; default (no flag) stays gated → backward-compatible.
+- **Bug (latent): router stdout truncated under a pipe.** `process.stdout.write(<large directive>)` followed by `process.exit(0)` truncated the buffer when stdout was a pipe (not a TTY) — directives were silently cut mid-block, dropping late content (e.g. the PHASED EXCELLENCE LOOP). Fixed: all four router writes use synchronous `writeSync(1, …)` so the full directive flushes before exit. Surfaced because the new directive shifted the cut point past asserted content; the eval now also guards delivery integrity.
+
 ## v1.19.0 — 2026-06-17
 
 Cleared the deferred loop-resilience backlog (the five fixes both prior Opus audits flagged as next-highest-leverage) + minor hygiene. Eval **142/142** (was 135/135 — +7 regression cases). All fixes preserve the gatekeeper's fail-open contract and the per-session ledger isolation.

@@ -151,6 +151,19 @@ function hooksSuite() {
   add('gatekeeper-greatness-needs-transcript-verify', gatekeeper([U('x'), TOOL('Bash', { command: 'echo done' })], false, 'GK3').includes('GREATNESS GATE'), 'expected block: a greatness stamp with NO real verification anywhere in the transcript is a rubber-stamp (F8)');
   add('gatekeeper-greatness-clears-with-transcript-verify', gatekeeper([U('x'), TOOLID('vf', 'Bash', { command: 'npm test' }), RESULT('vf', '5 passed, 0 failed')], false, 'GK3').trim() === '', 'expected allow: the same greatness stamp backed by a real passing verify in the transcript clears (F8)');
 
+  // ── Convergent Refinement (2026-06-18): a `refineRequired` deliverable does NOT close on a one-shot
+  // greatness — Gate 3 demands ≥AURA_GK_MIN_REFINE recorded refinement rounds (proof of convergence). ──
+  process.env.AURA_GK_MIN_REFINE = '2';
+  const verifTr = [U('x'), TOOLID('cv', 'Bash', { command: 'npm test' }), RESULT('cv', '5 passed, 0 failed')]; // real verify, no mutation
+  writeFileSync(g3Ledger, JSON.stringify({ sessionId: 'GK3', ts: stamp(), items: [{ id: 1, desc: 'd', done: true, refineRequired: true, greatness: { passed: true, evidence: 'max refinement' } }] }));
+  add('gatekeeper-convergence-blocks-without-refinements', gatekeeper(verifTr, false, 'GK3').includes('CONVERGENT REFINEMENT'), 'expected block: a refineRequired deliverable with 0 refinement rounds is not yet converged');
+  writeFileSync(g3Ledger, JSON.stringify({ sessionId: 'GK3', ts: stamp(), items: [{ id: 1, desc: 'd', done: true, refineRequired: true, refinements: [{ round: 1, delta: 'a' }, { round: 2, delta: 'converged' }], greatness: { passed: true, evidence: 'max-refinement thesis' } }] }));
+  add('gatekeeper-convergence-allows-at-min-rounds', gatekeeper(verifTr, false, 'GK3').trim() === '', 'expected allow: ≥AURA_GK_MIN_REFINE refinement rounds + greatness + verify clears Gate 3');
+  // a per-phase sub-step (greatRequired:false) closed with `done` and no greatness must NOT wedge Gate 3 (FIX E multi-item ledger)
+  writeFileSync(g3Ledger, JSON.stringify({ sessionId: 'GK3', ts: stamp(), items: [{ id: 1, desc: 'phase 04', done: true, greatRequired: false }, { id: 2, desc: 'deliverable', done: true, refineRequired: true, refinements: [{ round: 1 }, { round: 2 }], greatness: { passed: true, evidence: 't' } }] }));
+  add('gatekeeper-phase-substep-not-greatness-gated', gatekeeper(verifTr, false, 'GK3').trim() === '', 'expected allow: a done per-phase sub-step (greatRequired:false) is not treated as ungreat (no wedge)');
+  delete process.env.AURA_GK_MIN_REFINE;
+
   // ── resilience hardening (audit 2026-06-15): greatness gate must fire WITHOUT this-turn source edit + reject rubber-stamps + catch Bash edits ──
   // FIX A — greatness gate fires on a non-editing closing turn (the dominant early-stop hole).
   writeFileSync(g3Ledger, JSON.stringify({ sessionId: 'GK3', ts: stamp(), items: [{ id: 1, desc: 'd', done: true }] }));
@@ -469,6 +482,16 @@ function hooksSuite() {
   add('ledger-migrate-carries-open-items', mig.sessionId === 'TO' && (mig.items || []).some(x => x.desc === 'open work' && !x.done), 'expected L6: migrate re-stamps the predecessor OPEN items onto the successor session');
   add('ledger-migrate-drops-done-items', !((mig.items || []).some(x => x.desc === 'done work')), 'expected L6: already-done items are history, not carried across the handoff');
 
+  // ── Convergent Refinement (2026-06-18): `ledger.mjs refine` records numbered refinement rounds. ──
+  const refDir = join(TMP, 'ref'); mkdirSync(refDir, { recursive: true });
+  writeFileSync(join(refDir, 'R.json'), JSON.stringify({ sessionId: 'R', ts: Math.floor(Date.now() / 1000), items: [{ id: 1, desc: 'd', done: false }] }));
+  try {
+    execSync(`node "${LEDGER_CLI}" refine 1 "round 1: edge cases" --session R`, { env: { ...process.env, AURA_LEDGER_DIR: refDir }, timeout: 5000 });
+    execSync(`node "${LEDGER_CLI}" refine 1 "round 2: converged" --session R`, { env: { ...process.env, AURA_LEDGER_DIR: refDir }, timeout: 5000 });
+  } catch {}
+  let ref = {}; try { ref = JSON.parse(readFileSync(join(refDir, 'R.json'), 'utf8')); } catch {}
+  add('ledger-refine-records-rounds', (ref.items?.[0]?.refinements || []).length === 2 && ref.items[0].refinements[1].round === 2, 'expected: ledger.mjs refine appends numbered refinement rounds');
+
   // ── FIX E (audit 2026-06-17): the router decomposes a FRESH substantial action task into PER-PHASE
   // ledger items (incl. the greatness gate) instead of one generic blob — both prior audits' top ask. ──
   const fixeDir = join(TMP, 'fixe'); mkdirSync(fixeDir, { recursive: true });
@@ -477,7 +500,8 @@ function hooksSuite() {
     execSync(`node "${ROUTER}"`, { input: JSON.stringify({ prompt: 'build a complete new payments dashboard with auth, error states and tests', session_id: 'FIXE' }), env: { ...process.env, AURA_LEDGER_DIR: fixeDir }, encoding: 'utf8', timeout: 8000 });
     fixe = JSON.parse(readFileSync(join(fixeDir, 'FIXE.json'), 'utf8'));
   } catch {}
-  add('fixe-router-per-phase-ledger', (fixe.items || []).length >= 4 && (fixe.items || []).some(x => /GREATNESS GATE/.test(x.desc)) && (fixe.items || []).some(x => /Phase 05 TEST/.test(x.desc)), 'expected FIX E: a fresh substantial action task is decomposed into per-phase ledger items incl. a greatness item');
+  add('fixe-router-per-phase-ledger', (fixe.items || []).length >= 4 && (fixe.items || []).some(x => /Phase 08/.test(x.desc)) && (fixe.items || []).some(x => /Phase 05 TEST/.test(x.desc)), 'expected FIX E: a fresh substantial action task is decomposed into per-phase ledger items incl. a greatness item');
+  add('fixe-router-marks-refine-required', (fixe.items || []).some(x => x.refineRequired === true) && (fixe.items || []).some(x => x.greatRequired === false), 'expected Convergent Refinement: router marks the deliverable refineRequired + per-phase sub-steps greatRequired:false');
 
   try { rmSync(TMP, { recursive: true, force: true }); } catch {}
   return checks;
