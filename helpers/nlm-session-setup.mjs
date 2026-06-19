@@ -10,11 +10,11 @@
  * Receives project name as argv[2].
  * Always exits 0. Logs to ~/.auramaxing/nlm-setup.log
  */
-import { execSync } from 'child_process';
+import { execSync, execFileSync } from 'child_process';
 import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
-import { findPython, findNlm, pythonEnv } from "./find-bin.mjs";
+import { findPython, findNlm, findNlmArgs, pythonEnv } from "./find-bin.mjs";
 
 const HOME = homedir();
 const NLM_BIN = findNlm();
@@ -59,8 +59,10 @@ try {
 
   if (!nbMap[projectName]) {
     log(`Creating notebook for: ${projectName}`);
-    const result = execSync(
-      `${NLM_BIN} create "AURAMAXING: ${projectName}"`,
+    const nlm = findNlmArgs();
+    const result = execFileSync(
+      nlm.bin,
+      [...nlm.args, 'create', `AURAMAXING: ${projectName}`],
       { encoding: 'utf8', timeout: 15000 }
     ).trim();
     const idMatch = result.match(/([a-f0-9-]{36})/);
