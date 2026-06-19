@@ -137,7 +137,7 @@ function writeEntry(entry) {
           nlm(`source add "${tmpFile}" --title '${String(title).replace(/'/g, `'\\''`)}'`, { timeout: 45000 });
         }
       } else {
-        nlm(`source add "${tmpFile}" --title "${title.replace(/"/g, '\\"')}"`, { timeout: 45000 });
+        nlm(`source add "${tmpFile}" --title '${String(title).replace(/'/g, `'\\''`)}'`, { timeout: 45000 });
       }
     } finally {
       try { unlinkSync(tmpFile); } catch {}
