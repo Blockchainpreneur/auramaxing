@@ -5,7 +5,7 @@
 set -e
 APP="/Applications/Claude.app"
 ASAR="$APP/Contents/Resources/app.asar"
-WORK="/tmp/auramaxing-fix"
+WORK="$(mktemp -d "${TMPDIR:-/tmp}/auramaxing-fix.XXXXXX")"
 MAIN_JS=".vite/build/mainView.js"
 
 echo "▸ Cerrando Claude..."
