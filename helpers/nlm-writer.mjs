@@ -168,6 +168,11 @@ export async function flush({ limit = Infinity } = {}) {
 
   const queue = [...lines, ...retryLines].map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
 
+  // Requeue any entries beyond the limit so they aren't dropped (BUFFER/RETRY already truncated)
+  for (const entry of queue.slice(limit)) {
+    try { appendFileSync(RETRY, JSON.stringify(entry) + '\n'); } catch {}
+  }
+
   let written = 0, failed = 0, deadLettered = 0;
   for (const entry of queue.slice(0, limit)) {
     try {
