@@ -134,7 +134,7 @@ function writeEntry(entry) {
         if (typeof entry.payload === 'string' && /^https?:\/\//.test(entry.payload.trim())) {
           nlm(`source add-research '${entry.payload.trim().replace(/'/g, `'\\''`)}' --title "${title.replace(/"/g, '\\"')}"`, { timeout: 45000 });
         } else {
-          nlm(`source add "${tmpFile}" --title "${title.replace(/"/g, '\\"')}"`, { timeout: 45000 });
+          nlm(`source add "${tmpFile}" --title '${String(title).replace(/'/g, `'\\''`)}'`, { timeout: 45000 });
         }
       } else {
         nlm(`source add "${tmpFile}" --title "${title.replace(/"/g, '\\"')}"`, { timeout: 45000 });
