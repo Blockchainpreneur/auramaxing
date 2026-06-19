@@ -115,7 +115,9 @@ function postNote(noteTitle, noteContent) {
   // To avoid ARG_MAX issues with huge content, write to a temp file and read it.
   // But CLI takes content positionally; for safety stay under 100k via truncation in entryToNote.
   // Encode as base64 path? simpler: pass content directly as last arg.
-  const escapedTitle = noteTitle.replace(/"/g, '\\"');
+  // In a double-quoted shell context, `\`, `"`, `$`, and backtick stay live.
+  // Escape all four (backslash first) so $() / backticks can't execute.
+  const escapedTitle = noteTitle.replace(/[\\"$`]/g, '\\$&');
   // Write content to a temp file and inject via shell substitution (avoids
   // shell-escape pitfalls for newlines, quotes, backticks).
   const tmpFile = join('/tmp', `aura-replay-note-${process.pid}-${Math.random().toString(36).slice(2,8)}.txt`);
