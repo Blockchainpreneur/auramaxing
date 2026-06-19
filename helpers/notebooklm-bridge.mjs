@@ -41,6 +41,13 @@ function nlm(cmd) {
   }
 }
 
+// POSIX-safe shell quoting: wrap in single quotes (neutralizes $(), backticks,
+// "", \, etc.) and escape embedded single quotes. Double-quote escaping alone
+// leaves $()/backtick command substitution live → injection.
+function shq(s) {
+  return `'${String(s).replace(/'/g, "'\\''")}'`;
+}
+
 function ensureNotebook() {
   if (!existsSync(NB_ID_FILE)) {
     console.error('No NotebookLM notebook configured. Run: node notebooklm-bridge.mjs setup');
@@ -64,7 +71,7 @@ switch (command) {
         break;
       }
     }
-    const result = nlm(`ask "${input.replace(/"/g, '\\"')}"`);
+    const result = nlm(`ask ${shq(input)}`);
     // Extract just the answer
     const answer = result.split('Answer:').pop()?.trim() || result;
     writeFileSync(cacheFile, answer);
@@ -74,7 +81,7 @@ switch (command) {
 
   case 'structure': {
     ensureNotebook();
-    const structuredPrompt = nlm(`ask "Structure this prompt for maximum precision. Add requirements a senior engineer would expect. Prevent lazy responses. The prompt is: ${input.replace(/"/g, '\\"')}"`);
+    const structuredPrompt = nlm(`ask ${shq(`Structure this prompt for maximum precision. Add requirements a senior engineer would expect. Prevent lazy responses. The prompt is: ${input}`)}`);
     const answer = structuredPrompt.split('Answer:').pop()?.trim() || structuredPrompt;
     console.log(answer);
     break;
@@ -83,7 +90,7 @@ switch (command) {
   case 'add-source': {
     ensureNotebook();
     if (!existsSync(input)) { console.error('File not found:', input); break; }
-    const result = nlm(`source add-text "${input.replace(/"/g, '\\"')}"`);
+    const result = nlm(`source add-text ${shq(input)}`);
     console.log(result);
     break;
   }
@@ -95,7 +102,7 @@ switch (command) {
     const entries = files.map(f => { try { return JSON.parse(readFileSync(join(MEMORY_DIR, f), 'utf8')); } catch { return null; } }).filter(Boolean);
     const raw = entries.map(e => `[${e.ts?.slice(0,10)}] ${e.type}: ${e.content || e.summary || ''}`).join('\n');
 
-    const compressed = nlm(`ask "Compress these session logs into a 3-sentence briefing. Include: project, key decisions, current status, next actions: ${raw.slice(0, 2000).replace(/"/g, '\\"')}"`);
+    const compressed = nlm(`ask ${shq(`Compress these session logs into a 3-sentence briefing. Include: project, key decisions, current status, next actions: ${raw.slice(0, 2000)}`)}`);
     const answer = compressed.split('Answer:').pop()?.trim() || compressed;
 
     writeFileSync(join(MEMORY_DIR, '_compressed-summary.json'), JSON.stringify({
@@ -214,7 +221,7 @@ switch (command) {
 
   case 'query-knowledge': {
     ensureNotebook();
-    const answer = nlm(`ask "Based on all stored session knowledge, answer: ${input.replace(/"/g, '\\"')}"`);
+    const answer = nlm(`ask ${shq(`Based on all stored session knowledge, answer: ${input}`)}`);
     console.log(answer);
     break;
   }
