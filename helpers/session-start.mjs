@@ -93,9 +93,12 @@ try {
       // survives process.exit(0) in Node.js
       const logFile = join(HOME, '.auramaxing', 'nlm-setup-stderr.log');
       try {
+        // projectName comes from the cwd basename and can contain shell
+        // metacharacters — pass it via env, not string interpolation, so it
+        // can never break out of the argument and inject commands.
         execSync(
-          `node "${nlmSetup}" "${projectName}" >> "${logFile}" 2>&1 &`,
-          { shell: '/bin/bash', timeout: 2000, stdio: 'ignore' }
+          `node "${nlmSetup}" "$AURA_PROJECT_NAME" >> "${logFile}" 2>&1 &`,
+          { shell: '/bin/bash', timeout: 2000, stdio: 'ignore', env: { ...process.env, AURA_PROJECT_NAME: projectName } }
         );
       } catch {}
     }
