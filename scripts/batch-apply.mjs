@@ -14,7 +14,7 @@ const DATA = {
   firstName: 'Luis',
   lastName: 'Telleria',
   email: 'telleria.gerardt@gmail.com',
-  phone: '+1 (650) 555-0199',
+  phone: '+1 (650) 285-0142',
   linkedin: 'https://linkedin.com/in/luisgtelleria',
   twitter: 'https://x.com/econhubs',
   github: 'https://github.com/Blockchainpreneur',
