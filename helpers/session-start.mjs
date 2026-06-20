@@ -92,9 +92,13 @@ try {
       // Use execSync with shell backgrounding — the only pattern that reliably
       // survives process.exit(0) in Node.js
       const logFile = join(HOME, '.auramaxing', 'nlm-setup-stderr.log');
+      // Shell-escape the cwd basename: wrap in single quotes and escape any
+      // embedded single quotes, so directory names with shell metacharacters
+      // (e.g. $(...), backticks) cannot be injected into the backgrounded command.
+      const shQuote = (s) => `'${String(s).replace(/'/g, `'\\''`)}'`;
       try {
         execSync(
-          `node "${nlmSetup}" "${projectName}" >> "${logFile}" 2>&1 &`,
+          `node "${nlmSetup}" ${shQuote(projectName)} >> "${logFile}" 2>&1 &`,
           { shell: '/bin/bash', timeout: 2000, stdio: 'ignore' }
         );
       } catch {}
