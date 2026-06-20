@@ -77,6 +77,11 @@ export function bufferWrite(type, payload, ctx = {}) {
   return entry;
 }
 
+function shq(s) {
+  // POSIX-safe single-quote escaping: wrap in single quotes, close/escape/reopen for embedded quotes
+  return `'${String(s).replace(/'/g, `'\\''`)}'`;
+}
+
 function nlm(args, { timeout = 30000 } = {}) {
   if (!NLM_BIN) throw new Error('NLM CLI not available');
   return execSync(`${NLM_BIN} ${args}`, {
@@ -106,10 +111,10 @@ function writeEntry(entry) {
     try {
       // note create subcommand varies; try both positional forms gracefully
       try {
-        nlm(`note create --title "${title.replace(/"/g, '\\"')}" --file "${tmpFile}"`, { timeout: 20000 });
+        nlm(`note create --title ${shq(title)} --file ${shq(tmpFile)}`, { timeout: 20000 });
       } catch {
         // Some versions: `notebooklm note create "title" < file`
-        execSync(`${NLM_BIN} note create "${title.replace(/"/g, '\\"')}" < "${tmpFile}"`, {
+        execSync(`${NLM_BIN} note create ${shq(title)} < ${shq(tmpFile)}`, {
           encoding: 'utf8', timeout: 20000, shell: '/bin/bash',
           env: { ...process.env, PATH: pythonEnv().PATH },
         });
@@ -132,12 +137,12 @@ function writeEntry(entry) {
       if (method === 'source-research') {
         // source add-research expects a query/URL, fall back to add if payload is not a URL
         if (typeof entry.payload === 'string' && /^https?:\/\//.test(entry.payload.trim())) {
-          nlm(`source add-research "${entry.payload.trim()}" --title "${title.replace(/"/g, '\\"')}"`, { timeout: 45000 });
+          nlm(`source add-research ${shq(entry.payload.trim())} --title ${shq(title)}`, { timeout: 45000 });
         } else {
-          nlm(`source add "${tmpFile}" --title "${title.replace(/"/g, '\\"')}"`, { timeout: 45000 });
+          nlm(`source add ${shq(tmpFile)} --title ${shq(title)}`, { timeout: 45000 });
         }
       } else {
-        nlm(`source add "${tmpFile}" --title "${title.replace(/"/g, '\\"')}"`, { timeout: 45000 });
+        nlm(`source add ${shq(tmpFile)} --title ${shq(title)}`, { timeout: 45000 });
       }
     } finally {
       try { unlinkSync(tmpFile); } catch {}
