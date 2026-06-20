@@ -96,7 +96,7 @@ switch (command) {
     const entries = files.map(f => { try { return JSON.parse(readFileSync(join(MEMORY_DIR, f), 'utf8')); } catch { return null; } }).filter(Boolean);
     const raw = entries.map(e => `[${e.ts?.slice(0,10)}] ${e.type}: ${e.content || e.summary || ''}`).join('\n');
 
-    const compressed = nlm(`ask "Compress these session logs into a 3-sentence briefing. Include: project, key decisions, current status, next actions: ${raw.slice(0, 2000).replace(/"/g, '\\"')}"`);
+    const compressed = nlm(`ask 'Compress these session logs into a 3-sentence briefing. Include: project, key decisions, current status, next actions: ${raw.slice(0, 2000).replace(/'/g, "'\\''")}'`);
     const answer = compressed.split('Answer:').pop()?.trim() || compressed;
 
     writeFileSync(join(MEMORY_DIR, '_compressed-summary.json'), JSON.stringify({
