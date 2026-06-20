@@ -68,12 +68,22 @@ try {
           env: { ...process.env },
         });
         child.unref();
-        // Wait for it to be ready
-        execSync('sleep 3', { timeout: 5000 });
-        // Verify
-        execSync(`curl -s --connect-timeout 2 ${CDP_URL}/json/version`, {
-          timeout: 5000, stdio: ['pipe', 'pipe', 'pipe'],
-        });
+        // Poll for CDP readiness with retry/backoff instead of a fixed sleep,
+        // which races server startup (too short = miss, too long = wasted wait).
+        let cdpReady = false;
+        for (let attempt = 0; attempt < 6; attempt++) {
+          execSync(`sleep ${attempt === 0 ? 1 : 2}`, { timeout: 5000 });
+          try {
+            execSync(`curl -s --connect-timeout 2 ${CDP_URL}/json/version`, {
+              timeout: 5000, stdio: ['pipe', 'pipe', 'pipe'],
+            });
+            cdpReady = true;
+            break;
+          } catch {
+            // not up yet — back off and retry
+          }
+        }
+        if (!cdpReady) throw new Error('CDP did not become ready');
       } else {
         log('CDP not available and browser-server not found. Cannot refresh.');
         process.exit(0);
