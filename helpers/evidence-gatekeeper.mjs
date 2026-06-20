@@ -50,6 +50,23 @@ const BASH_SRC_WRITE = /\b(?:sed\s+-i\b|tee\b)[^|;&\n]*\.(?:tsx?|jsx?|mjs|cjs|vu
 const VERIFY_CMD = /\b(vitest|jest|pytest|playwright|tsc|eslint|ruff|mypy|pyright|rspec|phpunit)\b|\bcargo\s+(test|check|clippy)\b|\bgo\s+test\b|\bdotnet\s+test\b|\bdeno\s+(test|check)\b|\bnode\s+--(check|test)\b|(?:^|[;&|]\s*)(?:npm|yarn|pnpm|bun|make)\s+(?:run\s+)?(?:test|build|lint|type-?check|check)\b|\b(?:forge|hardhat|anchor|truffle)\s+(?:test|build|check|coverage)\b|\bnpx\s+(?:hardhat|truffle)\b|\bevals?\/run\.mjs\b/i;
 // gstack/skills that count as verification.
 const VERIFY_SKILL = new Set(['qa', 'qa-only', 'review', 'cso', 'verify', 'investigate', 'design-review', 'benchmark', 'canary']);
+// ADVERSARIAL critics — an INDEPENDENT second opinion (not the model's own assertion). A
+// `refineRequired` deliverable cannot reach greatness on self-certification alone: it must have
+// survived one of these (a real /review·/cso·/codex·/design-review run in the session) OR carry a
+// `ledger.mjs adversary` record. This is the teeth against "the model is judge of its own greatness".
+const ADVERSARY_SKILL = new Set(['review', 'cso', 'codex', 'design-review']);
+// NO-EXCUSES — greatness evidence that is a RATIONALIZATION for stopping short, not a proof, is
+// rejected (the model "creates excuses instead of trying"). Tight, stop-short phrasing only, so a
+// genuine proof ("eval 149/149, /review clean, 0 findings") never trips it. (audit 2026-06-20)
+// PRECISION over recall (adversarial review 2026-06-20, M1/M2): only UNAMBIGUOUS stop-short PHRASES —
+// bare "placeholder"/"todo"/"stub" were dropped (they false-positived on honest "removed all TODOs"
+// evidence). `[^.]*` keeps the multi-word patterns inside one sentence (no over-match, no ReDoS).
+const EXCUSE = /\b(good\s+enough|for now|for the moment|mvp-?fine|good for an mvp|out[- ]of[- ]scope|should work|simplified version|basic version|future work|later iteration|not strictly necessary|not\s+production[- ]ready|needs?\s+(?:more\s+)?polish|i think (?:it|this|that)\b|probably (?:works|fine|good)|for the purposes of (?:this|the)|left? (?:it|this|that|as)\b[^.]{0,40}\b(?:later|for now|future)|in a (?:real|production)\b[^.]{0,40}\b(?:you would|we would|implementation)|due to time|time constraints?|ran out of|out of time|partial(?:ly)?\s+(?:done|complete|implementation|implemented))\b/i;
+// Distinct, SUBSTANTIVE refinement rounds (adversarial review C3): a delta must be ≥ MIN_DELTA_LEN
+// chars to count, so "a"/"a." trivial rounds are not "distinct". Free text → best-effort speed-bump,
+// not a hard proof (the real teeth are the adversarial-skill path + the verify requirement).
+const MIN_DELTA_LEN = 6;
+const distinctDeltas = (item) => new Set((item && item.refinements || []).map(r => String(r && r.delta || '').trim().toLowerCase()).filter(d => d.length >= MIN_DELTA_LEN)).size;
 // Failure signals inside a verify command's RESULT.
 // Failure vocabulary covers the major runners (audit 2026-06-15 F1): vitest `×`, eslint `✖`,
 // cargo `error[E…]`, rspec `N failures`, go/make `*** Error`, panics, exited-with-status N.
@@ -228,6 +245,33 @@ function sessionHasRealVerification(transcriptPath) {
   } catch { return true; }                                       // fail-open
 }
 
+// v1.21.0 (audit 2026-06-20) — did the session run an INDEPENDENT adversarial critic? True if a
+// real /review·/cso·/codex·/design-review Skill was invoked, OR a `codex`/`review`/`cso` runner in
+// Bash. This forces a second opinion before greatness — self-certification is not greatness.
+// Fail-open: unreadable transcript → true (never wedge on IO).
+function sessionHasAdversarialReview(transcriptPath) {
+  try {
+    if (!transcriptPath || !existsSync(transcriptPath)) return true;
+    const lines = readFileSync(transcriptPath, 'utf8').split('\n').filter(Boolean);
+    for (const ln of lines) {
+      let o; try { o = JSON.parse(ln); } catch { continue; }
+      if (o.isSidechain) continue;
+      const content = o.message?.content ?? o.content;
+      if (!Array.isArray(content)) continue;
+      for (const item of content) {
+        if (!item || item.type !== 'tool_use') continue;
+        const name = item.name || '', inp = item.input || {};
+        if (name === 'Skill' && ADVERSARY_SKILL.has((inp.skill || '').toLowerCase())) return true;
+        // ONLY a real cross-model adversarial challenge counts in Bash. `eslint`/bare `codex` were
+        // REMOVED (adversarial review C1): eslint is already the Gate-1 verify, so it let a model
+        // satisfy "independent critic" by running a linter — zero second opinion. A linter is not a critic.
+        if (name === 'Bash' && typeof inp.command === 'string' && /\bcodex\s+(?:review|challenge)\b/i.test(inp.command)) return true;
+      }
+    }
+    return false;
+  } catch { return true; }                                       // fail-open
+}
+
 // Gate 3 helper — done items lacking a recorded Absolute-Greatness pass, for THIS session, fresh.
 function greatnessPending(sessionId, transcriptPath) {
   try {
@@ -248,11 +292,21 @@ function greatnessPending(sessionId, transcriptPath) {
     // "100/100". Items without the flag are unaffected (backward-compatible). Fail-open preserved.
     const MIN_REFINE = Math.max(1, parseInt(process.env.AURA_GK_MIN_REFINE || '2', 10) || 2);
     const converged = (x) => !x.refineRequired || (Array.isArray(x.refinements) && x.refinements.length >= MIN_REFINE);
+    // v1.21.0 — distinct refinement rounds (anti-gaming: N copies of the same shallow delta ≠ a real
+    // refinement loop) + an INDEPENDENT adversarial pass before greatness (self-certification is not
+    // greatness). Both required ONLY for refineRequired deliverables (substantial router-created work).
+    const adversarial = sessionHasAdversarialReview(transcriptPath);
+    const distinctRefine = (x) => distinctDeltas(x) >= Math.min(2, MIN_REFINE);
+    // A self-written adversary note must be SUBSTANTIVE (≥24 chars) — a 1-char "." no longer clears it
+    // (adversarial review C2). The honest signal is still the real critic-skill path (`adversarial`).
+    const adversariallyChecked = (x) => (x.adversary && String(x.adversary.note || '').trim().length >= 24) || adversarial;
     const hasRealGreatness = (x) => x.greatness && x.greatness.passed &&
       typeof x.greatness.evidence === 'string' && x.greatness.evidence.trim().length > 0 &&
       x.greatness.evidence.trim() !== '(no evidence given)' &&
+      !EXCUSE.test(x.greatness.evidence) &&                       // NO-EXCUSES: a proof, not a rationalization
       verifiedSession &&
-      converged(x);
+      converged(x) &&
+      (!x.refineRequired || (distinctRefine(x) && adversariallyChecked(x)));
     // Gate 3 applies to DELIVERABLE items. A per-phase sub-step (router FIX E items 03-07) is closed
     // with `done`, not `great`, and opts out via `greatRequired:false` — without this exclusion the
     // multi-item per-phase ledger would wedge (every done-non-great phase step looked "ungreat").
@@ -297,21 +351,29 @@ function failingGateMessage(sessionId, transcriptPath, mutated, verified, ranBut
   if (pending.length) {
     const MIN_REFINE = Math.max(1, parseInt(process.env.AURA_GK_MIN_REFINE || '2', 10) || 2);
     const items = pending.slice(0, 8).map(x => `  [${x.id}] ${x.desc}`).join('\n');
-    const needRefine = pending.filter(x => x.refineRequired && !(Array.isArray(x.refinements) && x.refinements.length >= MIN_REFINE));
+    const needRefine = pending.filter(x => x.refineRequired && !(Array.isArray(x.refinements) && x.refinements.length >= MIN_REFINE && distinctDeltas(x) >= Math.min(2, MIN_REFINE)));
     const refineBlock = needRefine.length ? '\n' + [
       `CONVERGENT REFINEMENT (required — ${needRefine.length} item(s) not yet converged): a deliverable ships ONLY at the ceiling of refinement, PROVEN not asserted.`,
       '  • Run the refinement loop: each round, IMPROVE one axis (correctness · robustness/edge-cases · clarity · performance · design) and record it:',
       `      node ~/.claude/helpers/ledger.mjs refine <id> "round N: <what improved>" --session ${sessionId || ''}`,
-      `  • LOOP until a full round yields ZERO material improvement (CONVERGENCE). Need ≥${MIN_REFINE} recorded rounds; the LAST states "converged — thesis: <why this IS the maximum-refinement version>".`,
+      `  • LOOP until a full round yields ZERO material improvement (CONVERGENCE). Need ≥${MIN_REFINE} DISTINCT recorded rounds (identical/duplicate deltas do NOT count); the LAST states "converged — thesis: <why this IS the maximum-refinement version>".`,
       '  • Only THEN take the greatness pass below (its evidence = the proven max-refinement thesis).',
     ].join('\n') + '\n' : '';
-    return ['ABSOLUTE GREATNESS GATE — do NOT stop. The deliverable is marked done WITHOUT a proven greatness + convergence pass (Phase 08):',
-      items, refineBlock,
-      'Closing with bare `done` (or empty / "(no evidence given)" evidence) does NOT satisfy the gate. Answer all THREE, each YES with EVIDENCE:',
+    const advSeen = sessionHasAdversarialReview(transcriptPath); // hoisted: one transcript scan, not per pending item
+    const needAdversary = pending.filter(x => x.refineRequired && !((x.adversary && String(x.adversary.note || '').trim().length >= 24) || advSeen));
+    const advBlock = needAdversary.length ? '\n' + [
+      `INDEPENDENT ADVERSARIAL PASS (required — ${needAdversary.length} item(s) unreviewed): self-certified greatness is NOT greatness. A critic that did NOT build it must try to BREAK it.`,
+      '  • RUN a real second opinion: `/review` (or `/cso` for security, `/codex` for a cross-model challenge, `/design-review` for UI) — and FIX everything it finds (then re-verify).',
+      `  • Or, if the critique was inline, record it: node ~/.claude/helpers/ledger.mjs adversary <id> "<what the critic attacked + what you fixed>" --session ${sessionId || ''}`,
+    ].join('\n') + '\n' : '';
+    return ['ABSOLUTE GREATNESS GATE — do NOT stop. The deliverable is done WITHOUT a proven greatness pass (Phase 08). Effort, not excuses:',
+      items, refineBlock, advBlock,
+      'NO EXCUSES: "good enough" / "MVP-fine" / "out of scope" / "should work" / "future work" / TODO / placeholder is a RATIONALIZATION, not a close. The greatness evidence must be a PROOF (run output, metrics, "/review clean: 0 findings"), and such phrasing in the evidence is auto-rejected. Either finish it to greatness, or get the user to EXPLICITLY de-scope.',
+      'Answer all THREE, each YES with EVIDENCE:',
       '  Q1. Does it meet/exceed the 20x hypothesis (measurable evidence)?',
       '  Q2. Would the 3 best-in-class references consider this competitive or better?',
       '  Q3. Is it production-ready RIGHT NOW (not "needs polish", not "MVP-fine")?',
-      `Then record the pass with REAL evidence:  node ~/.claude/helpers/ledger.mjs great <id> "<convergence thesis + evidence>" --session ${sessionId || ''}`,
+      `Then record the pass with REAL evidence:  node ~/.claude/helpers/ledger.mjs great <id> "<convergence thesis + proof>" --session ${sessionId || ''}`,
       'Kill-switch: AURA_GATEKEEPER_OFF=1.'].join('\n');
   }
   return null;

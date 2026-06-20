@@ -83,6 +83,13 @@ switch (cmd) {
                    if (it) { if (!Array.isArray(it.refinements)) it.refinements = [];
                              it.refinements.push({ round: it.refinements.length + 1, delta: args.slice(1).join(' ') || '(unspecified)', ts: now() }); }
                    l.ts = now(); save(l); break; }
+  // ADVERSARIAL PASS (2026-06-20) — record an INDEPENDENT critic's attack + the fix. Greatness on a
+  // refineRequired deliverable requires this (or a real /review·/cso·/codex run in the session):
+  // self-certification is not greatness. The note must describe what was attacked and what changed.
+  //   ledger.mjs adversary <id> "<critic attacked X · found Y · fixed Z>"
+  case 'adversary': { const it = l.items.find(x => x.id === Number(args[0]));
+                      if (it) it.adversary = { note: args.slice(1).join(' ') || '', ts: now() };
+                      l.ts = now(); save(l); break; }
   // ABSOLUTE GREATNESS GATE (Phase 08) — records the 3-YES pass + evidence and marks done.
   // This is the ONLY honest way to close a substantial code deliverable: Gate 3 in the
   // gatekeeper blocks turn-end while a done item lacks a `greatness` record.

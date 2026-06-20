@@ -101,13 +101,18 @@ evidence is FALSE.**
 - **Gate 1 (evidence)** — the evidence-gatekeeper Stop hook blocks turn-end if source changed
   without a *passing* verification. Enforces Zero-Tolerance #4/#5.
 - **Gate 2 (completion ledger)** — blocks turn-end while the session ledger has open deliverables.
-- **Gate 3 (Absolute Greatness + Convergent Refinement)** — blocks turn-end while a done deliverable
-  lacks a *real* greatness pass (evidence cross-validated against an actual verify event in the
-  transcript), and — for `refineRequired` deliverables (every router-created action deliverable) —
-  until **≥`AURA_GK_MIN_REFINE` (default 2) refinement rounds** are recorded, i.e. the refinement loop
-  reached convergence. Per-phase sub-steps opt out via `greatRequired:false`. Clears via
-  `ledger.mjs refine <id> "…"` (×N) then `ledger.mjs great <id> "<thesis + evidence>"`. Enforces
-  Phase 08 / Zero-Tolerance #1/#2. (Fail-open + bounded by the nudge cap — can never wedge a turn.)
+- **Gate 3 (Absolute Greatness + Convergent Refinement + No-Excuses + Adversarial)** — blocks turn-end
+  while a done deliverable lacks a *real* greatness pass. Requirements, all enforced: (a) evidence
+  cross-validated against an actual verify event in the transcript (F8); (b) the evidence is a PROOF —
+  rationalization phrasing ("good enough", "MVP-fine", "out of scope", "should work", "future work",
+  TODO, placeholder…) is **auto-rejected** (no stopping on excuses); and for `refineRequired`
+  deliverables (every router-created action deliverable): (c) **≥`AURA_GK_MIN_REFINE` (default 2)
+  DISTINCT refinement rounds** recorded (convergence, not shallow repeats); (d) an **INDEPENDENT
+  adversarial pass** — a real `/review`·`/cso`·`/codex`·`/design-review` in the session OR a
+  `ledger.mjs adversary <id>` record (self-certification is not greatness). Per-phase sub-steps opt
+  out via `greatRequired:false`. Clears via `refine`×N → `adversary` (or a critic skill) →
+  `great <id> "<thesis + proof>"`. Enforces Phase 08 / Zero-Tolerance #1/#2. (Fail-open + bounded by
+  the nudge cap — can never wedge a turn.)
 - The rest (phase ordering, moat research, 20x hypotheses, `/qa`+`/review`+`/cso` per detail) is
   doctrine the router injects and the agent must self-apply — the gates are the backstop, not the whole loop.
 

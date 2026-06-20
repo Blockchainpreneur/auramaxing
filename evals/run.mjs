@@ -154,13 +154,40 @@ function hooksSuite() {
   // ── Convergent Refinement (2026-06-18): a `refineRequired` deliverable does NOT close on a one-shot
   // greatness — Gate 3 demands ≥AURA_GK_MIN_REFINE recorded refinement rounds (proof of convergence). ──
   process.env.AURA_GK_MIN_REFINE = '2';
-  const verifTr = [U('x'), TOOLID('cv', 'Bash', { command: 'npm test' }), RESULT('cv', '5 passed, 0 failed')]; // real verify, no mutation
+  const verifTr = [U('x'), TOOLID('cv', 'Bash', { command: 'npm test' }), RESULT('cv', '5 passed, 0 failed')]; // real verify, NO adversarial skill
+  const verifAdvTr = [...verifTr, TOOL('Skill', { skill: 'review' })];                                          // verify + an independent /review critic
+  const DR = [{ round: 1, delta: 'edge-case hardening' }, { round: 2, delta: 'perf + a11y tuning' }];           // 2 DISTINCT, substantive (≥6 char) rounds
+  const adv = { note: '/review found an off-by-one in the nudge cap; fixed + re-verified' };                    // substantive (≥24 char) adversary note
   writeFileSync(g3Ledger, JSON.stringify({ sessionId: 'GK3', ts: stamp(), items: [{ id: 1, desc: 'd', done: true, refineRequired: true, greatness: { passed: true, evidence: 'max refinement' } }] }));
   add('gatekeeper-convergence-blocks-without-refinements', gatekeeper(verifTr, false, 'GK3').includes('CONVERGENT REFINEMENT'), 'expected block: a refineRequired deliverable with 0 refinement rounds is not yet converged');
-  writeFileSync(g3Ledger, JSON.stringify({ sessionId: 'GK3', ts: stamp(), items: [{ id: 1, desc: 'd', done: true, refineRequired: true, refinements: [{ round: 1, delta: 'a' }, { round: 2, delta: 'converged' }], greatness: { passed: true, evidence: 'max-refinement thesis' } }] }));
-  add('gatekeeper-convergence-allows-at-min-rounds', gatekeeper(verifTr, false, 'GK3').trim() === '', 'expected allow: ≥AURA_GK_MIN_REFINE refinement rounds + greatness + verify clears Gate 3');
+  writeFileSync(g3Ledger, JSON.stringify({ sessionId: 'GK3', ts: stamp(), items: [{ id: 1, desc: 'd', done: true, refineRequired: true, refinements: DR, adversary: adv, greatness: { passed: true, evidence: 'eval 149/149, /review clean' } }] }));
+  add('gatekeeper-convergence-allows-at-min-rounds', gatekeeper(verifTr, false, 'GK3').trim() === '', 'expected allow: distinct refine rounds + adversary record + greatness + verify clears Gate 3');
+  // v1.21.0 — refineRequired greatness REQUIRES an independent adversarial pass (self-cert is not greatness)
+  writeFileSync(g3Ledger, JSON.stringify({ sessionId: 'GK3', ts: stamp(), items: [{ id: 1, desc: 'd', done: true, refineRequired: true, refinements: DR, greatness: { passed: true, evidence: 'eval green' } }] }));
+  add('gatekeeper-convergence-needs-adversarial', gatekeeper(verifTr, false, 'GK3').includes('ADVERSARIAL PASS'), 'expected block: distinct refines but NO adversarial critic (no /review, no adversary record)');
+  add('gatekeeper-adversarial-via-skill-allows', gatekeeper(verifAdvTr, false, 'GK3').trim() === '', 'expected allow: a real /review skill in the session satisfies the adversarial requirement');
+  // v1.21.0 — identical refinement deltas are shallow gaming, not convergence
+  writeFileSync(g3Ledger, JSON.stringify({ sessionId: 'GK3', ts: stamp(), items: [{ id: 1, desc: 'd', done: true, refineRequired: true, refinements: [{ round: 1, delta: 'same' }, { round: 2, delta: 'same' }], adversary: adv, greatness: { passed: true, evidence: 'clean' } }] }));
+  add('gatekeeper-convergence-rejects-identical-rounds', gatekeeper(verifTr, false, 'GK3').includes('CONVERGENT REFINEMENT'), 'expected block: identical refinement deltas are not distinct rounds (anti-gaming)');
+  // v1.21.0 — NO-EXCUSES: greatness evidence that is a rationalization is auto-rejected
+  writeFileSync(g3Ledger, JSON.stringify({ sessionId: 'GK3', ts: stamp(), items: [{ id: 1, desc: 'd', done: true, refineRequired: true, refinements: DR, adversary: adv, greatness: { passed: true, evidence: 'good enough for an mvp, future work remains' } }] }));
+  add('gatekeeper-greatness-rejects-excuse-evidence', gatekeeper(verifTr, false, 'GK3').includes('GREATNESS GATE'), 'expected block: excuse-phrased greatness evidence is a rationalization, not a proof (NO-EXCUSES)');
+  // ── adversarial-review hardening (independent review 2026-06-20) ──
+  // C1: eslint is the Gate-1 verify, NOT an adversarial critic — running it must NOT satisfy the adversarial gate.
+  const eslintTr = [U('x'), TOOLID('e', 'Bash', { command: 'npx eslint .' }), RESULT('e', '0 problems')];
+  writeFileSync(g3Ledger, JSON.stringify({ sessionId: 'GK3', ts: stamp(), items: [{ id: 1, desc: 'd', done: true, refineRequired: true, refinements: DR, greatness: { passed: true, evidence: 'eslint clean' } }] }));
+  add('gatekeeper-eslint-is-not-adversarial', gatekeeper(eslintTr, false, 'GK3').includes('ADVERSARIAL PASS'), 'expected block: a linter (eslint) is the verify, not an independent critic (C1 bypass closed)');
+  // C2: a 1-char self-written adversary note must NOT clear the adversarial gate.
+  writeFileSync(g3Ledger, JSON.stringify({ sessionId: 'GK3', ts: stamp(), items: [{ id: 1, desc: 'd', done: true, refineRequired: true, refinements: DR, adversary: { note: '.' }, greatness: { passed: true, evidence: 'clean' } }] }));
+  add('gatekeeper-trivial-adversary-note-rejected', gatekeeper(verifTr, false, 'GK3').includes('ADVERSARIAL PASS'), 'expected block: a 1-char adversary note is not a substantive critic pass (C2)');
+  // M1: a real excuse the old regex missed ("partial implementation") is now caught.
+  writeFileSync(g3Ledger, JSON.stringify({ sessionId: 'GK3', ts: stamp(), items: [{ id: 1, desc: 'd', done: true, refineRequired: true, refinements: DR, adversary: adv, greatness: { passed: true, evidence: 'partial implementation done; rest later' } }] }));
+  add('gatekeeper-excuse-partial-implementation', gatekeeper(verifTr, false, 'GK3').includes('GREATNESS GATE'), 'expected block: "partial implementation" is an excuse (M1)');
+  // M2: honest proof that MENTIONS removed placeholders/TODOs must NOT false-positive as an excuse.
+  writeFileSync(g3Ledger, JSON.stringify({ sessionId: 'GK3', ts: stamp(), items: [{ id: 1, desc: 'd', done: true, refineRequired: true, refinements: DR, adversary: adv, greatness: { passed: true, evidence: 'removed all placeholders and TODOs; eval 153/153, /review clean' } }] }));
+  add('gatekeeper-no-excuse-false-positive', gatekeeper(verifTr, false, 'GK3').trim() === '', 'expected allow: "removed all placeholders/TODOs" is honest proof, not an excuse (M2 false-positive fixed)');
   // a per-phase sub-step (greatRequired:false) closed with `done` and no greatness must NOT wedge Gate 3 (FIX E multi-item ledger)
-  writeFileSync(g3Ledger, JSON.stringify({ sessionId: 'GK3', ts: stamp(), items: [{ id: 1, desc: 'phase 04', done: true, greatRequired: false }, { id: 2, desc: 'deliverable', done: true, refineRequired: true, refinements: [{ round: 1 }, { round: 2 }], greatness: { passed: true, evidence: 't' } }] }));
+  writeFileSync(g3Ledger, JSON.stringify({ sessionId: 'GK3', ts: stamp(), items: [{ id: 1, desc: 'phase 04', done: true, greatRequired: false }, { id: 2, desc: 'deliverable', done: true, refineRequired: true, refinements: DR, adversary: adv, greatness: { passed: true, evidence: 'proof' } }] }));
   add('gatekeeper-phase-substep-not-greatness-gated', gatekeeper(verifTr, false, 'GK3').trim() === '', 'expected allow: a done per-phase sub-step (greatRequired:false) is not treated as ungreat (no wedge)');
   delete process.env.AURA_GK_MIN_REFINE;
 
