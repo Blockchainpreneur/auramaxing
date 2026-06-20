@@ -72,9 +72,10 @@ const tokenResults = [];
 for (const prompt of TEST_PROMPTS) {
   // Measure prompt-engine output
   const { result: engineOut, elapsed: engineTime } = measure(() => {
-    return execSync(
-      `echo ${JSON.stringify(JSON.stringify({ prompt: prompt.text }))} | node "${join(HELPERS, 'prompt-engine.mjs')}" 2>/dev/null`,
-      { encoding: 'utf8', timeout: 5000 }
+    return execFileSync(
+      'node',
+      [join(HELPERS, 'prompt-engine.mjs')],
+      { input: JSON.stringify({ prompt: prompt.text }), encoding: 'utf8', timeout: 5000, stdio: ['pipe', 'pipe', 'ignore'] }
     ).trim();
   });
 
