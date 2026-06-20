@@ -64,7 +64,7 @@ switch (command) {
         break;
       }
     }
-    const result = nlm(`ask "${input.replace(/"/g, '\\"')}"`);
+    const result = nlm(`ask '${input.replace(/'/g, "'\\''")}'`);
     // Extract just the answer
     const answer = result.split('Answer:').pop()?.trim() || result;
     writeFileSync(cacheFile, answer);
