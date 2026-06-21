@@ -14,7 +14,7 @@
  *   node notebooklm-bridge.mjs store-knowledge          — store structured knowledge as NLM source (JSON via stdin)
  *   node notebooklm-bridge.mjs query-knowledge "q"      — query all stored session knowledge
  */
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { createHash } from 'crypto';
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync } from 'fs';
 import { join } from 'path';
@@ -33,9 +33,15 @@ mkdirSync(CACHE_DIR, { recursive: true });
 const command = process.argv[2] || 'help';
 const input = process.argv.slice(3).join(' ') || '';
 
-function nlm(cmd) {
+function nlm(argv) {
   try {
-    return execSync(`${NLM_BIN} ${cmd}`, { encoding: 'utf8', timeout: 30000 }).trim();
+    // Pass arguments as an array via execFileSync (no shell) so questions/titles/args
+    // containing backticks, $(), quotes, etc. cannot be interpolated/injected.
+    return execFileSync(NLM_BIN, argv, {
+      encoding: 'utf8',
+      timeout: 30000,
+      env: { ...process.env, PATH: pythonEnv().PATH },
+    }).trim();
   } catch (e) {
     return `[NLM error: ${e.message?.slice(0, 80)}]`;
   }
@@ -47,7 +53,7 @@ function ensureNotebook() {
     process.exit(1);
   }
   const id = readFileSync(NB_ID_FILE, 'utf8').trim();
-  nlm(`use ${id.slice(0, 8)}`);
+  nlm(['use', id.slice(0, 8)]);
   return id;
 }
 
@@ -64,7 +70,7 @@ switch (command) {
         break;
       }
     }
-    const result = nlm(`ask "${input.replace(/"/g, '\\"')}"`);
+    const result = nlm(['ask', input]);
     // Extract just the answer
     const answer = result.split('Answer:').pop()?.trim() || result;
     writeFileSync(cacheFile, answer);
@@ -74,7 +80,7 @@ switch (command) {
 
   case 'structure': {
     ensureNotebook();
-    const structuredPrompt = nlm(`ask "Structure this prompt for maximum precision. Add requirements a senior engineer would expect. Prevent lazy responses. The prompt is: ${input.replace(/"/g, '\\"')}"`);
+    const structuredPrompt = nlm(['ask', `Structure this prompt for maximum precision. Add requirements a senior engineer would expect. Prevent lazy responses. The prompt is: ${input}`]);
     const answer = structuredPrompt.split('Answer:').pop()?.trim() || structuredPrompt;
     console.log(answer);
     break;
@@ -83,7 +89,7 @@ switch (command) {
   case 'add-source': {
     ensureNotebook();
     if (!existsSync(input)) { console.error('File not found:', input); break; }
-    const result = nlm(`source add-text "${input.replace(/"/g, '\\"')}"`);
+    const result = nlm(['source', 'add-text', input]);
     console.log(result);
     break;
   }
@@ -95,7 +101,7 @@ switch (command) {
     const entries = files.map(f => { try { return JSON.parse(readFileSync(join(MEMORY_DIR, f), 'utf8')); } catch { return null; } }).filter(Boolean);
     const raw = entries.map(e => `[${e.ts?.slice(0,10)}] ${e.type}: ${e.content || e.summary || ''}`).join('\n');
 
-    const compressed = nlm(`ask "Compress these session logs into a 3-sentence briefing. Include: project, key decisions, current status, next actions: ${raw.slice(0, 2000).replace(/"/g, '\\"')}"`);
+    const compressed = nlm(['ask', `Compress these session logs into a 3-sentence briefing. Include: project, key decisions, current status, next actions: ${raw.slice(0, 2000)}`]);
     const answer = compressed.split('Answer:').pop()?.trim() || compressed;
 
     writeFileSync(join(MEMORY_DIR, '_compressed-summary.json'), JSON.stringify({
@@ -118,7 +124,7 @@ switch (command) {
 
   case 'setup': {
     console.log('Creating AURAMAXING Autopilot notebook...');
-    const result = nlm('create "AURAMAXING Autopilot Memory"');
+    const result = nlm(['create', 'AURAMAXING Autopilot Memory']);
     const idMatch = result.match(/([a-f0-9-]{36})/);
     if (idMatch) {
       writeFileSync(NB_ID_FILE, idMatch[1]);
@@ -151,14 +157,14 @@ switch (command) {
         } catch {}
       }
       if (sourceData.length > 10) {
-        const result = nlm(`Synthesize these tool learnings into exactly 5 concise rules. Each rule should be actionable. Format: numbered list. Learnings:\n${sourceData.slice(0, 1500)}`);
+        const result = nlm(['ask', `Synthesize these tool learnings into exactly 5 concise rules. Each rule should be actionable. Format: numbered list. Learnings:\n${sourceData.slice(0, 1500)}`]);
         console.log(result);
       } else {
         console.log('Not enough learnings to synthesize');
       }
     } else {
       // Default: briefing synthesis
-      const result = nlm(`ask "Summarize the current project state in 3 sentences"`);
+      const result = nlm(['ask', 'Summarize the current project state in 3 sentences']);
       console.log(result);
     }
     break;
@@ -203,7 +209,7 @@ switch (command) {
     const tmpFile = join(HOME, '.auramaxing', 'nlm-cache', `knowledge-${date}.md`);
     writeFileSync(tmpFile, doc);
     try {
-      const result = nlm(`source add "${tmpFile}" --title "AURAMAXING Session - ${date}"`);
+      const result = nlm(['source', 'add', tmpFile, '--title', `AURAMAXING Session - ${date}`]);
       console.log(result || 'Knowledge stored');
     } catch (e) {
       console.error(`[NLM store error: ${e.message?.slice(0, 80)}]`);
@@ -214,7 +220,7 @@ switch (command) {
 
   case 'query-knowledge': {
     ensureNotebook();
-    const answer = nlm(`ask "Based on all stored session knowledge, answer: ${input.replace(/"/g, '\\"')}"`);
+    const answer = nlm(['ask', `Based on all stored session knowledge, answer: ${input}`]);
     console.log(answer);
     break;
   }
