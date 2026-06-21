@@ -182,7 +182,7 @@ function matchField(label) {
   if (/valuation/.test(l)) return D.valuation;
   if (/round|what.*round/.test(l)) return D.round;
   if (/raised|capital.*raised|previously\s*raised/.test(l)) return D.raised;
-  if (/revenue|mrr|arr/.test(l)) return D.revenue;
+  if (/^revenue$|mrr|arr/.test(l)) return D.revenue;
   if (/burn|monthly.*burn|cash.*burn/.test(l)) return D.burn;
   if (/runway/.test(l)) return D.runway;
 
