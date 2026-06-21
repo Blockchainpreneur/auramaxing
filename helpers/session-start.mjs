@@ -12,7 +12,7 @@
 import { execSync, spawn as spawnProc } from 'child_process';
 import { join } from 'path';
 import { homedir } from 'os';
-import { existsSync, readdirSync, readFileSync, mkdirSync, writeFileSync, statSync, copyFileSync, unlinkSync } from 'fs';
+import { existsSync, readdirSync, readFileSync, mkdirSync, writeFileSync, statSync, copyFileSync, unlinkSync, openSync } from 'fs';
 
 const HOME = homedir();
 const MEMORY_DIR = join(HOME, '.auramaxing', 'memory');
@@ -93,10 +93,15 @@ try {
       // survives process.exit(0) in Node.js
       const logFile = join(HOME, '.auramaxing', 'nlm-setup-stderr.log');
       try {
-        execSync(
-          `node "${nlmSetup}" "${projectName}" >> "${logFile}" 2>&1 &`,
-          { shell: '/bin/bash', timeout: 2000, stdio: 'ignore' }
-        );
+        // Pass projectName as an argv element (never shell-interpolated) to
+        // avoid command injection via the working-directory name. Detached +
+        // unref backgrounds it so it survives process.exit(0).
+        const logFd = openSync(logFile, 'a');
+        const child = spawnProc('node', [nlmSetup, projectName], {
+          detached: true,
+          stdio: ['ignore', logFd, logFd],
+        });
+        child.unref();
       } catch {}
     }
   } catch {}
