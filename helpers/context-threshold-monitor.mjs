@@ -126,7 +126,7 @@ function delegateToNLM(handoff) {
     }
   } catch { /* if check itself fails, optimistically continue — better than blocking */ }
 
-  const nbId = readFileSync(NB_ID_FILE, 'utf8').trim().slice(0, 8);
+  const nbId = readFileSync(NB_ID_FILE, 'utf8').trim().replace(/[^\w-]/g, '').slice(0, 8);
   const date = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
   const tmpFile = join(AUR, 'nlm-cache', `handoff-${date}.md`);
   mkdirSync(join(AUR, 'nlm-cache'), { recursive: true });
@@ -150,7 +150,7 @@ function delegateToNLM(handoff) {
 
   writeFileSync(tmpFile, doc);
 
-  const cmd = `${NLM_BIN} use ${nbId} >/dev/null 2>&1 && ${NLM_BIN} source add "${tmpFile}" --title "Handoff ${date}" >/dev/null 2>&1`;
+  const cmd = `${NLM_BIN} use '${nbId}' >/dev/null 2>&1 && ${NLM_BIN} source add "${tmpFile}" --title "Handoff ${date}" >/dev/null 2>&1`;
   try {
     const child = spawn('/bin/bash', ['-c', cmd], { detached: true, stdio: 'ignore' });
     child.unref();
