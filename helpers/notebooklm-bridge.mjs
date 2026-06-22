@@ -41,6 +41,11 @@ function nlm(cmd) {
   }
 }
 
+// Escape chars that stay shell-active inside double quotes: \ " $ `
+function shEsc(s) {
+  return String(s).replace(/(["\\$`])/g, '\\$1');
+}
+
 function ensureNotebook() {
   if (!existsSync(NB_ID_FILE)) {
     console.error('No NotebookLM notebook configured. Run: node notebooklm-bridge.mjs setup');
@@ -64,7 +69,7 @@ switch (command) {
         break;
       }
     }
-    const result = nlm(`ask "${input.replace(/"/g, '\\"')}"`);
+    const result = nlm(`ask "${shEsc(input)}"`);
     // Extract just the answer
     const answer = result.split('Answer:').pop()?.trim() || result;
     writeFileSync(cacheFile, answer);
@@ -74,7 +79,7 @@ switch (command) {
 
   case 'structure': {
     ensureNotebook();
-    const structuredPrompt = nlm(`ask "Structure this prompt for maximum precision. Add requirements a senior engineer would expect. Prevent lazy responses. The prompt is: ${input.replace(/"/g, '\\"')}"`);
+    const structuredPrompt = nlm(`ask "Structure this prompt for maximum precision. Add requirements a senior engineer would expect. Prevent lazy responses. The prompt is: ${shEsc(input)}"`);
     const answer = structuredPrompt.split('Answer:').pop()?.trim() || structuredPrompt;
     console.log(answer);
     break;
@@ -83,7 +88,7 @@ switch (command) {
   case 'add-source': {
     ensureNotebook();
     if (!existsSync(input)) { console.error('File not found:', input); break; }
-    const result = nlm(`source add-text "${input.replace(/"/g, '\\"')}"`);
+    const result = nlm(`source add-text "${shEsc(input)}"`);
     console.log(result);
     break;
   }
@@ -151,7 +156,7 @@ switch (command) {
         } catch {}
       }
       if (sourceData.length > 10) {
-        const result = nlm(`Synthesize these tool learnings into exactly 5 concise rules. Each rule should be actionable. Format: numbered list. Learnings:\n${sourceData.slice(0, 1500)}`);
+        const result = nlm(`Synthesize these tool learnings into exactly 5 concise rules. Each rule should be actionable. Format: numbered list. Learnings:\n${shEsc(sourceData.slice(0, 1500))}`);
         console.log(result);
       } else {
         console.log('Not enough learnings to synthesize');
@@ -214,7 +219,7 @@ switch (command) {
 
   case 'query-knowledge': {
     ensureNotebook();
-    const answer = nlm(`ask "Based on all stored session knowledge, answer: ${input.replace(/"/g, '\\"')}"`);
+    const answer = nlm(`ask "Based on all stored session knowledge, answer: ${shEsc(input)}"`);
     console.log(answer);
     break;
   }
