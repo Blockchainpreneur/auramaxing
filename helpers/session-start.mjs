@@ -29,6 +29,11 @@ function findPython() {
   return 'python3'; // fallback — let PATH resolve it
 }
 
+/** Escape a string for safe interpolation inside a double-quoted bash argument */
+function shEsc(s) {
+  return String(s).replace(/(["\\$`])/g, '\\$1');
+}
+
 try {
   const C = '\x1b[36m', Y = '\x1b[33m', B = '\x1b[1m', R = '\x1b[0m', D = '\x1b[2m';
 
@@ -94,7 +99,7 @@ try {
       const logFile = join(HOME, '.auramaxing', 'nlm-setup-stderr.log');
       try {
         execSync(
-          `node "${nlmSetup}" "${projectName}" >> "${logFile}" 2>&1 &`,
+          `node "${nlmSetup}" "${shEsc(projectName)}" >> "${logFile}" 2>&1 &`,
           { shell: '/bin/bash', timeout: 2000, stdio: 'ignore' }
         );
       } catch {}
