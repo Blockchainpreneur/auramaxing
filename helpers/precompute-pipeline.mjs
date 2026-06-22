@@ -234,7 +234,7 @@ try {
         const masterIdFile = join(HOME, '.auramaxing', 'nlm-master-source-id');
         if (existsSync(masterIdFile)) {
           const oldId = readFileSync(masterIdFile, 'utf8').trim();
-          try { execSync(`${NLM_BIN} source delete ${oldId.slice(0, 8)}`, { timeout: 10000, stdio: 'ignore' }); } catch {}
+          try { execFileSync(NLM_BIN, ['source', 'delete', oldId.slice(0, 8)], { timeout: 10000, stdio: 'ignore' }); } catch {}
         }
         // Add updated master
         const result = execSync(
