@@ -237,8 +237,9 @@ try {
           try { execFileSync(NLM_BIN, ['source', 'delete', oldId.slice(0, 8)], { timeout: 10000, stdio: 'ignore' }); } catch {}
         }
         // Add updated master
-        const result = execSync(
-          `${NLM_BIN} source add "${masterFile}" --title "AURAMAXING Master Progress"`,
+        const result = execFileSync(
+          NLM_BIN,
+          ['source', 'add', masterFile, '--title', 'AURAMAXING Master Progress'],
           { encoding: 'utf8', timeout: 15000 }
         ).trim();
         const idMatch = result.match(/([a-f0-9-]{36})/);
