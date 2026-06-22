@@ -34,6 +34,11 @@ function projectFromCwd(cwd) {
   return basename(cwd || process.cwd()) || 'unknown';
 }
 
+// Escape chars that stay shell-active inside double quotes: \ " $ `
+function shEsc(s) {
+  return String(s).replace(/(["\\$`])/g, '\\$1');
+}
+
 export function classifyContent(text, ctx = {}) {
   if (!text) return 'session';
   const t = text.trim();
@@ -106,10 +111,10 @@ function writeEntry(entry) {
     try {
       // note create subcommand varies; try both positional forms gracefully
       try {
-        nlm(`note create --title "${title.replace(/"/g, '\\"')}" --file "${tmpFile}"`, { timeout: 20000 });
+        nlm(`note create --title "${shEsc(title)}" --file "${tmpFile}"`, { timeout: 20000 });
       } catch {
         // Some versions: `notebooklm note create "title" < file`
-        execSync(`${NLM_BIN} note create "${title.replace(/"/g, '\\"')}" < "${tmpFile}"`, {
+        execSync(`${NLM_BIN} note create "${shEsc(title)}" < "${tmpFile}"`, {
           encoding: 'utf8', timeout: 20000, shell: '/bin/bash',
           env: { ...process.env, PATH: pythonEnv().PATH },
         });
