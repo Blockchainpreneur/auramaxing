@@ -137,9 +137,9 @@ function writeEntry(entry) {
       if (method === 'source-research') {
         // source add-research expects a query/URL, fall back to add if payload is not a URL
         if (typeof entry.payload === 'string' && /^https?:\/\//.test(entry.payload.trim())) {
-          nlm(`source add-research "${entry.payload.trim()}" --title "${title.replace(/"/g, '\\"')}"`, { timeout: 45000 });
+          nlm(`source add-research "${entry.payload.trim()}" --title "${shEsc(title)}"`, { timeout: 45000 });
         } else {
-          nlm(`source add "${tmpFile}" --title "${title.replace(/"/g, '\\"')}"`, { timeout: 45000 });
+          nlm(`source add "${tmpFile}" --title "${shEsc(title)}"`, { timeout: 45000 });
         }
       } else {
         nlm(`source add "${tmpFile}" --title "${shEsc(title)}"`, { timeout: 45000 });
