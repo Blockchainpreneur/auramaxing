@@ -18,7 +18,7 @@ import { findPython, findNlm, pythonEnv } from "./find-bin.mjs";
 
 const HOME = homedir();
 const NLM_BIN = findNlm();
-if (!NLM_BIN) { process.stderr.write('[nlm] NotebookLM CLI not installed. Skipping.\n'); }
+if (!NLM_BIN) { process.stderr.write('[nlm] NotebookLM CLI not installed. Skipping.\n'); process.exit(0); }
 const LOG_FILE = join(HOME, '.auramaxing', 'nlm-setup.log');
 const projectName = process.argv[2] || 'unknown';
 
