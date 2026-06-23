@@ -131,8 +131,8 @@ async function fillForm(browser, program) {
         if (el.offsetHeight === 0 || el.value) continue;
 
         const label = (el.labels?.[0]?.innerText || el.placeholder || el.name || el.id || '').toLowerCase();
-        const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set ||
-                       Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
+        const proto = el.tagName === 'TEXTAREA' ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
+        const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
 
         let val = '';
         if (/first.?name/i.test(label)) val = data.firstName;
