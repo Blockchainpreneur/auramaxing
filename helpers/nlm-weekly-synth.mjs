@@ -70,7 +70,7 @@ async function synthesizeNotebook(nbKey, nbId) {
     // Generate report
     let genOut;
     try {
-      genOut = nlm(`generate report`, { timeout: 60000 });
+      genOut = nlm(`artifact generate report`, { timeout: 60000 });
     } catch (e) {
       log(`  generate report failed: ${e.message?.slice(0, 120)}`);
       return { ok: false, reason: 'generate-failed' };
