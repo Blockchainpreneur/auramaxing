@@ -22,14 +22,14 @@ import { execFileSync } from 'child_process';
 import { writeFileSync, appendFileSync, existsSync, mkdirSync, unlinkSync, statSync } from 'fs';
 import { join } from 'path';
 import { homedir, tmpdir } from 'os';
-import { findNlm, pythonEnv } from './find-bin.mjs';
+import { findNlmArgs, pythonEnv } from './find-bin.mjs';
 import { readMap } from './notebook-router.mjs';
 
 const HOME = homedir();
 const AUR = join(HOME, '.auramaxing');
 const LOG = join(AUR, 'nlm-weekly-synth.log');
 const STAMP = join(AUR, '.last-weekly-synth');
-const NLM_BIN = findNlm();
+const NLM = findNlmArgs();
 const SEVEN_DAYS_MS = 7 * 24 * 3600 * 1000;
 const MAX_WAIT_MS = 10 * 60 * 1000;
 
@@ -42,7 +42,7 @@ function log(...parts) {
 function nlm(argv, { timeout = 30000 } = {}) {
   // Pass arguments as an array via execFileSync (no shell) so that the title
   // and other values can never be interpreted as shell metacharacters.
-  return execFileSync(NLM_BIN, argv, {
+  return execFileSync(NLM.bin, [...NLM.args, ...argv], {
     encoding: 'utf8', timeout,
     env: { ...process.env, PATH: pythonEnv().PATH },
   }).trim();
