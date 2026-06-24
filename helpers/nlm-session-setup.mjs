@@ -14,10 +14,11 @@ import { execSync, execFileSync } from 'child_process';
 import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
-import { findPython, findNlm, pythonEnv } from "./find-bin.mjs";
+import { findPython, findNlm, findNlmArgs, pythonEnv } from "./find-bin.mjs";
 
 const HOME = homedir();
 const NLM_BIN = findNlm();
+const NLM = findNlmArgs(); // { bin, args } structured form for execFileSync (no shell split)
 if (!NLM_BIN) { process.stderr.write('[nlm] NotebookLM CLI not installed. Skipping.\n'); }
 const LOG_FILE = join(HOME, '.auramaxing', 'nlm-setup.log');
 const projectName = process.argv[2] || 'unknown';
@@ -60,7 +61,7 @@ try {
   if (!nbMap[projectName]) {
     log(`Creating notebook for: ${projectName}`);
     const result = execFileSync(
-      NLM_BIN, ['create', `AURAMAXING: ${projectName}`],
+      NLM.bin, [...NLM.args, 'create', `AURAMAXING: ${projectName}`],
       { encoding: 'utf8', timeout: 15000 }
     ).trim();
     const idMatch = result.match(/([a-f0-9-]{36})/);
