@@ -26,7 +26,7 @@
  *   node nlm-replay-buffer.mjs --limit 50
  *   node nlm-replay-buffer.mjs --dry-run
  */
-import { execSync } from 'child_process';
+import { execSync, execFileSync } from 'child_process';
 import { readFileSync, writeFileSync, existsSync, appendFileSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
@@ -111,21 +111,13 @@ function entryToNote(entry) {
 }
 
 function postNote(noteTitle, noteContent) {
-  // Pass content via stdin? No — note create takes content as positional arg.
-  // To avoid ARG_MAX issues with huge content, write to a temp file and read it.
-  // But CLI takes content positionally; for safety stay under 100k via truncation in entryToNote.
-  // Encode as base64 path? simpler: pass content directly as last arg.
-  const escapedTitle = noteTitle.replace(/"/g, '\\"');
-  // Write content to a temp file and inject via shell substitution (avoids
-  // shell-escape pitfalls for newlines, quotes, backticks).
-  const tmpFile = join('/tmp', `aura-replay-note-${process.pid}-${Math.random().toString(36).slice(2,8)}.txt`);
-  writeFileSync(tmpFile, noteContent);
+  // Pass title and content as argv elements via execFileSync (no shell), which
+  // avoids shell-escape pitfalls (quotes, $, backticks) and command injection.
+  // Content is capped (~48k) in entryToNote, well under ARG_MAX.
   try {
-    const cmd = `${NLM_BIN} note create -t "${escapedTitle}" "$(cat "${tmpFile}")"`;
-    execSync(cmd, {
+    execFileSync(NLM_BIN, ['note', 'create', '-t', noteTitle, noteContent], {
       encoding: 'utf8',
       timeout: 30000,
-      shell: '/bin/bash',
       stdio: ['ignore', 'pipe', 'pipe'],
       env: { ...process.env, PATH: pythonEnv().PATH },
     });
@@ -133,8 +125,6 @@ function postNote(noteTitle, noteContent) {
   } catch (e) {
     const err = (e.stderr?.toString() || e.message || '').slice(0, 200);
     return { ok: false, error: err };
-  } finally {
-    try { execSync(`rm -f "${tmpFile}"`, { stdio: 'ignore', timeout: 2000 }); } catch {}
   }
 }
 
