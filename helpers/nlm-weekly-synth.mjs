@@ -18,7 +18,7 @@
  * Usage: node nlm-weekly-synth.mjs [--force]
  * Always exits 0. Logs to ~/.auramaxing/nlm-weekly-synth.log
  */
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { writeFileSync, appendFileSync, existsSync, mkdirSync, unlinkSync, statSync } from 'fs';
 import { join } from 'path';
 import { homedir, tmpdir } from 'os';
@@ -39,8 +39,10 @@ function log(...parts) {
   try { appendFileSync(LOG, `[${new Date().toISOString()}] ${parts.join(' ')}\n`); } catch {}
 }
 
-function nlm(args, { timeout = 30000 } = {}) {
-  return execSync(`${NLM_BIN} ${args}`, {
+function nlm(argv, { timeout = 30000 } = {}) {
+  // Pass arguments as an array via execFileSync (no shell) so that the title
+  // and other values can never be interpreted as shell metacharacters.
+  return execFileSync(NLM_BIN, argv, {
     encoding: 'utf8', timeout,
     env: { ...process.env, PATH: pythonEnv().PATH },
   }).trim();
@@ -65,12 +67,12 @@ async function synthesizeNotebook(nbKey, nbId) {
   const short = nbId.slice(0, 8);
   log(`Synthesizing notebook ${nbKey} (${short})`);
   try {
-    nlm(`use ${short}`, { timeout: 10000 });
+    nlm(['use', short], { timeout: 10000 });
 
     // Generate report
     let genOut;
     try {
-      genOut = nlm(`generate report`, { timeout: 60000 });
+      genOut = nlm(['generate', 'report'], { timeout: 60000 });
     } catch (e) {
       log(`  generate report failed: ${e.message?.slice(0, 120)}`);
       return { ok: false, reason: 'generate-failed' };
@@ -89,7 +91,7 @@ async function synthesizeNotebook(nbKey, nbId) {
     while (Date.now() - waitStart < MAX_WAIT_MS) {
       await sleep(10000);
       try {
-        nlm(`artifact wait ${artifactId.slice(0, 8)}`, { timeout: 15000 });
+        nlm(['artifact', 'wait', artifactId.slice(0, 8)], { timeout: 15000 });
         break;
       } catch {
         // Not ready yet, keep polling
@@ -99,7 +101,7 @@ async function synthesizeNotebook(nbKey, nbId) {
     // Fetch content
     let content = '';
     try {
-      content = nlm(`artifact get ${artifactId.slice(0, 8)}`, { timeout: 30000 });
+      content = nlm(['artifact', 'get', artifactId.slice(0, 8)], { timeout: 30000 });
     } catch (e) {
       log(`  artifact get failed: ${e.message?.slice(0, 120)}`);
       return { ok: false, reason: 'get-failed' };
@@ -115,7 +117,7 @@ async function synthesizeNotebook(nbKey, nbId) {
     const tmp = join(tmpdir(), `aura-synth-${nbKey}-${date}.md`);
     writeFileSync(tmp, `# ${title}\n\n_Auto-generated from ${nbKey} notebook sources._\n\n${content}`);
     try {
-      nlm(`source add "${tmp}" --title "${title}"`, { timeout: 45000 });
+      nlm(['source', 'add', tmp, '--title', title], { timeout: 45000 });
       log(`  re-ingested as "${title}"`);
     } finally {
       try { unlinkSync(tmp); } catch {}
