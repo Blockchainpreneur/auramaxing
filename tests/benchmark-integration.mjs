@@ -18,7 +18,7 @@ import { join } from 'path';
 import { homedir } from 'os';
 
 const HOME = homedir();
-const PYTHON_BIN = '/Library/Frameworks/Python.framework/Versions/3.12/bin/python3';
+const PYTHON_BIN = process.env.PYTHON_BIN || 'python3';
 const LIGHTRAG_CLI = join(HOME, 'auramaxing', 'scripts', 'lightrag-cli.py');
 const WORKSPACE = join(HOME, '.auramaxing', 'lightrag-workspace');
 const PROMPT_CACHE = join(HOME, '.auramaxing', 'prompt-cache');
