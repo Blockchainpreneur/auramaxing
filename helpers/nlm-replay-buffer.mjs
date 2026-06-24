@@ -30,13 +30,14 @@ import { execSync, execFileSync } from 'child_process';
 import { readFileSync, writeFileSync, existsSync, appendFileSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
-import { findNlm, pythonEnv } from './find-bin.mjs';
+import { findNlm, findNlmArgs, pythonEnv } from './find-bin.mjs';
 
 const HOME = homedir();
 const AUR = join(HOME, '.auramaxing');
 const RETRY = join(AUR, 'nlm-write-buffer.retry.jsonl');
 const DEAD = join(AUR, 'nlm-write-buffer.dead-letter.jsonl');
 const NLM_BIN = findNlm();
+const NLM_ARGS = findNlmArgs();
 
 const args = process.argv.slice(2);
 const RETRY_ONLY = args.includes('--retry-only');
@@ -115,7 +116,7 @@ function postNote(noteTitle, noteContent) {
   // avoids shell-escape pitfalls (quotes, $, backticks) and command injection.
   // Content is capped (~48k) in entryToNote, well under ARG_MAX.
   try {
-    execFileSync(NLM_BIN, ['note', 'create', '-t', noteTitle, noteContent], {
+    execFileSync(NLM_ARGS.bin, [...NLM_ARGS.args, 'note', 'create', '-t', noteTitle, noteContent], {
       encoding: 'utf8',
       timeout: 30000,
       stdio: ['ignore', 'pipe', 'pipe'],
