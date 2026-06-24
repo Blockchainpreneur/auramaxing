@@ -10,7 +10,7 @@
  * Receives project name as argv[2].
  * Always exits 0. Logs to ~/.auramaxing/nlm-setup.log
  */
-import { execSync } from 'child_process';
+import { execSync, execFileSync } from 'child_process';
 import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
@@ -59,8 +59,8 @@ try {
 
   if (!nbMap[projectName]) {
     log(`Creating notebook for: ${projectName}`);
-    const result = execSync(
-      `${NLM_BIN} create "AURAMAXING: ${projectName}"`,
+    const result = execFileSync(
+      NLM_BIN, ['create', `AURAMAXING: ${projectName}`],
       { encoding: 'utf8', timeout: 15000 }
     ).trim();
     const idMatch = result.match(/([a-f0-9-]{36})/);
