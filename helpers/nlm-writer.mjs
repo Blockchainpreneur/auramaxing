@@ -18,7 +18,7 @@ import { execFileSync } from 'child_process';
 import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync, unlinkSync, statSync, renameSync } from 'fs';
 import { join, basename } from 'path';
 import { homedir, tmpdir } from 'os';
-import { findNlm, pythonEnv } from './find-bin.mjs';
+import { findNlmArgs, pythonEnv } from './find-bin.mjs';
 import { notebookFor, ensureAll } from './notebook-router.mjs';
 
 const HOME = homedir();
@@ -26,7 +26,7 @@ const AUR = join(HOME, '.auramaxing');
 const BUFFER = join(AUR, 'nlm-write-buffer.jsonl');
 const RETRY = join(AUR, 'nlm-write-buffer.retry.jsonl');
 const DEAD = join(AUR, 'nlm-write-buffer.dead-letter.jsonl');
-const NLM_BIN = findNlm();
+const NLM_BIN = findNlmArgs();
 
 mkdirSync(AUR, { recursive: true });
 
@@ -81,7 +81,9 @@ function nlm(argv, { timeout = 30000, input } = {}) {
   if (!NLM_BIN) throw new Error('NLM CLI not available');
   // Pass arguments as an array via execFileSync (no shell) so that title/project
   // and other untrusted values can never be interpreted as shell metacharacters.
-  return execFileSync(NLM_BIN, argv, {
+  // NLM_BIN is { bin, args } so the "python3 -m notebooklm" fallback resolves to a
+  // real executable + module args instead of being treated as a single ENOENT exe.
+  return execFileSync(NLM_BIN.bin, [...NLM_BIN.args, ...argv], {
     encoding: 'utf8',
     timeout,
     input,
