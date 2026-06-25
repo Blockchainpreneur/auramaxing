@@ -56,7 +56,8 @@ function drainDiffBuffers(projectHint) {
       // Group diffs by project+day for compaction
       const grouped = {};
       for (const e of entries) {
-        const key = `${e.project || projectHint}::${e.ts.slice(0, 10)}::${e.prd ? 'prd' : 'diff'}`;
+        const day = typeof e.ts === 'string' ? e.ts.slice(0, 10) : 'unknown';
+        const key = `${e.project || projectHint}::${day}::${e.prd ? 'prd' : 'diff'}`;
         (grouped[key] ||= []).push(e);
       }
       for (const [key, group] of Object.entries(grouped)) {
