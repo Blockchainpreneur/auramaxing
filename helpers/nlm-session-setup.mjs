@@ -59,8 +59,9 @@ try {
 
   if (!nbMap[projectName]) {
     log(`Creating notebook for: ${projectName}`);
+    const shArg = (s) => `'${String(s).replace(/'/g, `'\\''`)}'`;
     const result = execSync(
-      `${NLM_BIN} create "AURAMAXING: ${projectName}"`,
+      `${NLM_BIN} create ${shArg(`AURAMAXING: ${projectName}`)}`,
       { encoding: 'utf8', timeout: 15000 }
     ).trim();
     const idMatch = result.match(/([a-f0-9-]{36})/);
