@@ -35,8 +35,8 @@ function resolveLP() {
   if (SESSION) return join(LDIR, `${SESSION}.json`);
   try {
     const fresh = readdirSync(LDIR).filter(f => f.endsWith('.json'))
-      .map(f => ({ f, m: statSync(join(LDIR, f)).mtimeMs }))
-      .filter(x => Date.now() - x.m < 6 * 3600e3)
+      .map(f => { try { return { f, m: statSync(join(LDIR, f)).mtimeMs }; } catch { return null; } })
+      .filter(x => x && Date.now() - x.m < 6 * 3600e3)
       .sort((a, b) => b.m - a.m);
     if (fresh.length) return join(LDIR, fresh[0].f);
   } catch {}
