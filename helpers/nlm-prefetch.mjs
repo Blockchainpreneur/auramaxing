@@ -77,7 +77,8 @@ function spawnAsk(query) {
     env: { ...process.env, PATH: pythonEnv().PATH },
   }, (err, stdout) => {
     if (err) return;
-    const answer = (stdout || '').split('Answer:').pop()?.trim() || stdout?.trim();
+    const out = stdout || '';
+    const answer = out.includes('Answer:') ? out.split('Answer:').pop().trim() : null;
     const filtered = qualityFilter(answer);
     if (filtered) {
       try { writeFileSync(cacheFile, filtered); } catch {}
