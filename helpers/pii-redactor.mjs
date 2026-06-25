@@ -51,7 +51,7 @@ function detectPrivateKeyHex(text) { return PRIVKEY_HEX.test(text); }
 // MODIFY severity — redact value but allow tool to run
 const MODIFY_RULES = [
   { name: 'Email Address',  pattern: /\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b/g, placeholder: '[REDACTED:EMAIL]' },
-  { name: 'Phone Number',   pattern: /(\+1[\s.\-]?)?\(?\d{3}\)?[\s.\-]\d{3}[\s.\-]\d{4}\b/g,   placeholder: '[REDACTED:PHONE]' },
+  { name: 'Phone Number',   pattern: /(\+1[\s.\-]?)?\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4}\b/g,   placeholder: '[REDACTED:PHONE]' },
   { name: 'Large Amount',   pattern: /\$\s?[0-9]{1,3}(,[0-9]{3})+(\.[0-9]{2})?/g,              placeholder: '[REDACTED:LARGE_AMOUNT]' },
   // Solana: exactly 43-44 base58 chars, not inside a word
   { name: 'Solana Address', pattern: /(?<![A-Za-z0-9])[1-9A-HJ-NP-Za-km-z]{43,44}(?![A-Za-z0-9])/g, placeholder: '[REDACTED:SOL_ADDR]' },
