@@ -175,8 +175,15 @@ export async function flush({ limit = Infinity } = {}) {
 
   const queue = [...lines, ...retryLines].map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
 
+  // Preserve entries beyond the limit so they aren't dropped after the buffer was truncated
+  const toProcess = queue.slice(0, limit);
+  const remainder = queue.slice(limit);
+  if (remainder.length) {
+    try { appendFileSync(BUFFER, remainder.map(e => JSON.stringify(e)).join('\n') + '\n'); } catch {}
+  }
+
   let written = 0, failed = 0, deadLettered = 0;
-  for (const entry of queue.slice(0, limit)) {
+  for (const entry of toProcess) {
     try {
       writeEntry(entry);
       written++;
