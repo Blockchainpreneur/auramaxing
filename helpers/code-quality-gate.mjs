@@ -212,12 +212,11 @@ async function main() {
 
     if (!raw) { console.log('{"decision":"approve"}'); process.exit(0); }
 
-    let toolName = '', toolInput = {}, toolResult = '';
+    let toolName = '', toolInput = {};
     try {
       const payload = JSON.parse(raw);
       toolName   = (payload.tool_name || '').toLowerCase();
       toolInput  = payload.tool_input  || {};
-      toolResult = typeof payload.tool_result === 'string' ? payload.tool_result : '';
     } catch { console.log('{"decision":"approve"}'); process.exit(0); }
 
     // Context Guard first (Layer 2 — 40% ceiling) — covers Read/Grep/Glob/Bash
