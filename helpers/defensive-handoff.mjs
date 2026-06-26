@@ -20,7 +20,11 @@ import { join, basename } from 'path';
 const HOME = homedir();
 const AUR = join(HOME, '.auramaxing');
 const HANDOFF = join(AUR, 'pending-handoff.json');
-const MEMORY_DIR = join(HOME, '.claude', 'projects', '-Users-macbook', 'memory');
+// Derive the Claude projects slug from the cwd (path separators → '-'), matching how
+// Claude Code names ~/.claude/projects/<slug>/memory — never a hardcoded machine path.
+function memoryDir(cwd) {
+  return join(HOME, '.claude', 'projects', cwd.replace(/[^a-zA-Z0-9]/g, '-'), 'memory');
+}
 
 function gitState(cwd) {
   try {
@@ -46,10 +50,11 @@ function readNextAction() {
   return null;
 }
 
-function recentMemory() {
+function recentMemory(cwd) {
   try {
-    const files = readdirSync(MEMORY_DIR).filter(f => f.endsWith('.md') && f !== 'MEMORY.md')
-      .map(f => ({ f, m: statSync(join(MEMORY_DIR, f)).mtimeMs })).sort((a, b) => b.m - a.m).slice(0, 3);
+    const dir = memoryDir(cwd);
+    const files = readdirSync(dir).filter(f => f.endsWith('.md') && f !== 'MEMORY.md')
+      .map(f => ({ f, m: statSync(join(dir, f)).mtimeMs })).sort((a, b) => b.m - a.m).slice(0, 3);
     return files.map(x => `- ${x.f.replace('.md', '')}`).join('\n');
   } catch { return ''; }
 }
@@ -86,7 +91,7 @@ async function main() {
       git: gitState(cwd),
       checkpointDoc: findCheckpointDoc(cwd),
       nextAction: readNextAction(),
-      recentDecisions: recentMemory(),
+      recentDecisions: recentMemory(cwd),
     };
     writeFileSync(HANDOFF, JSON.stringify(handoff, null, 2));
   } catch { /* never throw — non-blocking */ }
