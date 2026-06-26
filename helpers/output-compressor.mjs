@@ -75,9 +75,9 @@ async function main() {
     catch { console.log('{"decision":"approve"}'); process.exit(0); }
 
     const toolName = (payload.tool_name || '').toLowerCase();
-    const result = typeof payload.tool_result === 'string'
-      ? payload.tool_result
-      : JSON.stringify(payload.tool_result || '');
+    const result = typeof payload.tool_response === 'string'
+      ? payload.tool_response
+      : JSON.stringify(payload.tool_response || '');
 
     // Only compress UNSOLICITED Bash output. Model-requested read tools
     // (Read/Grep/Glob/NotebookRead) are explicitly asked for — compressing a
