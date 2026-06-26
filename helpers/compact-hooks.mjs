@@ -125,7 +125,7 @@ async function preCompact(input) {
   mkdirSync(AUR, { recursive: true });
   // L6 — stamp the PRE-compact session so PostCompact can migrate its OPEN ledger to the new session.
   try { if (input && input.session_id) writeFileSync(LINEAGE, JSON.stringify({ from: input.session_id, ts: Math.floor(Date.now() / 1000) })); } catch {}
-  const mem = recentFiles(MEMORY_DIR, '.json', 5), learns = recentFiles(LEARNINGS_DIR, '.jsonl', 3);
+  const mem = recentFiles(MEMORY_DIR, '.json', 5), learns = recentFiles(LEARNINGS_DIR, '.json', 3);
   const model = input.model || process.env.CLAUDE_MODEL || '';
   writeFileSync(SDR_PATH, buildSDR(mem, learns, gitDiffStat(), model) + buildResumeBlock());
   try {
