@@ -79,7 +79,8 @@ async function main() {
         const payload = JSON.parse(raw);
         toolName   = payload.tool_name   || payload.toolName   || 'unknown';
         toolInput  = typeof payload.tool_input  === 'string' ? payload.tool_input  : JSON.stringify(payload.tool_input  || {});
-        toolResult = typeof payload.tool_result === 'string' ? payload.tool_result : JSON.stringify(payload.tool_result || '');
+        const toolResponse = payload.tool_response ?? payload.tool_result;
+        toolResult = typeof toolResponse === 'string' ? toolResponse : JSON.stringify(toolResponse || '');
       } catch {}
     }
 
