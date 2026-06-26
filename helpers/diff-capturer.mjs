@@ -62,7 +62,7 @@ async function main() {
   // We handle a few shapes to be robust across Claude Code versions.
   const toolName = input.tool_name || input.tool || '';
   const toolInput = input.tool_input || input.input || {};
-  const toolResult = input.tool_result || input.result || null;
+  const toolResult = input.tool_response || input.tool_result || input.result || null;
 
   if (!/^(Edit|Write|NotebookEdit|MultiEdit)$/i.test(toolName)) process.exit(0);
 
@@ -92,6 +92,7 @@ async function main() {
     project: basename(input.cwd || process.cwd()),
     diff: makeUnifiedDiff(oldStr, newStr, filePath),
     bytes: { old: oldStr.length, new: newStr.length },
+    result: toolResult,
   };
 
   try { appendFileSync(BUFFER, JSON.stringify(entry) + '\n'); } catch {}
