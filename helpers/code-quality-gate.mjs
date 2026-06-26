@@ -239,7 +239,10 @@ async function main() {
 
     // Extract code content and file path
     const filePath = toolInput.file_path || '';
-    const code     = toolInput.content || toolInput.new_string || toolInput.new_content || '';
+    let code       = toolInput.content || toolInput.new_string || toolInput.new_content || '';
+    if (!code && Array.isArray(toolInput.edits)) {
+      code = toolInput.edits.map(e => e.new_string || e.new_content || '').join('\n');
+    }
 
     if (!code || code.length < 10) {
       console.log('{"decision":"approve"}');
