@@ -73,6 +73,12 @@ async function main() {
   let oldStr = toolInput.old_string || '';
   let newStr = toolInput.new_string || toolInput.content || '';
 
+  // MultiEdit uses an `edits[]` array rather than top-level old_string/new_string
+  if (/^MultiEdit$/i.test(toolName) && Array.isArray(toolInput.edits)) {
+    oldStr = toolInput.edits.map((e) => e.old_string || '').join('\n');
+    newStr = toolInput.edits.map((e) => e.new_string || '').join('\n');
+  }
+
   // For Write tool, old_string is the previous file content (may not be provided) — skip diff
   if (!oldStr && toolName === 'Write') {
     oldStr = '';
