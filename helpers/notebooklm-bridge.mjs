@@ -72,7 +72,10 @@ switch (command) {
     const result = nlm(`ask ${shq(input)}`);
     // Extract just the answer
     const answer = result.split('Answer:').pop()?.trim() || result;
-    writeFileSync(cacheFile, answer);
+    // Don't cache error responses — they'd be served for 1hr
+    if (!result.startsWith('[NLM error:')) {
+      writeFileSync(cacheFile, answer);
+    }
     console.log(answer);
     break;
   }
