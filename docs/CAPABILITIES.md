@@ -81,7 +81,12 @@ Tailwind v4 + shadcn (Base UI backend) · **Geist/Inter via Fontsource** (`@font
   - `multica-ai/andrej-karpathy-skills` — anti-mistake CLAUDE.md guardrails (cheap, orthogonal).
 - **Prompt-engineering references (read, don't install):** `asgeirtj/system_prompts_leaks` (freshest leaked
   system prompts incl. Claude Code) · `anthropics/claude-cookbooks` + `prompt-eng-interactive-tutorial` (caching/tool-use patterns).
-- **Skip (verified heavy overlap / counter to setup):** superpowers / ECC / GSD (parallel lifecycles = gstack);
+- **ADOPTED — superpowers = LAYER 1 / base method (highest precedence; user directive 2026-06-26):** installed
+  (`superpowers@claude-plugins-official` v6.0.3, user-scope) and is the model's DEFAULT working method. NOT a gstack
+  duplicate — it fills disciplines auramaxing/gstack lack (TDD red-green, git-worktrees, verification-before-completion).
+  Precedence: superpowers (HOW) ▸ AURAMAXING (WHEN/WHAT + evidence-gatekeeper enforcement) ▸ gstack (domain tools).
+  Overlaps NEST: method invokes tool (`systematic-debugging`→`/investigate`, `requesting-code-review`→`/review`+`/cso`).
+- **Skip (verified heavy overlap / counter to setup):** ECC / GSD (parallel lifecycles = gstack);
   free-claude-code (counter to max-Opus); steel-browser / browser-use (= your CDP); graphify / mem0 / supermemory /
   cognee (= LightRAG+codegraph); claude-mem (parallel memory system, only if granular action-replay is a pain).
 

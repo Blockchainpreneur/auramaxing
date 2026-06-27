@@ -5,6 +5,15 @@ All notable changes to Auramaxing are documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.22.0 — 2026-06-26
+
+**superpowers adopted as LAYER 1 (base method) + `cloud-shellcheck` CI for the shell-infra layer.** Two changes, both verified against the full CI + eval before commit.
+
+- **Doctrine — superpowers = LAYER 1.** Reversed the prior "Skip (heavy overlap)" stance in `docs/CAPABILITIES.md`: superpowers (`@claude-plugins-official` v6.0.3, user-scope) is now the model's DEFAULT working method, per the LAYER PRECEDENCE directive (2026-06-26). It is NOT a gstack duplicate — it fills disciplines auramaxing/gstack lack (TDD red-green, git-worktrees, verification-before-completion). Precedence: **superpowers (HOW) ▸ AURAMAXING (WHEN/WHAT + evidence-gatekeeper enforcement) ▸ gstack (domain tools)**; overlaps NEST (method invokes tool), never run in parallel.
+- **New CI — `.github/workflows/shellcheck.yml` (`cloud-shellcheck`).** The `cloud/**` layer launches `claude --dangerously-skip-permissions` on a remote box and runs `rsync --delete`, so it now gets strict linting on every change: `shellcheck -x -S warning` + `bash -n` + `zsh -n` + the DRY_RUN smoke test (39/39). Closes the long-deferred user-gated CI item.
+- **Root-caused the 2 warnings the new linter surfaced (not blanket-suppressed):** **(a)** `cloud/orchestra.sh` carried a **dead `MCP_FLAGS` variable** — computed but never read, because the driver (`orchestra-driver.sh`) recomputes its own `$MCP` and that is what reaches the `claude` call; removed it, keeping the empty-MCP staging side-effect the driver consumes (SC2034). **(b)** `cloud/orchestra-driver.sh:49` `{2} {1}` are GNU `parallel` field placeholders, not brace expansion — scoped `# shellcheck disable=SC1083` with an explanation (SC1083, true false-positive).
+- Verified: all 5 CI steps green locally (shellcheck rc=0 · bash/zsh syntax OK · smoke 39/39) and eval **157/157** (no regression — the gatekeeper code is intact; an earlier 125/157 reading was a shell-local `AURA_GATEKEEPER_OFF=1` artifact, not a code regression).
+
 ## v1.21.0 — 2026-06-20
 
 **Effort floor: NO-EXCUSES + mandatory ADVERSARIAL pass before greatness.** The loops were still half-measures — the model reached "good enough" and *rationalized* instead of pushing to greatness, because it was the judge of its own greatness and could close on self-asserted evidence. v1.21.0 removes the excuse-exits and forces an independent critic, all enforced by the gatekeeper (not doctrine). Eval **149→153/153**.

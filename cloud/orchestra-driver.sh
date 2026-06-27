@@ -46,6 +46,7 @@ if [ "${RESUME:-0}" = "1" ] && [ -s out/findings.md ]; then
   echo "== stage 1: RESUME — reusing existing findings.md ($(wc -c < out/findings.md) bytes) =="
 else
   echo "== stage 1: fan-out $(wc -l < roles.txt) specialists, ${N}-wide =="
+  # shellcheck disable=SC1083  # {2} {1} are GNU parallel field placeholders, not brace expansion
   nl -ba roles.txt | parallel --colsep '\t' -j "$N" run_role {2} {1}
   : > out/findings.md; i=0
   while IFS= read -r l; do

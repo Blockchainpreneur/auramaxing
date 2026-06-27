@@ -63,11 +63,11 @@ if [ "${DRY_RUN:-0}" = "1" ]; then
   exit 0
 fi
 
-# Light mode → empty MCP set (RAM-min). Otherwise agents inherit the box's full skills+MCP.
-MCP_FLAGS=""
+# Light mode → empty MCP set (RAM-min). The driver applies --strict-mcp-config itself (see
+# orchestra-driver.sh: `MCP=…`); here we only STAGE the empty-MCP file it references. Otherwise
+# agents inherit the box's full skills+MCP.
 if [ "$LIGHT" = "1" ]; then
   printf '%s\n' "$AURA_EMPTY_MCP" | ssh $AURA_SESSION_SSH "$HOST" 'cat > ~/.orchestra-empty-mcp.json'
-  MCP_FLAGS="--strict-mcp-config --mcp-config \$HOME/.orchestra-empty-mcp.json"
 fi
 # Hook-disabling settings (valid JSON, written from the LOCAL side → no nested-quote corruption).
 # Every agent passes --settings ~/.fleet-nohooks.json so the AURAMAXING autopilot hooks stay OFF.
