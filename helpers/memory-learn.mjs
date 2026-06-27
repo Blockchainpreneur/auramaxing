@@ -73,13 +73,17 @@ async function main() {
       raw = Buffer.concat(chunks).toString().trim();
     }
 
-    let toolName = 'unknown', toolInput = '', toolResult = '';
+    let toolName = 'unknown', toolInput = '', toolResult = '', explicitError = null;
     if (raw) {
       try {
         const payload = JSON.parse(raw);
         toolName   = payload.tool_name   || payload.toolName   || 'unknown';
         toolInput  = typeof payload.tool_input  === 'string' ? payload.tool_input  : JSON.stringify(payload.tool_input  || {});
         toolResult = typeof payload.tool_result === 'string' ? payload.tool_result : JSON.stringify(payload.tool_result || '');
+        // Prefer an explicit failure signal from the hook payload over scanning output text.
+        const errFlag = payload.is_error ?? payload.tool_error ??
+          (payload.tool_response && typeof payload.tool_response === 'object' ? payload.tool_response.is_error : undefined);
+        if (typeof errFlag === 'boolean') explicitError = errFlag;
       } catch {}
     }
 
@@ -89,7 +93,12 @@ async function main() {
     const context   = extractContext(toolInput);
     const timestamp = new Date().toISOString();
     const project   = basename(cwd);
-    const success   = !/\b(error|failed|exception|traceback|fatal)\b/i.test(toolResult);
+    // Use the explicit failure flag when the hook provides one; only fall back to the
+    // text heuristic (which over-triggers when output merely mentions "error"/"failed",
+    // e.g. reading a log file) when no explicit signal is available.
+    const success   = explicitError !== null
+      ? !explicitError
+      : !/\b(error|failed|exception|traceback|fatal)\b/i.test(toolResult);
 
     // ── Hash-based dedup ───────────────────────────────────────────────────────
     const key = hashKey(toolName, context);
