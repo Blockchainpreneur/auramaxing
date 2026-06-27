@@ -326,6 +326,36 @@ function hooksSuite() {
   } catch (e) { lrOut = (e.stdout || '') + (e.stderr || ''); }
   add('nlm-live-recall-early-exit', !lrOut.includes('NLM-RECALL'), 'nlm-live-recall did not early-exit silent when NLM unavailable (would burn timeout)');
 
+  // ── nlm-writer `source add-research` injection-safe path (regression for commit 9ab79b6) ──
+  // A malicious URL payload carrying $()/backticks must be SINGLE-quoted (shq) before it reaches the
+  // NLM CLI, so the shell that spawns the CLI can't execute the substitution. We run the LIVE writer
+  // under a throwaway HOME with a fake `notebooklm` on PATH (it only records its argv), buffer a
+  // research URL containing $(touch CANARY), flush, and assert the canary was NEVER created — the
+  // double-quoted regression would have executed it. `node evals/run.mjs` now catches a silent revert.
+  // Test the REPO-local writer (the artifact this branch protects); the installed ~/auramaxing copy
+  // may lag behind the repo's escaping fix, so resolve relative to this eval file, not AURA_H.
+  const NLM_WRITER = join(new URL('..', import.meta.url).pathname, 'helpers', 'nlm-writer.mjs');
+  const nlmHome = join(TMP, 'nlm-home');
+  mkdirSync(join(nlmHome, '.auramaxing'), { recursive: true });
+  mkdirSync(join(nlmHome, 'bin'), { recursive: true });
+  const nlmCanary = join(nlmHome, 'CANARY');
+  const nlmLog = join(nlmHome, 'nlm-argv.log');
+  // research routes to global.projects — seed it so writeEntry reaches the source-research branch.
+  writeFileSync(join(nlmHome, '.auramaxing', 'nlm-notebooks.json'),
+    JSON.stringify({ projects: {}, global: { projects: '00000000-0000-0000-0000-000000000000' } }));
+  // Fake CLI: record args, never execute them, exit 0 — any injection must already have fired upstream.
+  writeFileSync(join(nlmHome, 'bin', 'notebooklm'), '#!/bin/sh\necho "$@" >> "$AURA_NLM_LOG"\nexit 0\n', { mode: 0o755 });
+  const nlmEnv = { ...process.env, HOME: nlmHome, AURA_NLM_LOG: nlmLog, PATH: `${join(nlmHome, 'bin')}:${process.env.PATH}` };
+  const nlmEvilUrl = `https://evil.test/x$(touch ${nlmCanary})`;
+  try {
+    execSync(`node "${NLM_WRITER}" buffer research --title inj-test --project injproj`, { input: nlmEvilUrl, encoding: 'utf8', timeout: 8000, env: nlmEnv });
+    execSync(`node "${NLM_WRITER}" flush`, { encoding: 'utf8', timeout: 20000, env: nlmEnv });
+  } catch {}
+  let nlmLogTxt = ''; try { nlmLogTxt = readFileSync(nlmLog, 'utf8'); } catch {}
+  add('nlm-source-research-injection-safe',
+    !existsSync(nlmCanary) && nlmLogTxt.includes('source add-research'),
+    'expected nlm-writer to single-quote the source add-research URL payload — a $() injection in the URL must NOT execute (regression guard for the shq escaping fix at nlm-writer.mjs:141)');
+
   // ── update-gate cases ──────────────────────────────────────────────────
   // Uses AURA_UPDATE_STATE_FILE to point at /tmp fixtures — no HOME state touched.
   const UPDATE_GATE = join(AURA_H, 'update-gate.mjs');
