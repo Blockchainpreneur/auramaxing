@@ -34,6 +34,12 @@ function projectFromCwd(cwd) {
   return basename(cwd || process.cwd()) || 'unknown';
 }
 
+// Wrap a value in single quotes for safe shell interpolation. Double quotes
+// still allow backtick / $() command substitution, so titles must be single-quoted.
+function shq(s) {
+  return `'${String(s).replace(/'/g, `'\\''`)}'`;
+}
+
 export function classifyContent(text, ctx = {}) {
   if (!text) return 'session';
   const t = text.trim();
@@ -106,7 +112,7 @@ function writeEntry(entry) {
     try {
       // note create subcommand varies; try both positional forms gracefully
       try {
-        nlm(`note create --title "${title.replace(/"/g, '\\"')}" --file "${tmpFile}"`, { timeout: 20000 });
+        nlm(`note create --title ${shq(title)} --file "${tmpFile}"`, { timeout: 20000 });
       } catch {
         // Some versions: `notebooklm note create "title" < file`
         execSync(`${NLM_BIN} note create '${title.replace(/'/g, `'\\''`)}' < "${tmpFile}"`, {
@@ -132,12 +138,12 @@ function writeEntry(entry) {
       if (method === 'source-research') {
         // source add-research expects a query/URL, fall back to add if payload is not a URL
         if (typeof entry.payload === 'string' && /^https?:\/\//.test(entry.payload.trim())) {
-          nlm(`source add-research "${entry.payload.trim()}" --title "${title.replace(/"/g, '\\"')}"`, { timeout: 45000 });
+          nlm(`source add-research "${entry.payload.trim()}" --title ${shq(title)}`, { timeout: 45000 });
         } else {
-          nlm(`source add "${tmpFile}" --title "${title.replace(/"/g, '\\"')}"`, { timeout: 45000 });
+          nlm(`source add "${tmpFile}" --title ${shq(title)}`, { timeout: 45000 });
         }
       } else {
-        nlm(`source add "${tmpFile}" --title "${title.replace(/"/g, '\\"')}"`, { timeout: 45000 });
+        nlm(`source add "${tmpFile}" --title ${shq(title)}`, { timeout: 45000 });
       }
     } finally {
       try { unlinkSync(tmpFile); } catch {}
