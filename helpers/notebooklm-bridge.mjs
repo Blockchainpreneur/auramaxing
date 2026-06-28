@@ -151,7 +151,7 @@ switch (command) {
         } catch {}
       }
       if (sourceData.length > 10) {
-        const result = nlm([`Synthesize these tool learnings into exactly 5 concise rules. Each rule should be actionable. Format: numbered list. Learnings:\n${sourceData.slice(0, 1500)}`]);
+        const result = nlm(['ask', `Synthesize these tool learnings into exactly 5 concise rules. Each rule should be actionable. Format: numbered list. Learnings:\n${sourceData.slice(0, 1500)}`]);
         console.log(result);
       } else {
         console.log('Not enough learnings to synthesize');
