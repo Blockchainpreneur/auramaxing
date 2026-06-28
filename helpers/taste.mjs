@@ -20,7 +20,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
-import { execSync } from 'child_process';
+import { execSync, execFileSync } from 'child_process';
 
 const DIR = join(homedir(), '.auramaxing', 'taste');
 const WEEK = 7 * 24 * 3600;
@@ -30,7 +30,7 @@ const now = () => Math.floor(Date.now() / 1000);
 function projectKey(cwd = process.cwd()) {
   // Prefer the git remote slug (stable across clones); fall back to the dir basename.
   try {
-    const url = execSync('git -C "' + cwd + '" remote get-url origin 2>/dev/null', { encoding: 'utf8', timeout: 1500 }).trim();
+    const url = execFileSync('git', ['-C', cwd, 'remote', 'get-url', 'origin'], { encoding: 'utf8', timeout: 1500, stdio: ['ignore', 'pipe', 'ignore'] }).trim();
     const m = url.match(/[:/]([^/]+\/[^/]+?)(?:\.git)?$/);
     if (m) return m[1].replace(/[^\w.-]/g, '_');
   } catch {}
