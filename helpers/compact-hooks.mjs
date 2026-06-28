@@ -4,7 +4,7 @@
  * PostCompact: emits SDR as [MAXXING-SDR] block for context injection.
  * Always exits 0. */
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync } from 'fs';
-import { spawn, execSync } from 'child_process';
+import { spawn, execSync, execFileSync } from 'child_process';
 import { join } from 'path';
 import { homedir } from 'os';
 
@@ -152,7 +152,7 @@ function postCompact(input) {
     let lin = {}; try { lin = JSON.parse(readSafe(LINEAGE) || '{}'); } catch {}
     if (to && lin.from && lin.from !== to && (Math.floor(Date.now() / 1000) - (lin.ts || 0)) < 24 * 3600) {
       const ledgerCli = join(HOME, '.claude', 'helpers', 'ledger.mjs');
-      if (existsSync(ledgerCli)) { try { execSync(`node "${ledgerCli}" migrate "${lin.from}" "${to}"`, { timeout: 1500 }); } catch {} }
+      if (existsSync(ledgerCli)) { try { execFileSync('node', [ledgerCli, 'migrate', String(lin.from), String(to)], { timeout: 1500 }); } catch {} }
     }
   } catch {}
   try {
