@@ -83,7 +83,7 @@ switch (command) {
   case 'add-source': {
     ensureNotebook();
     if (!existsSync(input)) { console.error('File not found:', input); break; }
-    const result = nlm(['source', 'add-text', input]);
+    const result = nlm(['source', 'add', input]);
     console.log(result);
     break;
   }
