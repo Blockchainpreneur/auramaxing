@@ -238,7 +238,7 @@ async function main() {
   if (existsSync(FLAG_PATH)) process.exit(0);
   writeFileSync(FLAG_PATH, new Date().toISOString());
 
-  const model = cw.model || input.model || 'unknown';
+  const model = (cw && cw.model) || input.model || 'unknown';
   const cwd = input.cwd || process.cwd();
   const lastPrompt = input.prompt || input.user_prompt || input.message || '';
 
