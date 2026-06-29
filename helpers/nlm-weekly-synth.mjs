@@ -115,7 +115,8 @@ async function synthesizeNotebook(nbKey, nbId) {
     const tmp = join(tmpdir(), `aura-synth-${nbKey}-${date}.md`);
     writeFileSync(tmp, `# ${title}\n\n_Auto-generated from ${nbKey} notebook sources._\n\n${content}`);
     try {
-      nlm(`source add "${tmp}" --title "${title}"`, { timeout: 45000 });
+      const shq = (s) => `'${String(s).replace(/'/g, `'\\''`)}'`;
+      nlm(`source add ${shq(tmp)} --title ${shq(title)}`, { timeout: 45000 });
       log(`  re-ingested as "${title}"`);
     } finally {
       try { unlinkSync(tmp); } catch {}
