@@ -146,7 +146,7 @@ const ALL_PROGRAMS = [
 // ═══════════════════════════════════════════════════════════════════
 // FIELD MATCHER — Maps form labels to Econ Markets data
 // ═══════════════════════════════════════════════════════════════════
-function matchField(label) {
+function matchField(label, ref) {
   const l = label.toLowerCase().replace(/[*:]/g, '').trim();
 
   // Identity
@@ -206,7 +206,7 @@ function matchField(label) {
   if (/ask|what.*need|looking\s*for|what.*want|help.*from/.test(l)) return D.ask;
   if (/team|co-?founder|who.*work|member/.test(l)) return D.team;
   if (/why.*apply|why.*interest|why.*program|what.*convinced/.test(l)) return 'The network, mentorship, and credibility of this program would directly accelerate our path to market. We need institutional connections and regulatory guidance — both of which your network provides.';
-  if (/anything\s*else|additional|other\s*info|comments/.test(l)) return 'Also applying to YC S2026 (deadline May 4). Happy to demo the working prototype anytime: calendly.com/lt01/30min. Referred by ' + (D._currentRef || 'startup ecosystem.');
+  if (/anything\s*else|additional|other\s*info|comments/.test(l)) return 'Also applying to YC S2026 (deadline May 4). Happy to demo the working prototype anytime: calendly.com/lt01/30min. Referred by ' + (ref || 'startup ecosystem.');
 
   return null;
 }
@@ -389,7 +389,7 @@ async function main() {
           const label = await inp.evaluate(el => {
             return el.labels?.[0]?.innerText || el.placeholder || el.getAttribute('aria-label') || '';
           });
-          const match = matchField(label);
+          const match = matchField(label, prog.ref);
           if (match) {
             try {
               await inp.click({ timeout: 1000 });
@@ -413,7 +413,7 @@ async function main() {
             }
             return el.placeholder || '';
           });
-          const match = matchField(label);
+          const match = matchField(label, prog.ref);
           if (match) {
             try {
               await ta.click({ timeout: 1000 });
