@@ -20,7 +20,7 @@ import { join, basename } from 'path';
 const HOME = homedir();
 const AUR = join(HOME, '.auramaxing');
 const HANDOFF = join(AUR, 'pending-handoff.json');
-const MEMORY_DIR = join(HOME, '.claude', 'projects', '-Users-macbook', 'memory');
+const MEMORY_DIR = join(HOME, '.claude', 'projects', process.cwd().replace(/[^a-zA-Z0-9]/g, '-'), 'memory');
 
 function gitState(cwd) {
   try {
