@@ -105,7 +105,7 @@ const PROGRAMS = [
 ];
 
 async function fillForm(browser, program) {
-  const ctx = browser.contexts()[0];
+  const ctx = browser.contexts()[0] || await browser.newContext();
   let pg;
 
   try {
