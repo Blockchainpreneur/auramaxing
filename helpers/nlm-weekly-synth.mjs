@@ -32,6 +32,7 @@ const STAMP = join(AUR, '.last-weekly-synth');
 const NLM_BIN = findNlm();
 const SEVEN_DAYS_MS = 7 * 24 * 3600 * 1000;
 const MAX_WAIT_MS = 10 * 60 * 1000;
+const MAX_SYNTH_SOURCES = 4;
 
 mkdirSync(AUR, { recursive: true });
 
@@ -60,6 +61,37 @@ function stampNow() {
 }
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// Prune older "Weekly synthesis" sources so at most MAX_SYNTH_SOURCES remain
+// (one-month rolling window). Assumes the current notebook is already selected.
+function pruneSynthSources() {
+  let listOut;
+  try {
+    listOut = nlm(`source list`, { timeout: 30000 });
+  } catch (e) {
+    log(`  prune: source list failed: ${e.message?.slice(0, 120)}`);
+    return;
+  }
+  const synths = [];
+  for (const line of listOut.split('\n')) {
+    if (!line.includes('Weekly synthesis')) continue;
+    const idMatch = line.match(/([a-f0-9-]{36})/);
+    if (!idMatch) continue;
+    const dateMatch = line.match(/Weekly synthesis (\d{4}-\d{2}-\d{2})/);
+    synths.push({ id: idMatch[1], date: dateMatch ? dateMatch[1] : '' });
+  }
+  if (synths.length <= MAX_SYNTH_SOURCES) return;
+  // Newest first, then drop everything past the cap.
+  synths.sort((a, b) => b.date.localeCompare(a.date));
+  for (const s of synths.slice(MAX_SYNTH_SOURCES)) {
+    try {
+      nlm(`source delete ${s.id.slice(0, 8)}`, { timeout: 15000 });
+      log(`  pruned old synthesis source ${s.id.slice(0, 8)} (${s.date})`);
+    } catch (e) {
+      log(`  prune: delete ${s.id.slice(0, 8)} failed: ${e.message?.slice(0, 120)}`);
+    }
+  }
+}
 
 async function synthesizeNotebook(nbKey, nbId) {
   const short = nbId.slice(0, 8);
@@ -120,6 +152,9 @@ async function synthesizeNotebook(nbKey, nbId) {
     } finally {
       try { unlinkSync(tmp); } catch {}
     }
+
+    // Prune older "Weekly synthesis" sources to keep at most MAX_SYNTH_SOURCES
+    pruneSynthSources();
 
     return { ok: true, artifactId, title };
   } catch (e) {
