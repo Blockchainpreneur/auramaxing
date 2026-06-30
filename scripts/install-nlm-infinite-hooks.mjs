@@ -12,7 +12,7 @@
  *
  * Usage: node install-nlm-infinite-hooks.mjs [--dry-run] [--rollback]
  */
-import { readFileSync, writeFileSync, copyFileSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, copyFileSync, existsSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 
@@ -120,7 +120,7 @@ function main() {
 
   if (changes === 0) {
     console.log('\nNo changes needed.');
-    if (!DRY && !ROLLBACK) try { require('fs').unlinkSync(BACKUP); } catch {}
+    if (!DRY && !ROLLBACK) try { unlinkSync(BACKUP); } catch {}
     return;
   }
 
