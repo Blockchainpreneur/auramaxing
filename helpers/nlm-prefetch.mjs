@@ -112,9 +112,11 @@ for (const { test, q } of intentMap) {
 queries.push(`What prior decisions apply when working on: ${prompt.slice(0, 150)}? <= 3 bullets.`);
 
 // Limit to 3 prefetches max, stagger to avoid server contention
-queries.slice(0, 3).forEach((q, i) => {
+const staggered = queries.slice(0, 3);
+staggered.forEach((q, i) => {
   setTimeout(() => spawnAsk(q), i * 400);
 });
 
-// Give spawns time to kick off, then exit parent.
-setTimeout(() => process.exit(0), 200);
+// Give every staggered spawn time to kick off, then exit parent.
+const lastSpawnDelay = staggered.length ? (staggered.length - 1) * 400 : 0;
+setTimeout(() => process.exit(0), lastSpawnDelay + 200);
