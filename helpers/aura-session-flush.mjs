@@ -14,7 +14,7 @@
  * Reads optional JSON from stdin: { cwd, ... }. Always exits 0.
  */
 import { spawn } from 'child_process';
-import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync, readdirSync, appendFileSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync, readdirSync, appendFileSync, statSync } from 'fs';
 import { join, basename } from 'path';
 import { homedir } from 'os';
 import { bufferWrite, flush } from './nlm-writer.mjs';
@@ -80,7 +80,6 @@ function maybeTriggerWeekly() {
   try {
     let age = Infinity;
     if (existsSync(WEEKLY_STAMP)) {
-      const { statSync } = require('fs');
       age = Date.now() - statSync(WEEKLY_STAMP).mtimeMs;
     }
     if (age < SEVEN_DAYS_MS) return false;
