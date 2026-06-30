@@ -87,8 +87,8 @@ for (const s of sections) {
 //   aura-autopilot-engine-always-on
 //   agent-teams-swarm
 //   browser-automation-native-auramaxing-skill-cdp
-//   ui-design-activate-only-when-building-ui
-//   gstack-ai-software-factory-global
+//   gstack-ai-software-factory-tool-composition-invariant-decision-tree
+//   design-supremacy-protocol-front-end-brain-invariant
 
 const ALWAYS_INCLUDE = [
   'global-behavioral-rules',
@@ -103,17 +103,17 @@ const TASK_SECTIONS = {
   ],
   'new-feature': [
     ...ALWAYS_INCLUDE,
-    'ui-design-activate-only-when-building-ui',
+    'design-supremacy-protocol-front-end-brain-invariant',
     'aura-autopilot-engine-always-on',
-    'gstack-ai-software-factory-global',
+    'gstack-ai-software-factory-tool-composition-invariant-decision-tree',
   ],
   'deploy-ship': [
     ...ALWAYS_INCLUDE,
-    'gstack-ai-software-factory-global',
+    'gstack-ai-software-factory-tool-composition-invariant-decision-tree',
   ],
   design: [
     ...ALWAYS_INCLUDE,
-    'ui-design-activate-only-when-building-ui',
+    'design-supremacy-protocol-front-end-brain-invariant',
     'aura-autopilot-engine-always-on',
   ],
   'e2e-testing': [
@@ -123,7 +123,7 @@ const TASK_SECTIONS = {
   security: [
     ...ALWAYS_INCLUDE,
     'aura-autopilot-engine-always-on',
-    'gstack-ai-software-factory-global',
+    'gstack-ai-software-factory-tool-composition-invariant-decision-tree',
   ],
   'code-review': [
     ...ALWAYS_INCLUDE,
@@ -135,7 +135,7 @@ const TASK_SECTIONS = {
   ],
   planning: [
     ...ALWAYS_INCLUDE,
-    'gstack-ai-software-factory-global',
+    'gstack-ai-software-factory-tool-composition-invariant-decision-tree',
   ],
   investigate: [
     ...ALWAYS_INCLUDE,
@@ -151,11 +151,11 @@ const TASK_SECTIONS = {
   ],
   strategy: [
     ...ALWAYS_INCLUDE,
-    'gstack-ai-software-factory-global',
+    'gstack-ai-software-factory-tool-composition-invariant-decision-tree',
   ],
   pitch: [
     ...ALWAYS_INCLUDE,
-    'gstack-ai-software-factory-global',
+    'gstack-ai-software-factory-tool-composition-invariant-decision-tree',
   ],
   research: [
     ...ALWAYS_INCLUDE,
