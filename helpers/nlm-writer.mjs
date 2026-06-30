@@ -185,6 +185,11 @@ export async function flush({ limit = Infinity } = {}) {
       }
     }
   }
+  // Preserve entries beyond `limit` — they were emptied from the buffer but not
+  // yet processed; re-queue them so they aren't permanently lost.
+  for (const entry of queue.slice(limit)) {
+    try { appendFileSync(RETRY, JSON.stringify(entry) + '\n'); } catch {}
+  }
   return { written, failed, deadLettered };
 }
 
