@@ -73,7 +73,12 @@ function syncProfile() {
 if (process.argv.includes('--stop')) {
   if (existsSync(PID_FILE)) {
     const pid = readFileSync(PID_FILE, 'utf8').trim();
-    try { process.kill(parseInt(pid)); } catch {}
+    try {
+      process.kill(parseInt(pid));
+    } catch {
+      // Stored PID is stale or a wrapper — fall back to killing Chrome by CDP port
+      try { execSync(`pkill -f "remote-debugging-port=${CDP_PORT}" 2>/dev/null`); } catch {}
+    }
     try { unlinkSync(PID_FILE); } catch {}
     console.log('Browser server stopped.');
   } else {
