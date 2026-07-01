@@ -118,7 +118,7 @@ function delegateToNLM(handoff) {
 
   // Pre-flight auth check — fast (~2s timeout). If auth is dead, don't lie about queueing.
   try {
-    const authOut = execSync(`${NLM_BIN} list 2>&1 | head -3`, {
+    const authOut = execSync(`"${NLM_BIN}" list 2>&1 | head -3`, {
       encoding: 'utf8', timeout: 4000, shell: '/bin/bash',
     });
     if (/Authentication expired|Redirected to|Run.*notebooklm login/i.test(authOut)) {
