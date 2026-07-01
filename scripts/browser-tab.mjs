@@ -36,7 +36,7 @@ if (process.argv.includes('--list')) {
   ensureServer();
   try {
     const res = execSync(`curl -sf ${CDP_URL}/json`, { encoding: 'utf8', timeout: 3000 });
-    const tabs = JSON.parse(res).filter(t => t.type === 'page' && !t.url.startsWith('chrome'));
+    const tabs = JSON.parse(res).filter(t => t.type === 'page' && !t.url?.startsWith('chrome'));
     for (const t of tabs) {
       console.log(`${t.title?.slice(0, 50).padEnd(52)} ${t.url?.slice(0, 60)}`);
     }
