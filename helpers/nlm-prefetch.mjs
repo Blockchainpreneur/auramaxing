@@ -83,7 +83,8 @@ function spawnAsk(query) {
       try { writeFileSync(cacheFile, filtered); } catch {}
     }
   });
-  child.unref();
+  // Do NOT unref: the writeFileSync above runs in this process's callback, so we
+  // must keep the event loop alive until every ask completes or the cache stays empty.
 }
 
 // Derive predicted queries
@@ -117,6 +118,8 @@ staggered.forEach((q, i) => {
   setTimeout(() => spawnAsk(q), i * 400);
 });
 
-// Give the last staggered spawn time to kick off, then exit parent.
-const lastSpawnAt = Math.max(0, staggered.length - 1) * 400;
-setTimeout(() => process.exit(0), lastSpawnAt + 200);
+// Do NOT force an early process.exit here: the staggered asks fire after
+// lastSpawnAt and each ask's callback (which writes the cache) can take up to
+// the 90s execFile timeout. Exiting early would kill those callbacks before
+// writeFileSync runs, populating zero cache. Instead let node exit naturally
+// once every ask has completed and the event loop drains.
