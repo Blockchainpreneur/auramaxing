@@ -14,11 +14,11 @@
  *   node nlm-writer.mjs classify           # reads text from stdin, prints type
  *   node nlm-writer.mjs stats              # buffer + retry + dead-letter counts
  */
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync, unlinkSync, statSync, renameSync } from 'fs';
 import { join, basename } from 'path';
 import { homedir, tmpdir } from 'os';
-import { findNlm, pythonEnv } from './find-bin.mjs';
+import { findNlm, findNlmArgs, pythonEnv } from './find-bin.mjs';
 import { notebookFor, ensureAll } from './notebook-router.mjs';
 
 const HOME = homedir();
@@ -77,9 +77,13 @@ export function bufferWrite(type, payload, ctx = {}) {
   return entry;
 }
 
-function nlm(args, { timeout = 30000 } = {}) {
+// argv is an array of args (no shell). execFileSync does not interpret backticks/$()/;
+// so titles/projects derived from process.cwd() can't inject commands (P1 audit finding).
+function nlm(argv, { timeout = 30000 } = {}) {
   if (!NLM_BIN) throw new Error('NLM CLI not available');
-  return execSync(`${NLM_BIN} ${args}`, {
+  const resolved = findNlmArgs(); // { bin, args } — handles "python3 -m notebooklm"
+  const extra = Array.isArray(argv) ? argv : [argv];
+  return execFileSync(resolved.bin, [...resolved.args, ...extra], {
     encoding: 'utf8',
     timeout,
     env: { ...process.env, PATH: pythonEnv().PATH },
@@ -93,7 +97,7 @@ function writeEntry(entry) {
   const nbShort = notebookId.slice(0, 8);
 
   // Switch context first
-  nlm(`use ${nbShort}`, { timeout: 10000 });
+  nlm(['use', nbShort], { timeout: 10000 });
 
   if (method === 'note') {
     // `notebooklm note create` takes a title + content. We serialize payload to markdown.
@@ -106,11 +110,12 @@ function writeEntry(entry) {
     try {
       // note create subcommand varies; try both positional forms gracefully
       try {
-        nlm(`note create --title "${title.replace(/"/g, '\\"')}" --file "${tmpFile}"`, { timeout: 20000 });
+        nlm(['note', 'create', '--title', title, '--file', tmpFile], { timeout: 20000 });
       } catch {
-        // Some versions: `notebooklm note create "title" < file`
-        execSync(`${NLM_BIN} note create "${title.replace(/"/g, '\\"')}" < "${tmpFile}"`, {
-          encoding: 'utf8', timeout: 20000, shell: '/bin/bash',
+        // Some versions: `notebooklm note create "title" < file` — feed the file via stdin.
+        const resolved = findNlmArgs();
+        execFileSync(resolved.bin, [...resolved.args, 'note', 'create', title], {
+          encoding: 'utf8', timeout: 20000, input: readFileSync(tmpFile),
           env: { ...process.env, PATH: pythonEnv().PATH },
         });
       }
@@ -132,12 +137,12 @@ function writeEntry(entry) {
       if (method === 'source-research') {
         // source add-research expects a query/URL, fall back to add if payload is not a URL
         if (typeof entry.payload === 'string' && /^https?:\/\//.test(entry.payload.trim())) {
-          nlm(`source add-research "${entry.payload.trim()}" --title "${title.replace(/"/g, '\\"')}"`, { timeout: 45000 });
+          nlm(['source', 'add-research', entry.payload.trim(), '--title', title], { timeout: 45000 });
         } else {
-          nlm(`source add "${tmpFile}" --title "${title.replace(/"/g, '\\"')}"`, { timeout: 45000 });
+          nlm(['source', 'add', tmpFile, '--title', title], { timeout: 45000 });
         }
       } else {
-        nlm(`source add "${tmpFile}" --title "${title.replace(/"/g, '\\"')}"`, { timeout: 45000 });
+        nlm(['source', 'add', tmpFile, '--title', title], { timeout: 45000 });
       }
     } finally {
       try { unlinkSync(tmpFile); } catch {}
