@@ -188,6 +188,13 @@ export async function flush({ limit = Infinity } = {}) {
 
   const queue = [...lines, ...retryLines].map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
 
+  // Re-buffer any entries beyond the limit so they aren't silently dropped:
+  // the whole buffer was consumed via rename, but only `limit` get processed.
+  const overflow = queue.slice(limit);
+  if (overflow.length) {
+    try { appendFileSync(RETRY, overflow.map(e => JSON.stringify(e)).join('\n') + '\n'); } catch {}
+  }
+
   let written = 0, failed = 0, deadLettered = 0;
   for (const entry of queue.slice(0, limit)) {
     try {
