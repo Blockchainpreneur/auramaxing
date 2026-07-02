@@ -105,8 +105,10 @@ function writeEntry(entry) {
     writeFileSync(tmpFile, content);
     try {
       // note create subcommand varies; try both positional forms gracefully
+      // Single-quote the title so shell metacharacters ($(), backticks, etc.) can't execute.
+      const titleArg = `'${String(title).replace(/'/g, `'\\''`)}'`;
       try {
-        nlm(`note create --title "${title.replace(/"/g, '\\"')}" --file "${tmpFile}"`, { timeout: 20000 });
+        nlm(`note create --title ${titleArg} --file "${tmpFile}"`, { timeout: 20000 });
       } catch {
         // Some versions: `notebooklm note create "title" < file`
         execSync(`${NLM_BIN} note create "${title.replace(/"/g, '\\"')}" < "${tmpFile}"`, {
