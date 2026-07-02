@@ -77,6 +77,13 @@ export function bufferWrite(type, payload, ctx = {}) {
   return entry;
 }
 
+// Single-quote a value for safe use in a /bin/bash command string. Wrapping in
+// single quotes disables ALL shell metacharacters ($(), backticks, etc.) —
+// double-quote escaping of only `"` still lets those execute.
+function shq(value) {
+  return `'${String(value).replace(/'/g, `'\\''`)}'`;
+}
+
 function nlm(args, { timeout = 30000 } = {}) {
   if (!NLM_BIN) throw new Error('NLM CLI not available');
   return execSync(`${NLM_BIN} ${args}`, {
@@ -106,12 +113,12 @@ function writeEntry(entry) {
     try {
       // note create subcommand varies; try both positional forms gracefully
       // Single-quote the title so shell metacharacters ($(), backticks, etc.) can't execute.
-      const titleArg = `'${String(title).replace(/'/g, `'\\''`)}'`;
+      const titleArg = shq(title);
       try {
-        nlm(`note create --title ${titleArg} --file "${tmpFile}"`, { timeout: 20000 });
+        nlm(`note create --title ${titleArg} --file ${shq(tmpFile)}`, { timeout: 20000 });
       } catch {
         // Some versions: `notebooklm note create "title" < file`
-        execSync(`${NLM_BIN} note create "${title.replace(/"/g, '\\"')}" < "${tmpFile}"`, {
+        execSync(`${NLM_BIN} note create ${shq(title)} < ${shq(tmpFile)}`, {
           encoding: 'utf8', timeout: 20000, shell: '/bin/bash',
           env: { ...process.env, PATH: pythonEnv().PATH },
         });
@@ -134,12 +141,12 @@ function writeEntry(entry) {
       if (method === 'source-research') {
         // source add-research expects a query/URL, fall back to add if payload is not a URL
         if (typeof entry.payload === 'string' && /^https?:\/\//.test(entry.payload.trim())) {
-          nlm(`source add-research "${entry.payload.trim()}" --title "${title.replace(/"/g, '\\"')}"`, { timeout: 45000 });
+          nlm(`source add-research ${shq(entry.payload.trim())} --title ${shq(title)}`, { timeout: 45000 });
         } else {
-          nlm(`source add "${tmpFile}" --title "${title.replace(/"/g, '\\"')}"`, { timeout: 45000 });
+          nlm(`source add ${shq(tmpFile)} --title ${shq(title)}`, { timeout: 45000 });
         }
       } else {
-        nlm(`source add "${tmpFile}" --title "${title.replace(/"/g, '\\"')}"`, { timeout: 45000 });
+        nlm(`source add ${shq(tmpFile)} --title ${shq(title)}`, { timeout: 45000 });
       }
     } finally {
       try { unlinkSync(tmpFile); } catch {}
