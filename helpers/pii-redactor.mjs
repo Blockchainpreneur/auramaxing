@@ -81,7 +81,6 @@ const BIP39_COMMON = new Set([
   'begin','behave','behind','believe','below','belt','bench','benefit','best','betray',
 ]);
 function detectMnemonic(text) {
-  if (text.length > 50000) return false;
   const words = text.match(/\b[a-z]{3,8}\b/g) || [];
   let run = 0;
   for (const w of words) {
