@@ -4,7 +4,7 @@
  * PostCompact: emits SDR as [MAXXING-SDR] block for context injection.
  * Always exits 0. */
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync } from 'fs';
-import { spawn, execSync } from 'child_process';
+import { spawn, execSync, execFileSync } from 'child_process';
 import { join } from 'path';
 import { homedir } from 'os';
 
@@ -156,7 +156,10 @@ function postCompact(input) {
     let lin = {}; try { lin = JSON.parse(readSafe(LINEAGE) || '{}'); } catch {}
     if (to && lin.from && lin.from !== to && (Math.floor(Date.now() / 1000) - (lin.ts || 0)) < 24 * 3600) {
       const ledgerCli = join(HOME, '.claude', 'helpers', 'ledger.mjs');
-      if (existsSync(ledgerCli)) { try { execSync(`node "${ledgerCli}" migrate "${lin.from}" "${to}"`, { timeout: 1500 }); } catch {} }
+      // SECURITY: session ids (lin.from/to) are session-derived and attacker-influenceable;
+      // pass them as structured argv args via execFileSync (no shell) so a `$(...)`/backtick/`;`
+      // in a session id cannot inject shell commands at compaction time.
+      if (existsSync(ledgerCli)) { try { execFileSync('node', [ledgerCli, 'migrate', String(lin.from), String(to)], { timeout: 1500, stdio: 'ignore' }); } catch {} }
     }
   } catch {}
   try {
