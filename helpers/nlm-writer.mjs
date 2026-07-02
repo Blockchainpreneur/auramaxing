@@ -154,9 +154,20 @@ export async function flush({ limit = Infinity } = {}) {
   if (!existsSync(BUFFER)) return { written: 0, failed: 0, deadLettered: 0 };
   if (!NLM_BIN) return { written: 0, failed: 0, deadLettered: 0, skipped: true };
 
-  // Snapshot buffer
-  const raw = readFileSync(BUFFER, 'utf8');
-  try { writeFileSync(BUFFER, ''); } catch {}
+  // Snapshot buffer atomically: rename away so concurrent appends land in a
+  // fresh buffer instead of being lost between read and truncate.
+  const snapshot = `${BUFFER}.flush-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  let raw = '';
+  try {
+    renameSync(BUFFER, snapshot);
+    raw = readFileSync(snapshot, 'utf8');
+  } catch {
+    // Fall back to read-then-truncate if rename is unavailable.
+    raw = readFileSync(BUFFER, 'utf8');
+    try { writeFileSync(BUFFER, ''); } catch {}
+  } finally {
+    try { unlinkSync(snapshot); } catch {}
+  }
   const lines = raw.split('\n').filter(Boolean);
 
   // Append any existing retry entries to the queue
