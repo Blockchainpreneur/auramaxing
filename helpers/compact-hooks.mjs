@@ -59,7 +59,11 @@ async function readStdin() {
   if (process.stdin.isTTY) return {};
   const chunks = [];
   for await (const chunk of process.stdin) chunks.push(chunk);
-  return JSON.parse(Buffer.concat(chunks).toString().trim() || '{}');
+  try {
+    return JSON.parse(Buffer.concat(chunks).toString().trim() || '{}');
+  } catch {
+    return {};
+  }
 }
 
 function recentFiles(dir, ext, count) {
