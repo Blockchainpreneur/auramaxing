@@ -15,6 +15,20 @@ import { homedir } from 'os';
 import { existsSync, readdirSync, readFileSync, mkdirSync, writeFileSync, statSync, copyFileSync, unlinkSync } from 'fs';
 
 const HOME = homedir();
+
+// Box drawing that actually lines up: pad the PLAIN text to a fixed inner width
+// first, then colorize. Colorizing first makes ANSI escapes count as characters
+// and the right border goes ragged; wide glyphs (⚠, emoji) do the same, so the
+// box body stays plain ASCII.
+const BOX_W = 56;
+const boxTop = (title, Y, B, R) => `${Y}${B}  ┌─ ${title} ${'─'.repeat(Math.max(0, BOX_W - title.length - 3))}┐${R}`;
+const boxRow = (text, Y, R, hi = '') => {
+  const plain = `  ${text}`;
+  const pad = ' '.repeat(Math.max(0, BOX_W - plain.length));
+  return `${Y}  │${R}${hi ? plain.replace(text, `${hi}${text}\u001b[0m`) : plain}${pad}${Y}│${R}`;
+};
+const boxBot = (Y, B, R) => `${Y}${B}  └${'─'.repeat(BOX_W)}┘${R}`;
+
 const MEMORY_DIR = join(HOME, '.auramaxing', 'memory');
 const LEARNINGS_DIR = join(HOME, '.auramaxing', 'learnings');
 
@@ -200,22 +214,20 @@ try {
 
   // ── Upgrade banner (REQUIRED — prompts blocked until updated) ────
   if (upgradeAvail) {
-    const pad = (s, w) => s + ' '.repeat(Math.max(0, w - s.length));
-    process.stderr.write([
-      '', `${Y}${B}  ┌─ AURAMAXING UPDATE REQUIRED ${'─'.repeat(23)}┐${R}`,
-      `${Y}  │${R}  Current : ${C}${pad(localVer, 43)}${Y}│${R}`,
-      `${Y}  │${R}  New     : ${C}${B}${pad(remoteVer, 43)}${Y}│${R}`,
-      `${Y}  │${R}                                                        ${Y}│${R}`,
-      `${Y}  │${R}  ${B}⚠  Prompts will be BLOCKED until you update.${R}  ${Y}│${R}`,
-      `${Y}  │${R}                                                        ${Y}│${R}`,
-      `${Y}  │${R}  Run: ${C}${B}bash ~/auramaxing/scripts/update.sh${R}       ${Y}│${R}`,
-      `${Y}  │${R}                                                        ${Y}│${R}`,
-      `${Y}  │${R}  Override (one session): ${C}AURA_UPDATE_GATE_OFF=1 claude${R} ${Y}│${R}`,
-      `${Y}  │${R}                                                        ${Y}│${R}`,
-      `${Y}  │${R}  Heads-up: continued use will become ${B}USD $1,499${R}      ${Y}│${R}`,
-      `${Y}  │${R}  per user / year — ${B}not charged yet${R}.                  ${Y}│${R}`,
-      `${Y}${B}  └${'─'.repeat(52)}┘${R}`, '',
-    ].join('\n') + '\n');
+    process.stderr.write(['',
+      boxTop('AURAMAXING UPDATE REQUIRED', Y, B, R),
+      boxRow(`Current   ${localVer}`, Y, R),
+      boxRow(`Required  ${remoteVer}`, Y, R),
+      boxRow('', Y, R),
+      boxRow('Prompts are BLOCKED until you update.', Y, R, B),
+      boxRow('Run:  bash ~/auramaxing/scripts/update.sh', Y, R),
+      boxRow('', Y, R),
+      boxRow('Heads-up: continued use of AURAMAXING will', Y, R),
+      boxRow('become USD $1,499 per user / year.', Y, R, B),
+      boxRow('Not charged yet - advance notice only.', Y, R),
+      boxRow('', Y, R),
+      boxRow('Override once: AURA_UPDATE_GATE_OFF=1 claude', Y, R),
+      boxBot(Y, B, R), ''].join('\n') + '\n');
   }
 
   // ── Pricing notice — reaches EVERY user, not only outdated ones ──
@@ -228,16 +240,16 @@ try {
     try { seen = parseInt(readFileSync(noticeFile, 'utf8').trim(), 10) || 0; } catch {}
     if (seen < 3) {
       writeFileSync(noticeFile, String(seen + 1));
-      process.stderr.write([
-        '', `${Y}${B}  ┌─ AURAMAXING · HEADS-UP ${'─'.repeat(28)}┐${R}`,
-        `${Y}  │${R}  Updating is MANDATORY: only the latest version    ${Y}│${R}`,
-        `${Y}  │${R}  is supported (prompts block until you update).    ${Y}│${R}`,
-        `${Y}  │${R}                                                    ${Y}│${R}`,
-        `${Y}  │${R}  Continued use will become ${B}USD $1,499${R}             ${Y}│${R}`,
-        `${Y}  │${R}  per user / year — ${B}not charged yet${R}.               ${Y}│${R}`,
-        `${Y}  │${R}  Advance notice so the price is no surprise.       ${Y}│${R}`,
-        `${Y}${B}  └${'─'.repeat(52)}┘${R}`, '',
-      ].join('\n') + '\n');
+      process.stderr.write(['',
+        boxTop('AURAMAXING · HEADS-UP', Y, B, R),
+        boxRow('Updating is MANDATORY: only the latest version', Y, R),
+        boxRow('is supported - prompts block until you update.', Y, R),
+        boxRow('', Y, R),
+        boxRow('Continued use of AURAMAXING will become', Y, R),
+        boxRow('USD $1,499 per user / year.', Y, R, B),
+        boxRow('Not charged yet - advance notice only, so the', Y, R),
+        boxRow('price is no surprise when it takes effect.', Y, R),
+        boxBot(Y, B, R), ''].join('\n') + '\n');
     }
   } catch {}
 

@@ -105,25 +105,28 @@ try {
       process.exit(0);   // let the update window render this once
     }
 
-    const B = '\x1b[1m', R = '\x1b[0m', Y = '\x1b[33m', C = '\x1b[36m', D = '\x1b[2m';
-    const line = '─'.repeat(54);
-    process.stderr.write([
-      '',
-      `${Y}${B}  ┌─ AURAMAXING UPDATE REQUIRED ${line}┐${R}`,
-      `${Y}  │${R}  Current version : ${C}${state.local}${R}`,
-      `${Y}  │${R}  Available version: ${C}${B}${state.remote}${R}`,
-      `${Y}  │${R}`,
-      `${Y}  │${R}  ${B}Prompts are blocked until you update.${R}`,
-      `${Y}  │${R}`,
-      `${Y}  │${R}  ${B}Run:${R}  ${C}bash ~/auramaxing/scripts/update.sh${R}`,
-      `${Y}  │${R}`,
-      `${Y}  │${R}  ${D}Heads-up — continued use of AURAMAXING will become${R}`,
-      `${Y}  │${R}  ${B}USD $1,499 per user / year${R}${D} (not charged yet).${R}`,
-      `${Y}  │${R}`,
-      `${Y}  │${R}  ${D}One-time override: ${C}AURA_UPDATE_GATE_OFF=1 claude${R}`,
-      `${Y}${B}  └${'─'.repeat(84)}┘${R}`,
-      '',
-    ].join('\n') + '\n');
+    const B = '\x1b[1m', R = '\x1b[0m', Y = '\x1b[33m';
+    const W = 56;
+    const top = `${Y}${B}  ┌─ AURAMAXING UPDATE REQUIRED ${'─'.repeat(W - 29)}┐${R}`;
+    const row = (text, hi = '') => {
+      const plain = `  ${text}`;
+      return `${Y}  │${R}${hi ? `${hi}${plain}${R}` : plain}${' '.repeat(Math.max(0, W - plain.length))}${Y}│${R}`;
+    };
+    const bot = `${Y}${B}  └${'─'.repeat(W)}┘${R}`;
+    process.stderr.write(['',
+      top,
+      row(`Current   ${state.local}`),
+      row(`Required  ${state.remote}`),
+      row(''),
+      row('Prompts are BLOCKED until you update.', B),
+      row('Run:  bash ~/auramaxing/scripts/update.sh'),
+      row(''),
+      row('Heads-up: continued use of AURAMAXING will'),
+      row('become USD $1,499 per user / year.', B),
+      row('Not charged yet - advance notice only.'),
+      row(''),
+      row('Override once: AURA_UPDATE_GATE_OFF=1 claude'),
+      bot, ''].join('\n') + '\n');
     // Stdout JSON block survives the settings.json hook wrapper (`2>/dev/null || true`
     // turns exit 2 into exit 0 and swallows stderr); raw wiring still blocks via exit 2.
     process.stdout.write(JSON.stringify({

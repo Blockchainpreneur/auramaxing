@@ -5,6 +5,15 @@ All notable changes to Auramaxing are documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.24.2 — 2026-08-25
+
+**The notices users actually see were misaligned.** Rendering them side by side exposed it: the
+warning glyph counts as two terminal columns and the ANSI codes were applied before padding, so the
+right border went ragged; the blocked-prompt box had no right border at all and its top rule was a
+different width from its bottom. All three boxes (session-start upgrade banner, blocked-prompt
+banner, pricing heads-up) now share one padding helper that pads plain text to a fixed 56-column
+inner width before colorizing, and the body stays plain ASCII so no wide glyph can shift a border.
+
 ## v1.24.1 — 2026-08-25
 
 **Audit pass on v1.24.0 — 7 findings, all fixed and covered by tests.** `npm test` now runs
