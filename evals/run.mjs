@@ -62,12 +62,23 @@ const KILLSWITCHES_OFF = {
   AURA_COUNCIL_OFF: '', AURA_RUFLO_SWARM: '',
 };
 function run(bin, input, ms = 8000, extraEnv = {}) {
+  const exec = (timeout) => execSync(`node "${bin}"`, {
+    input: input ?? '', encoding: 'utf8', timeout,
+    env: { ...process.env, ...KILLSWITCHES_OFF, ...extraEnv },
+  });
   try {
-    return execSync(`node "${bin}"`, {
-      input: input ?? '', encoding: 'utf8', timeout: ms,
-      env: { ...process.env, ...KILLSWITCHES_OFF, ...extraEnv },
-    });
-  } catch (e) { return (e.stdout || '') + (e.stderr || ''); }
+    return exec(ms);
+  } catch (e) {
+    // A hook STARVED of CPU is not a failing hook. Under load (this suite runs
+    // dozens of node processes) the router overran its 8s budget and returned
+    // nothing, reporting a phantom regression. Retry ONCE, and only when the
+    // kill was a timeout — a hook that genuinely produces nothing still fails.
+    const timedOut = e.signal === 'SIGTERM' || e.code === 'ETIMEDOUT' || /ETIMEDOUT|timed out/i.test(String(e.message));
+    if (timedOut) {
+      try { return exec(ms * 3); } catch (e2) { return (e2.stdout || '') + (e2.stderr || ''); }
+    }
+    return (e.stdout || '') + (e.stderr || '');
+  }
 }
 function classify(out) { const m = out.match(/task:([a-z-]+)/); return m ? m[1] : ''; }
 function sameFile(a, b) { try { return readFileSync(a, 'utf8') === readFileSync(b, 'utf8'); } catch { return false; } }
