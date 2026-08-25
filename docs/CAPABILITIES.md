@@ -61,8 +61,10 @@ Native: `/code-review` (incl. `ultra`), `/simplify`, `/verify`, `/security-revie
   `connectOverCDP`, which hangs on the user's 30+-target Chrome) whenever a script must drive
   the user's live browser; its `Input.*` path also produces TRUSTED events (user activation).
 
-## 6b. ChatGPT Council (second opinion, always-on)
-Fires automatically when **2+ Claude Code terminals are mid-task**: pushes the live project
+## 6b. ChatGPT Council (second opinion, OPT-IN)
+**Opt-in — inert until `touch ~/.auramaxing/council/ENABLED` (or `AURA_COUNCIL_ON=1`)**, because it
+drives a real browser and can open the microphone. Once enabled it fires when **2+ Claude Code
+terminals are mid-task**: pushes the live project
 context (prompt, git, open ledger, peer terminals, steering doc — secret-scrubbed) to ChatGPT
 in a new tab, archives the answer, reads it aloud and opens the voice call on that thread.
 - `helpers/gpt-council.mjs` (UserPromptSubmit + `--stop`; `--status`/`--force`/`--dry`)

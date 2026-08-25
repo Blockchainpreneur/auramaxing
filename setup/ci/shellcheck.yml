@@ -1,0 +1,26 @@
+name: cloud-shellcheck
+# Strict lint + syntax + smoke test for the shell-infra layer (cloud delegation / mirror mode).
+# This layer launches `claude --dangerously-skip-permissions` on a remote box and runs
+# `rsync --delete`, so it MUST be linted on every change.
+on:
+  push:
+    paths: ['cloud/**', '.github/workflows/shellcheck.yml']
+  pull_request:
+    paths: ['cloud/**', '.github/workflows/shellcheck.yml']
+  workflow_dispatch: {}
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install shellcheck + zsh
+        run: sudo apt-get update -y && sudo apt-get install -y shellcheck zsh
+      - name: ShellCheck (bash scripts, -x follows sourced lib.sh)
+        run: shellcheck -x -S warning cloud/*.sh
+      - name: Syntax check (bash)
+        run: for f in cloud/*.sh; do bash -n "$f"; done
+      - name: Syntax check (zsh)
+        run: for f in cloud/*.zsh; do zsh -n "$f"; done
+      - name: Smoke test (DRY_RUN — no network)
+        run: bash cloud/smoke-test.sh

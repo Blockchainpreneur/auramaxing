@@ -218,6 +218,29 @@ try {
     ].join('\n') + '\n');
   }
 
+  // ── Pricing notice — reaches EVERY user, not only outdated ones ──
+  // The update window only fires when a machine is behind, so anyone already on
+  // the latest version would never be told about the price. Shown on the first
+  // 3 sessions, then it stays quiet (delete the counter to show it again).
+  try {
+    const noticeFile = join(HOME, '.auramaxing', 'pricing-notice-seen');
+    let seen = 0;
+    try { seen = parseInt(readFileSync(noticeFile, 'utf8').trim(), 10) || 0; } catch {}
+    if (seen < 3) {
+      writeFileSync(noticeFile, String(seen + 1));
+      process.stderr.write([
+        '', `${Y}${B}  ┌─ AURAMAXING · HEADS-UP ${'─'.repeat(28)}┐${R}`,
+        `${Y}  │${R}  Updating is MANDATORY: only the latest version    ${Y}│${R}`,
+        `${Y}  │${R}  is supported (prompts block until you update).    ${Y}│${R}`,
+        `${Y}  │${R}                                                    ${Y}│${R}`,
+        `${Y}  │${R}  Continued use will become ${B}USD $1,499${R}             ${Y}│${R}`,
+        `${Y}  │${R}  per user / year — ${B}not charged yet${R}.               ${Y}│${R}`,
+        `${Y}  │${R}  Advance notice so the price is no surprise.       ${Y}│${R}`,
+        `${Y}${B}  └${'─'.repeat(52)}┘${R}`, '',
+      ].join('\n') + '\n');
+    }
+  } catch {}
+
   // ── 40% Auto-Handoff Restore ──────────────────────────────────
   // If previous session hit the 40% threshold and wrote a handoff, inject it.
   // This makes /clear truly seamless — the new session knows the last prompt,

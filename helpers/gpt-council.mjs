@@ -43,6 +43,11 @@ const LOCK_TTL_MS = 6 * 60_000;
 const argv = process.argv.slice(2);
 const has = (f) => argv.includes(f);
 const OFF = process.env.AURA_COUNCIL_OFF === '1' || existsSync(join(DIR, 'OFF'));
+// OPT-IN, deliberately. This hook drives a real browser and can open the user's
+// MICROPHONE. Shipping that on-by-default on someone else's machine is not
+// acceptable, so it stays inert until the operator turns it on explicitly:
+//   touch ~/.auramaxing/council/ENABLED     (or AURA_COUNCIL_ON=1)
+const ENABLED = process.env.AURA_COUNCIL_ON === '1' || existsSync(join(DIR, 'ENABLED'));
 
 mkdirSync(SESS, { recursive: true });
 
@@ -52,27 +57,44 @@ function log(line) {
 const readJson = (p, d = null) => { try { return JSON.parse(readFileSync(p, 'utf8')); } catch { return d; } };
 const writeJson = (p, o) => { try { writeFileSync(p, JSON.stringify(o, null, 2)); } catch {} };
 
-/** The Claude Code process that owns this hook (hook → sh → claude). */
+/**
+ * The Claude Code process that owns this hook (hook → sh → claude).
+ * Returns { pid, verified }: `verified` is false when no `claude` ancestor could be
+ * identified (deeper wrapper chains, a renamed binary, `ps` unavailable). That flag
+ * is what keeps liveness honest — see `alive()`. Without it the hook stored a pid its
+ * OWN liveness check then rejected, and the council silently never fired.
+ */
 function claudePid() {
   let pid = process.ppid;
-  for (let i = 0; i < 6 && pid > 1; i++) {
+  for (let i = 0; i < 12 && pid > 1; i++) {
     let out = '';
-    try { out = execSync(`ps -o ppid=,comm= -p ${pid}`, { encoding: 'utf8', timeout: 1200 }).trim(); } catch { break; }
+    try { out = execSync(`${PS_BIN} -o ppid=,comm= -p ${pid}`, { encoding: 'utf8', timeout: 2500 }).trim(); } catch { break; }
     const m = out.match(/^(\d+)\s+(.*)$/);
     if (!m) break;
-    if (/claude/i.test(m[2])) return pid;
+    if (/claude/i.test(m[2])) return { pid, verified: true };
     pid = Number(m[1]);
   }
-  return process.ppid;
+  return { pid: process.ppid, verified: false };
 }
 /**
  * Liveness must confirm the pid is still a CLAUDE process: macOS recycles pids,
  * and a recycled pid would keep a dead terminal "busy" forever.
+ *
+ * FAIL-SAFE DIRECTION MATTERS. `process.kill(pid, 0)` already proved the pid
+ * exists; the `ps` call only refines *which* process it is. If `ps` itself fails
+ * or times out (a loaded machine — reproduced under `npm test`), treating that as
+ * "dead" silently evicts a terminal that is very much alive and the council stops
+ * firing. An existing pid is therefore assumed alive unless `ps` SUCCEEDS and
+ * says it is not claude.
  */
-const alive = (pid) => {
+const PS_BIN = process.env.AURA_COUNCIL_PS_BIN || 'ps';
+const alive = (pid, verified = true) => {
   try { process.kill(pid, 0); } catch { return false; }
-  try { return /claude/i.test(execSync(`ps -o comm= -p ${pid}`, { encoding: 'utf8', timeout: 1200 })); }
-  catch { return false; }
+  // Only a pid we positively identified as claude may be rejected for not being
+  // claude — otherwise the check contradicts what was recorded.
+  if (!verified) return true;
+  try { return /claude/i.test(execSync(`${PS_BIN} -o comm= -p ${pid}`, { encoding: 'utf8', timeout: 2500 })); }
+  catch { return true; }
 };
 
 async function stdinPayload() {
@@ -93,7 +115,7 @@ function liveSessions() {
     const s = readJson(p);
     if (!s) { try { unlinkSync(p); } catch {} continue; }
     const stale = Date.now() - (s.updatedTs || 0) > BUSY_TTL_MS;
-    const dead = s.pid ? !alive(s.pid) : false;
+    const dead = s.pid ? !alive(s.pid, s.pidVerified !== false) : false;
     if (dead || (stale && s.state === 'busy')) {
       if (dead) { try { unlinkSync(p); } catch {} continue; }
       s.state = 'stale';
@@ -117,6 +139,7 @@ function takeLock() {
 
 // ── --status ────────────────────────────────────────────────────────────────
 if (has('--status')) {
+  if (!ENABLED) console.log('council: NOT ENABLED — `touch ~/.auramaxing/council/ENABLED` (o AURA_COUNCIL_ON=1) para activarlo');
   const sessions = liveSessions();
   const st = readJson(STATE, {});
   console.log(`council: ${OFF ? 'OFF' : 'ON'}  ·  min sessions: ${MIN_SESSIONS}  ·  1 disparo por prompt${COOLDOWN_MS ? ` · cooldown ${COOLDOWN_MS / 60000}min` : ''}`);
@@ -129,6 +152,9 @@ if (has('--status')) {
   process.exit(0);
 }
 
+// Not enabled on this machine → completely inert (no state, no browser, no mic).
+if (!ENABLED) process.exit(0);
+
 const payload = await stdinPayload();
 const sessionId = payload.session_id || process.env.CLAUDE_SESSION_ID || `pid-${process.ppid}`;
 const cwd = payload.cwd || process.cwd();
@@ -139,15 +165,16 @@ const sessFile = join(SESS, `${String(sessionId).replace(/[^\w.-]/g, '_')}.json`
 // ── --stop (Stop hook): this terminal finished its task ─────────────────────
 if (has('--stop')) {
   const prev = readJson(sessFile, {});
-  writeJson(sessFile, { ...prev, sessionId, pid: prev.pid || claudePid(), cwd, project, state: 'idle', updatedTs: Date.now() });
+  const own = claudePid();
+  writeJson(sessFile, { ...prev, sessionId, pid: prev.pid || own.pid, pidVerified: prev.pidVerified ?? own.verified, cwd, project, state: 'idle', updatedTs: Date.now() });
   process.exit(0);
 }
 
 // ── UserPromptSubmit: register BUSY, then decide ────────────────────────────
-const pid = claudePid();
+const { pid, verified: pidVerified } = claudePid();
 const prev = readJson(sessFile, {});
 writeJson(sessFile, {
-  sessionId, pid, cwd, project, state: 'busy',
+  sessionId, pid, pidVerified, cwd, project, state: 'busy',
   prompt: prompt.slice(0, 400), promptTs: Date.now(), updatedTs: Date.now(),
   turns: (prev.turns || 0) + 1,
 });

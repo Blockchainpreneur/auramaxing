@@ -5,6 +5,48 @@ All notable changes to Auramaxing are documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.24.1 — 2026-08-25
+
+**Audit pass on v1.24.0 — 7 findings, all fixed and covered by tests.** `npm test` now runs
+everything: 37 council + 10 turn-sentinel + 18 install-merge + 170 evals = **235 checks, all green**.
+
+- **F1 — the wiring every other user gets had ZERO tests.** That is exactly how v1.24.0 shipped the
+  ChatGPT Council helpers without wiring them: on any machine but the author's it was dead code.
+  New `tests/install-merge.test.mjs` executes install.sh's real settings-merge block against
+  fixtures: update-gate present and FIRST, router, council (submit + stop), security guards, the
+  user's own hooks preserved, their model not overwritten, re-running install.sh idempotent, the
+  fresh-install template matching, and every hook command pointing at a file that exists.
+- **F2 — the council auto-armed on strangers' machines.** It drives a real browser and can open the
+  MICROPHONE; on-by-default is not acceptable for someone else's laptop. It is now **opt-in**:
+  inert (no state, no browser, no mic) until `touch ~/.auramaxing/council/ENABLED` or
+  `AURA_COUNCIL_ON=1`.
+- **F3 — users already on the latest version never saw the pricing notice.** The notice only rode
+  the update path, so exactly the people who kept up to date were the ones never told. Session start
+  now shows it on the first 3 sessions regardless of version.
+- **F4 — the eval harness leaked the operator's kill-switches.** `AURA_GATEKEEPER_OFF=1` in
+  settings.json made 33 gatekeeper checks fail as phantoms (the hook exited before running any
+  logic). The harness now neutralizes kill-switches for every hook subprocess; the kill-switch cases
+  set them back on explicitly. Real-environment score went 79% → 100%.
+- **F5 — the evidence-gatekeeper was disabled** in settings.json while CLAUDE.md declares it always
+  on. Verified against a real transcript (it blocks with a correct reason), then re-enabled.
+- **F6 — orphan working files at the repo root** (`polymax-qa.mjs` tracked, `shot_aipump.mjs`
+  untracked) — one-off QA scripts for other projects, violating the project's own "nothing in root"
+  rule. Moved out to `~/.auramaxing/misc/`.
+- **F7 — `npm test` did nothing** (`scripts: {}`). Added `test`, `test:unit`, `test:evals`,
+  `test:council`, `test:install`.
+
+**CI definition now ships with the repo.** Verified, not assumed: the current token cannot write
+`.github/workflows/*` — `git push` is rejected outright and the REST contents API returns 404 — so
+the shellcheck workflow lived only on one laptop. It is now versioned at `setup/ci/shellcheck.yml`,
+which needs no special scope, and activating it is one line:
+
+```bash
+mkdir -p .github/workflows && cp setup/ci/shellcheck.yml .github/workflows/ && git add .github/workflows && git commit -m "ci: enable shellcheck" && git push
+```
+
+That push still requires a token with the `workflow` scope (or a registered SSH key) — the only
+part of this that a credential, not code, can fix.
+
 ## v1.24.0 — 2026-08-25
 
 **Mandatory updates enforced for every user + advance pricing notice.** Nothing is being charged today.

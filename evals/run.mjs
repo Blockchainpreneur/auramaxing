@@ -51,9 +51,23 @@ const args = process.argv.slice(2);
 const asJson = args.includes('--json');
 const setBaseline = args.includes('--baseline');
 
-function run(bin, input, ms = 8000) {
-  try { return execSync(`node "${bin}"`, { input: input ?? '', encoding: 'utf8', timeout: ms }); }
-  catch (e) { return (e.stdout || '') + (e.stderr || ''); }
+// The suite measures hook LOGIC, not the operator's environment. Kill-switches
+// inherited from the caller's shell/settings (AURA_GATEKEEPER_OFF=1 is set in
+// settings.json on the author's machine) made 33 gatekeeper checks fail as
+// phantoms — the hook was exiting 0 before running any logic. Neutralize them
+// for every hook subprocess; the dedicated kill-switch cases set them back on
+// explicitly when that IS what they assert.
+const KILLSWITCHES_OFF = {
+  AURA_GATEKEEPER_OFF: '', AURA_UPDATE_GATE_OFF: '', AURA_ULTRAMAX_OFF: '',
+  AURA_COUNCIL_OFF: '', AURA_RUFLO_SWARM: '',
+};
+function run(bin, input, ms = 8000, extraEnv = {}) {
+  try {
+    return execSync(`node "${bin}"`, {
+      input: input ?? '', encoding: 'utf8', timeout: ms,
+      env: { ...process.env, ...KILLSWITCHES_OFF, ...extraEnv },
+    });
+  } catch (e) { return (e.stdout || '') + (e.stderr || ''); }
 }
 function classify(out) { const m = out.match(/task:([a-z-]+)/); return m ? m[1] : ''; }
 function sameFile(a, b) { try { return readFileSync(a, 'utf8') === readFileSync(b, 'utf8'); } catch { return false; } }

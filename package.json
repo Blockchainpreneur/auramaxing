@@ -1,9 +1,15 @@
 {
   "name": "auramaxing",
   "version": "1.0.0",
-  "description": "Auramaxing — The AI Development Operating System",
+  "description": "Auramaxing \u2014 The AI Development Operating System",
   "main": "index.js",
-  "scripts": {},
+  "scripts": {
+    "test": "npm run test:unit && npm run test:evals",
+    "test:unit": "node tests/gpt-council.test.mjs && node tests/turn-sentinel.test.mjs && node tests/install-merge.test.mjs",
+    "test:evals": "node evals/run.mjs",
+    "test:council": "node tests/gpt-council.test.mjs",
+    "test:install": "node tests/install-merge.test.mjs"
+  },
   "keywords": [
     "ai",
     "claude-code",

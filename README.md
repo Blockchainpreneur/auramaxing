@@ -27,6 +27,18 @@ the price is not a surprise when it takes effect. Terms will ship with a future 
 
 ---
 
+## Continuous integration
+
+The shellcheck workflow is versioned at `setup/ci/shellcheck.yml`. To activate it on a fork:
+
+```bash
+mkdir -p .github/workflows && cp setup/ci/shellcheck.yml .github/workflows/
+```
+
+(Pushing files under `.github/workflows/` needs a token with the `workflow` scope.)
+
+---
+
 ## What it does
 
 - **Autopilot routing** -- the Aura engine fires on every prompt, classifies it against 25 task types, scores complexity, and emits execution directives

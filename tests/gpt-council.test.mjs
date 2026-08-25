@@ -30,7 +30,7 @@ function run(payload, args = [], env = {}) {
       input: JSON.stringify(payload),
       encoding: 'utf8',
       timeout: 15000,
-      env: { ...process.env, AURA_COUNCIL_DIR: DIR, AURA_COUNCIL_NO_SPAWN: '1', ...env },
+      env: { ...process.env, AURA_COUNCIL_DIR: DIR, AURA_COUNCIL_NO_SPAWN: '1', AURA_COUNCIL_ON: '1', ...env },
     });
   } catch (e) { return `THREW:${e.message}`; }
 }
@@ -46,6 +46,20 @@ const A = { session_id: 'sessA', cwd: join(homedir(), 'auramaxing'), prompt: 'ar
 const B = { session_id: 'sessB', cwd: homedir(), prompt: 'construye el council de chatgpt' };
 
 console.log('\ngpt-council');
+
+// 0 — OPT-IN: on a machine that never turned it on, the hook must be completely
+// inert (no browser, no microphone, not even a state file).
+fresh();
+let inert = run(A, [], { AURA_COUNCIL_ON: '' });
+ok('sin opt-in → no dispara nada', requests().length === 0 && inert.trim() === '');
+ok('sin opt-in → ni siquiera escribe estado', !existsSync(sessionFile('sessA')));
+run(B, [], { AURA_COUNCIL_ON: '' });
+ok('sin opt-in → 2 terminales tampoco disparan', requests().length === 0);
+// enabling via the ENABLED file (the documented way) works
+writeFileSync(join(DIR, 'ENABLED'), '');
+run(A, [], { AURA_COUNCIL_ON: '' });
+run(B, [], { AURA_COUNCIL_ON: '' });
+ok('con ~/.auramaxing/council/ENABLED → dispara', requests().length === 1, `requests=${requests().length}`);
 
 // 1 — a single working terminal must stay silent
 fresh();
@@ -96,7 +110,7 @@ ok('1 busy tras el stop → no dispara', requests().length === 1, `requests=${re
 // 6 — a crashed terminal must not keep the council armed forever
 fresh();
 writeFileSync(sessionFile('ghost'), JSON.stringify({
-  sessionId: 'ghost', pid: 999999, cwd: homedir(), project: 'ghost', state: 'busy', updatedTs: Date.now(),
+  sessionId: 'ghost', pid: 999999, pidVerified: true, cwd: homedir(), project: 'ghost', state: 'busy', updatedTs: Date.now(),
 }));
 run(A);
 ok('sesión con pid muerto → no cuenta', requests().length === 0);
@@ -124,10 +138,27 @@ run(A);
 run(B, [], { AURA_COUNCIL_OFF: '1' });
 ok('AURA_COUNCIL_OFF=1 apaga el council', requests().length === 0);
 
+// 9b — if `ps` itself fails (loaded machine), an existing pid must still count as
+// alive: the inverse fail-safe silently evicted live terminals and killed the council.
+fresh();
+run(A, [], { AURA_COUNCIL_PS_BIN: '/nonexistent/ps' });
+run(B, [], { AURA_COUNCIL_PS_BIN: '/nonexistent/ps' });
+ok('ps caído → las terminales vivas siguen contando (fail-safe)', requests().length === 1,
+  `requests=${requests().length}`);
+
+// 9c — a session whose claude ancestor could NOT be identified (deep wrapper chain:
+// this very suite under `npm test`) must still count: the hook may not record a pid
+// that its own liveness check would then reject.
+fresh();
+run(A); run(B);
+ok('pid no verificable (wrapper profundo) → sigue contando', requests().length === 1,
+  `requests=${requests().length}`);
+ok('se registra pidVerified para poder distinguirlo', 'pidVerified' in sess('sessA'));
+
 // 10 — a live pid that is NOT claude (recycled pid) must not count as a terminal
 fresh();
 writeFileSync(sessionFile('recycled'), JSON.stringify({
-  sessionId: 'recycled', pid: 1, cwd: homedir(), project: 'recycled', state: 'busy', updatedTs: Date.now(),
+  sessionId: 'recycled', pid: 1, pidVerified: true, cwd: homedir(), project: 'recycled', state: 'busy', updatedTs: Date.now(),
 }));
 run(A);
 ok('pid vivo pero no-claude (reciclado) → no cuenta', requests().length === 0);
