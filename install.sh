@@ -233,6 +233,9 @@ stop  = os.environ["_CM_STOP_CMD"]
 path  = os.environ["_CM_SETTINGS"]
 home  = os.environ.get("HOME", "")
 ug_cmd = f"export PATH=\"$HOME/.nvm/versions/node/v$(cat $HOME/.nvm/alias/default 2>/dev/null | tr -d '[:space:]' | sed 's/^v//')/bin:/usr/local/bin:/usr/bin:/bin:$PATH\" && node ~/.claude/helpers/update-gate.mjs 2>/dev/null || true"
+_pfx = f"export PATH=\"$HOME/.nvm/versions/node/v$(cat $HOME/.nvm/alias/default 2>/dev/null | tr -d '[:space:]' | sed 's/^v//')/bin:/usr/local/bin:/usr/bin:/bin:$PATH\" && "
+council_cmd      = _pfx + "node ~/auramaxing/helpers/gpt-council.mjs 2>/dev/null || true"
+council_stop_cmd = _pfx + "node ~/auramaxing/helpers/gpt-council.mjs --stop 2>/dev/null || true"
 
 with open(path) as f:
     settings = json.load(f)
@@ -272,6 +275,10 @@ usp2 = hooks["UserPromptSubmit"]
 if not has_hook(usp2, "update-gate"):
     hooks["UserPromptSubmit"].insert(0, {"hooks": [{"type": "command", "command": ug_cmd, "timeout": 2000}]})
 
+# ChatGPT Council — second opinion when 2+ terminals work in parallel
+if not has_hook(usp2, "gpt-council"):
+    hooks["UserPromptSubmit"].append({"hooks": [{"type": "command", "command": council_cmd, "timeout": 3000}]})
+
 # PostToolUse
 ptu_hooks = hooks.setdefault("PostToolUse", [])
 if not has_hook(ptu_hooks, "post-tool-use-apex"):
@@ -285,6 +292,8 @@ if not has_hook(stop_hooks, "task-complete"):
     stop_hooks.insert(0, {"hooks": [{"type": "command", "command": tc, "timeout": 2000}]})
 if not has_hook(stop_hooks, "session-stop"):
     stop_hooks.append({"hooks": [{"type": "command", "command": stop, "timeout": 2000}]})
+if not has_hook(stop_hooks, "gpt-council"):
+    stop_hooks.append({"hooks": [{"type": "command", "command": council_stop_cmd, "timeout": 2000}]})
 
 # SessionStart — welcome + daemon ping + ruflo
 ss = hooks.setdefault("SessionStart", [])
