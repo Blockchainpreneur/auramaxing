@@ -1,6 +1,12 @@
 #!/usr/bin/env node
 /**
- * Context Threshold Monitor — AURAMAXING 40% auto-handoff
+ * Context Threshold Monitor — AURAMAXING auto-clear staging (45% system)
+ *
+ * The ACTUAL clear is native auto-compact, forced early via settings.json
+ * `autoCompactWindow: 450000` (~45% of Fable's 1M window). This monitor fires
+ * BEFORE that (35% hard / 28% soft) so the handoff bundle is always staged
+ * before compaction, and PreCompact/PostCompact (compact-hooks.mjs) carry it
+ * across. Manual /clear or /compact is NEVER required or suggested.
  *
  * Canonical source (synced to ~/.claude/helpers/ by session-start.mjs).
  * See that copy for full documentation.
@@ -206,7 +212,7 @@ async function main() {
   if (usedPct === null) {
     // unknown context → emit a soft advisory once, then exit (don't trigger a full handoff on a guess)
     if (!existsSync(FLAG_PATH)) {
-      process.stdout.write(`[CONTEXT-ADVISORY]\nℹ️ Context % unavailable (statusline stale) — defensive checkpoint runs on session end regardless. Consider /clear if this is a long session.\n[/CONTEXT-ADVISORY]\n`);
+      process.stdout.write(`[CONTEXT-ADVISORY]\nℹ️ Context % unavailable (statusline stale) — no action needed: native auto-compact (autoCompactWindow) clears automatically and the defensive checkpoint runs on session end. Never ask the user to /clear.\n[/CONTEXT-ADVISORY]\n`);
     }
     process.exit(0);
   }
@@ -227,8 +233,8 @@ async function main() {
   if (usedPct >= SOFT_THRESHOLD_PCT && usedPct < THRESHOLD_USED_PCT) {
     process.stdout.write([
       '[CONTEXT-ADVISORY]',
-      `ℹ️ Context at ${Math.round(usedPct)}% (${fmtTokenSummary(usedPct, detectedModel)}) — approaching ${THRESHOLD_USED_PCT}% auto-handoff ceiling.`,
-      'Wrap current sub-task or run /compact proactively to preserve headroom.',
+      `ℹ️ Context at ${Math.round(usedPct)}% (${fmtTokenSummary(usedPct, detectedModel)}) — approaching the ${THRESHOLD_USED_PCT}% staging point (native auto-clear fires ~45%).`,
+      'Start checkpointing durable state (commit progress, update next-action.txt) — the clear is automatic, never manual.',
       '[/CONTEXT-ADVISORY]',
     ].join('\n') + '\n');
     process.exit(0);
@@ -289,7 +295,7 @@ async function main() {
 
   process.stdout.write([
     '[CONTEXT-AUTO-REFRESH]',
-    `Context at ${handoff.contextUsedPct}% (${fmtTokenSummary(handoff.contextUsedPct, detectedModel)}) — AURAMAXING ${THRESHOLD_USED_PCT}% LEAN CEILING reached. Everything below is already staged, so a clear here is SAFE and resumes automatically.`, '',
+    `Context at ${handoff.contextUsedPct}% (${fmtTokenSummary(handoff.contextUsedPct, detectedModel)}) — AURAMAXING ${THRESHOLD_USED_PCT}% STAGING POINT reached. Native auto-clear (auto-compact @ autoCompactWindow ≈45%) will fire automatically soon; everything below is staged so that clear loses NOTHING and auto-resumes.`, '',
     `✅ Handoff bundle staged → ~/.auramaxing/pending-handoff.json`,
     `✅ SDR staged → ~/.auramaxing/sdr-active.md`,
     `✅ ${prdNote}`,
@@ -299,7 +305,7 @@ async function main() {
     `  2. WRITE/REFRESH a checkpoint doc with a self-contained resume plan + explicit "FIRST NEXT ACTION"${checkpointDoc ? ` (found ${checkpointDoc} — refresh it)` : ' (none found — create docs/CHECKPOINT.md)'}.`,
     '  3. UPDATE persistent memory (~/.claude/projects/.../memory/) with this session\'s decisions/learnings.',
     '  4. BACKFILL the next action: write your one-line first-next-action to ~/.auramaxing/next-action.txt.',
-    'KEEP CONTEXT LEAN — at this 55% ceiling, after the 4 checkpoint steps above, tell the user in ONE line: "Context at ' + handoff.contextUsedPct + '% — run /clear to stay lean; your work is checkpointed and auto-resumes." A hook cannot press the button, so the user (or native auto-compact) is the trigger; but everything is staged, so clearing NOW is safe and is the only way to actually hold context under 55%. PreCompact/PostCompact also fold this same bundle in on native compaction and AUTO-RESUME. Do not block on it — surface the one-liner, finish the current sub-task, keep working.',
+    'THE CLEAR IS AUTOMATIC — settings.json `autoCompactWindow: 450000` forces native auto-compact at ~45% of the window (Fable 1M). NEVER tell the user to /clear or /compact. Your only job is the 4 checkpoint steps above, done SILENTLY and NOW, so that when the automatic compaction fires (any moment after this directive) the staged bundle + PreCompact SDR carry 100% of the needed context across, and PostCompact AUTO-RESUMES the task. Finish the current sub-task and keep working normally.',
     'The handoff preserves: last prompt, PRD, git state, edited files, checkpoint-doc pointer, next-action, anticipated next task, recent decisions.',
     '[/CONTEXT-AUTO-REFRESH]',
   ].join('\n') + '\n');

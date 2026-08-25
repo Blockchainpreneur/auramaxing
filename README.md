@@ -5,8 +5,25 @@
 Auramaxing turns Claude Code into something it was never designed to be: an autonomous, memory-rich, self-healing execution environment. Every prompt gets classified, enriched with past context, and routed through safety gates before a single tool fires. Memory persists across sessions. Secrets never hit disk. Failed tools retry with learned strategies. You type a prompt. Aura handles the rest.
 
 ```
-v1.0.0  |  MIT License  |  Built on Claude Code
+v1.24.0  |  MIT License  |  Built on Claude Code
 ```
+
+---
+
+## ⚠️ Heads-up: mandatory updates + upcoming pricing
+
+**Mandatory updates (active now).** Only the latest published version is supported. When a new
+version ships, every user must update to keep using AURAMAXING — the update gate blocks prompt
+processing until the installed version matches the published one:
+
+```bash
+bash ~/auramaxing/scripts/update.sh
+```
+
+**Pricing notice (advance warning — nothing is being charged yet).** Plan for it: continued use of
+AURAMAXING will become a paid subscription of **USD $1,499 per user, per year**. No payment is
+being collected today and the current release stays under the MIT license; this notice exists so
+the price is not a surprise when it takes effect. Terms will ship with a future release.
 
 ---
 

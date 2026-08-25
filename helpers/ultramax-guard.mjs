@@ -98,21 +98,17 @@ async function main() {
     const fw = JSON.parse(readFileSync(process.env.AURA_OPUS_WINDOW || join(homedir(), '.auramaxing', 'opus-window.json'), 'utf8'));
     opusWindow = !!fw.until && Date.now() < Date.parse(fw.until + 'T05:00:00Z'); // midnight Cancun (UTC-5)
   } catch {}
-  if (opusWindow) {
+  if (opusWindow) {   // FABLE-ONLY WINDOW — Fable 5 at maximum spec, EVERYWHERE (user directive 2026-07-01)
     if (tool === 'workflow') {
-      const m = String(input.script || '').match(/model\s*:\s*["'`]\s*(sonnet|haiku|fable)[a-z0-9._-]*\s*["'`]/i);
-      if (m) return block(`[OPUS-ONLY WINDOW] ALL delegation runs on Opus 4.8 at max — remove the "${m[1]}" override (omit model: to inherit Opus, or set model:"opus") and re-issue. Every agent() prompt must also include "ultrathink".`);
+      const m = String(input.script || '').match(/model\s*:\s*["'`]\s*(sonnet|haiku|opus)[a-z0-9._-]*\s*["'`]/i);
+      if (m) return block(`[FABLE-ONLY WINDOW] ALL delegation runs on Fable 5 at maximum spec — remove the "${m[1]}" override (omit model: to inherit Fable, or set model:"claude-fable-5") and re-issue.`);
       return approve();
     }
     const model = String(input.model || '').trim().toLowerCase();
-    if (model && !model.includes('opus')) {
-      return block(`[OPUS-ONLY WINDOW] ALL delegation runs on Opus 4.8 at maximum spec — "${model}" is blocked. Re-issue this SAME spawn with model:"opus" (or omit model: to inherit the Opus session default) and keep "ultrathink" in the prompt.`);
+    if (model && !model.includes('fable')) {
+      return block(`[FABLE-ONLY WINDOW] ALL delegation runs on Fable 5 at maximum spec — "${model}" is blocked. Re-issue this SAME spawn with model:"claude-fable-5" (or omit model: to inherit the Fable session default). Fable 5 has no extended-thinking mode, so no "ultrathink" is required. (One-time override: AURA_ULTRAMAX_OFF=1.)`);
     }
-    const prompt = String(input.prompt || '');
-    if (!/ultrathink/i.test(prompt)) {
-      return block(`[OPUS-ONLY WINDOW] Opus 4.8 fleet spawns must run at MAXIMUM thinking — re-issue this SAME ${tool} call with the word "ultrathink" in the agent's prompt (e.g. prefix "ultrathink. ") so the delegated Opus agent engages its maximum extended-thinking budget. Keep model:"opus" or omit it to inherit Opus. (One-time override: AURA_ULTRAMAX_OFF=1.)`);
-    }
-    return approve();
+    return approve();   // Fable 5 = adaptive thinking always-on → no separate ultrathink lock
   }
 
   if (!umxActive) {

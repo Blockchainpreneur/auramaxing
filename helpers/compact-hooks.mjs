@@ -19,7 +19,7 @@ const LINEAGE = process.env.AURA_LINEAGE_FILE || join(AUR, 'ledger-lineage.json'
 // Pull the important state staged by the threshold monitor + intent-predictor so the
 // post-compact context can AUTO-RESUME the big task with zero user action.
 function readSafe(p) { try { return existsSync(p) ? readFileSync(p, 'utf8').trim() : ''; } catch { return ''; } }
-function buildResumeBlock() {
+function buildResumeBlock(sessionId) {
   const nextAction = readSafe(NEXT_ACTION);
   const predicted = readSafe(PREDICTION);
   let handoff = {};
@@ -27,6 +27,18 @@ function buildResumeBlock() {
   const lines = ['', '## FIRST NEXT ACTION (auto-resume — do this immediately, do NOT ask the user)',
     nextAction || handoff.lastPrompt || '(continue the in-flight task from the data above)'];
   if (predicted) lines.push('', '## ANTICIPATED NEXT TASK', predicted);
+  // Open ledger items listed EXPLICITLY — the L6 migration moves them to the new session id,
+  // but the post-compact model must also SEE them, or open work dies silently with the clear.
+  try {
+    const sid = String(sessionId || '').replace(/[^\w.-]/g, '');
+    const ledgerCli = join(HOME, '.claude', 'helpers', 'ledger.mjs');
+    if (sid && existsSync(ledgerCli)) {
+      const out = execSync(`node "${ledgerCli}" list --session "${sid}"`, { encoding: 'utf8', timeout: 800 });
+      const open = (JSON.parse(out).items || []).filter(i => !i.done);
+      if (open.length) lines.push('', '## OPEN LEDGER ITEMS (unfinished work — finish or explicitly de-scope, never drop)',
+        ...open.map(i => `- [${i.id}] ${String(i.desc || '').slice(0, 180)}`));
+    }
+  } catch {}
   if (handoff.prd?.path) lines.push('', `## PRD POINTER`, `${handoff.prd.path}`);
   if (handoff.git) lines.push('', '## GIT STATE', `${handoff.git.branch || '?'} @ ${handoff.git.lastCommit || '?'}`);
   lines.push('', '## AUTO-RESUME DIRECTIVE',
@@ -53,7 +65,9 @@ function findNlm() {
   return null;
 }
 const NLM_BIN = findNlm();
-const timeout = setTimeout(() => process.exit(0), 2000);
+// 4.5s watchdog (was 2s): the SDR write is the inviolable payload — gitDiffStat (1.5s cap)
+// + ledger list (0.8s cap) must never be truncated by an early exit. Settings hook timeout is 5s.
+const timeout = setTimeout(() => process.exit(0), 4500);
 
 async function readStdin() {
   if (process.stdin.isTTY) return {};
@@ -127,7 +141,7 @@ async function preCompact(input) {
   try { if (input && input.session_id) writeFileSync(LINEAGE, JSON.stringify({ from: input.session_id, ts: Math.floor(Date.now() / 1000) })); } catch {}
   const mem = recentFiles(MEMORY_DIR, '.json', 5), learns = recentFiles(LEARNINGS_DIR, '.jsonl', 3);
   const model = input.model || process.env.CLAUDE_MODEL || '';
-  writeFileSync(SDR_PATH, buildSDR(mem, learns, gitDiffStat(), model) + buildResumeBlock());
+  writeFileSync(SDR_PATH, buildSDR(mem, learns, gitDiffStat(), model) + buildResumeBlock(input && input.session_id));
   try {
     if (!NLM_BIN) return;
     // SECURITY: read the SDR in Node and pass it as a STRUCTURED argv arg — never via

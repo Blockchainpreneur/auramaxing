@@ -350,12 +350,26 @@ function hooksSuite() {
     }
   }
 
-  // (a) newer remote → blocks (exit 2 + stderr contains remote version)
+  // (a) newer remote → ONE grace prompt (so the update window can render), then blocks
   const gateNewerState = writeGateState('newer', '1.0.0', '1.1.0');
+  try { rmSync(gateNewerState + '.nag', { force: true }); } catch (_) {}
+  const gateGrace = runGate(gateNewerState);
+  add('gate-grace-prompt-lets-window-render',
+    gateGrace.exitCode === 0,
+    `expected exit 0 on the first outdated prompt (grace turn shows the update window); got ${gateGrace.exitCode}`);
   const gateBlock = runGate(gateNewerState);
   add('gate-blocks-on-newer-version',
     gateBlock.exitCode === 2 && gateBlock.stderr.includes('1.1.0'),
-    `expected exit 2 with remote ver in stderr; got exitCode=${gateBlock.exitCode} stderr="${gateBlock.stderr.slice(0, 120)}"`);
+    `expected exit 2 on the second outdated prompt; got exitCode=${gateBlock.exitCode} stderr="${gateBlock.stderr.slice(0, 120)}"`);
+  add('gate-block-carries-pricing-notice',
+    gateBlock.stderr.includes('1,499'),
+    'expected the blocked banner to carry the USD $1,499/user/year advance notice');
+  // (a2) grace can be disabled → blocks on the very first prompt
+  const gateNoGrace = writeGateState('nograce', '1.0.0', '1.1.0');
+  const gateHard = runGate(gateNoGrace, { AURA_UPDATE_GRACE_PROMPTS: '0' });
+  add('gate-grace-disabled-blocks-immediately',
+    gateHard.exitCode === 2,
+    `expected exit 2 with AURA_UPDATE_GRACE_PROMPTS=0; got ${gateHard.exitCode}`);
 
   // (b) equal versions → allows (exit 0)
   const gateEqualState = writeGateState('equal', '1.3.1', '1.3.1');
@@ -448,15 +462,45 @@ function hooksSuite() {
   delete process.env.AURA_LEDGER_DIR;
 
   // update-check.sh ver_gt — regression: string compare made local 1.10.0 "upgrade" to remote 1.9.0.
+  // Extract the function in Node + feed bash via stdin: `bash -c '... "$(sed ...{...})" ...'`
+  // breaks under macOS /bin/bash 3.2 (its command-substitution parser mangles the braced
+  // sed program), so the old form only passed when homebrew bash 5.x was in PATH.
   const verGt = (a, b) => {
     try {
-      execSync(`bash -c 'eval "$(sed -n "/^ver_gt() {/,/^}/p" "$HOME/auramaxing/scripts/update-check.sh")"; ver_gt ${a} ${b}'`, { encoding: 'utf8', timeout: 5000 });
+      const vsrc = readFileSync(join(homedir(), 'auramaxing', 'scripts', 'update-check.sh'), 'utf8');
+      const vfn = (vsrc.match(/^ver_gt\(\) \{[\s\S]*?\n\}/m) || [''])[0];
+      execSync('bash', { input: `${vfn}\nver_gt ${a} ${b}\n`, encoding: 'utf8', timeout: 5000 });
       return true;
     } catch { return false; }
   };
   add('vercheck-remote-older-no-upgrade', verGt('1.9.0', '1.10.0') === false, 'expected ver_gt(1.9.0 > 1.10.0)=false — the lexicographic-compare regression');
   add('vercheck-remote-newer-upgrades', verGt('1.10.0', '1.9.0') === true, 'expected ver_gt(1.10.0 > 1.9.0)=true');
   add('vercheck-equal-no-upgrade', verGt('1.10.0', '1.10.0') === false, 'expected ver_gt(equal)=false');
+
+  // ── 45% auto-clear system (2026-07-03) — native auto-compact forced at ~45%, ────
+  //    staging strictly earlier, zero manual-clear language, SDR carries open ledger.
+  try {
+    const stg = JSON.parse(readFileSync(join(HOME, '.claude', 'settings.json'), 'utf8'));
+    add('autoclear-settings-window', stg.autoCompactWindow === 450000, 'expected settings.autoCompactWindow=450000 (~45% of Fable 1M window)');
+    add('autoclear-staging-before-clear', Number(stg.env && stg.env.AURA_CTX_THRESHOLD_PCT) < 45, 'staging threshold must be BELOW the 45% clear point');
+  } catch (e) { add('autoclear-settings-window', false, 'settings.json unreadable: ' + e.message); }
+  const monSrc = readFileSync(join(CLAUDE_H, 'context-threshold-monitor.mjs'), 'utf8');
+  add('autoclear-no-manual-clear-language', !/run \/clear|Consider \/clear|run \/compact/i.test(monSrc), 'monitor must never instruct a manual /clear or /compact');
+  add('autoclear-directive-references-native-clear', monSrc.includes('[CONTEXT-AUTO-REFRESH]') && monSrc.includes('autoCompactWindow'), 'monitor keeps the auto-refresh directive and references the native auto-clear');
+  add('autoclear-sdr-carries-open-ledger', readFileSync(join(CLAUDE_H, 'compact-hooks.mjs'), 'utf8').includes('OPEN LEDGER ITEMS'), 'PreCompact SDR must list open ledger items across the clear');
+  const monRun = (pct, sid) => {
+    try {
+      return execSync(`node "${join(CLAUDE_H, 'context-threshold-monitor.mjs')}"`, {
+        input: JSON.stringify({ session_id: sid, context_window: { used_percentage: pct } }),
+        encoding: 'utf8', timeout: 8000,
+        env: { ...process.env, AURA_CTX_THRESHOLD_PCT: '35', AURA_CTX_SOFT_THRESHOLD_PCT: '28' },
+      });
+    } catch { return '(monitor crashed)'; }
+  };
+  const softOut = monRun(30, 'EVCTXSOFT');
+  add('autoclear-soft-advisory-fires', softOut.includes('[CONTEXT-ADVISORY]'), 'expected soft advisory at 30% (28 soft / 35 hard)');
+  add('autoclear-soft-advisory-no-manual', !softOut.includes('/clear') && !softOut.includes('/compact'), 'soft advisory must not suggest manual /clear|/compact');
+  add('autoclear-silent-below-soft', monRun(10, 'EVCTXLOW').trim() === '', 'expected silence below the soft threshold');
 
   // ── ultramax-guard cases (Opus-4.8-only fleet at MAX presets) ─────────────
   // Uses AURA_ULTRAMAX_FLAG to point at a TMP flag — the real session flag is never touched.
@@ -522,6 +566,16 @@ function hooksSuite() {
   let mig = {}; try { mig = JSON.parse(readFileSync(join(migDir, 'TO.json'), 'utf8')); } catch {}
   add('ledger-migrate-carries-open-items', mig.sessionId === 'TO' && (mig.items || []).some(x => x.desc === 'open work' && !x.done), 'expected L6: migrate re-stamps the predecessor OPEN items onto the successor session');
   add('ledger-migrate-drops-done-items', !((mig.items || []).some(x => x.desc === 'done work')), 'expected L6: already-done items are history, not carried across the handoff');
+  // A ledger born via bare `add --session` used to carry sessionId:null → migrate's
+  // `src.sessionId === from` guard silently dropped its open items on compact (2026-07-03).
+  try {
+    const abDir = join(TMP, 'ledger-addborn'); mkdirSync(abDir, { recursive: true });
+    const abEnv = { ...process.env, AURA_LEDGER_DIR: abDir };
+    execSync(`node "${join(CLAUDE_H, 'ledger.mjs')}" add "born via add" --session ABFROM`, { env: abEnv, timeout: 3000 });
+    execSync(`node "${join(CLAUDE_H, 'ledger.mjs')}" migrate ABFROM ABTO`, { env: abEnv, timeout: 3000 });
+    const ab = JSON.parse(readFileSync(join(abDir, 'ABTO.json'), 'utf8'));
+    add('ledger-addborn-migrates', ab.sessionId === 'ABTO' && (ab.items || []).some(x => x.desc === 'born via add' && !x.done), 'expected a ledger created via bare `add --session` to carry its sessionId and survive migrate');
+  } catch (e) { add('ledger-addborn-migrates', false, 'threw: ' + String(e && e.message).slice(0, 80)); }
 
   // ── Convergent Refinement (2026-06-18): `ledger.mjs refine` records numbered refinement rounds. ──
   const refDir = join(TMP, 'ref'); mkdirSync(refDir, { recursive: true });

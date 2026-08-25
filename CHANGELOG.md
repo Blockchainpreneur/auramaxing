@@ -5,6 +5,34 @@ All notable changes to Auramaxing are documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.24.0 — 2026-08-25
+
+**Mandatory updates enforced for every user + advance pricing notice.** Nothing is being charged today.
+
+- **Updating is now required to keep using AURAMAXING.** Only the latest published version is
+  supported: `helpers/update-gate.mjs` (UserPromptSubmit) blocks prompt processing whenever the
+  installed VERSION is behind the published one, and the router now emits a **mandatory update
+  window** (AskUserQuestion) with no "not now" and no snooze — `scripts/update-check.sh` deletes
+  any legacy snooze file instead of honoring it, so a stale snooze can no longer hide the window
+  while the gate keeps blocking. Escape hatch unchanged: `AURA_UPDATE_GATE_OFF=1 claude`.
+- **One grace prompt, then the wall.** Blocking the very first outdated prompt means the model never
+  runs and the update window never renders — the user hits a wall with no one-click path. The gate
+  now allows exactly ONE prompt per published version (the window shows, with the pricing notice and
+  the update action) and blocks every prompt after it. `AURA_UPDATE_GRACE_PROMPTS=0` restores
+  immediate blocking. Encoded in the eval suite (170/170).
+- **Pricing notice (advance warning).** The update window, the session-start banner, the blocked
+  prompt reason, `scripts/update.sh` and the README all state: continued use of AURAMAXING will
+  become **USD $1,499 per user, per year**. No payment is collected today and this release stays
+  under the MIT license; licensing terms ship in a later release.
+- **ChatGPT Council** (`helpers/gpt-council.mjs`, `helpers/council-brief.mjs`,
+  `scripts/chatgpt-call.mjs`, `helpers/cdp-lite.mjs`): with 2+ Claude Code terminals mid-task, the
+  live project context (secret-scrubbed) goes to ChatGPT, the answer is archived and read aloud and
+  a voice call opens on that thread. Exactly one dispatch per prompt — a tab you close stays closed
+  until your next prompt, and a live call is never interrupted. 33 tests.
+- **`helpers/cdp-lite.mjs`** — dependency-free CDP client. Playwright's `connectOverCDP()` hangs on
+  a Chrome with many targets; this attaches only to the page it needs and its `Input.*` path
+  produces trusted events (user activation), which browser voice/audio requires.
+
 ## v1.22.0 — 2026-06-26
 
 **superpowers adopted as LAYER 1 (base method) + `cloud-shellcheck` CI for the shell-infra layer.** Two changes, both verified against the full CI + eval before commit.

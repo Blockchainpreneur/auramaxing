@@ -50,6 +50,11 @@ mkdir -p "$STATE_DIR"
 # Levels: 1=24h, 2=48h, 3+=7d. New version resets snooze.
 check_snooze() {
   local remote_ver="$1"
+  # v1.24.0: updates are MANDATORY — there is no "not now". Snoozing is disabled,
+  # otherwise a legacy snooze file would hide the update window while the gate
+  # keeps blocking prompts (blocked with no explanation).
+  rm -f "$SNOOZE_FILE" 2>/dev/null || true
+  return 1
   [ -f "$SNOOZE_FILE" ] || return 1
 
   local sv sl se

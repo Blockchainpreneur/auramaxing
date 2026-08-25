@@ -211,6 +211,9 @@ try {
       `${Y}  │${R}  Run: ${C}${B}bash ~/auramaxing/scripts/update.sh${R}       ${Y}│${R}`,
       `${Y}  │${R}                                                        ${Y}│${R}`,
       `${Y}  │${R}  Override (one session): ${C}AURA_UPDATE_GATE_OFF=1 claude${R} ${Y}│${R}`,
+      `${Y}  │${R}                                                        ${Y}│${R}`,
+      `${Y}  │${R}  Heads-up: continued use will become ${B}USD $1,499${R}      ${Y}│${R}`,
+      `${Y}  │${R}  per user / year — ${B}not charged yet${R}.                  ${Y}│${R}`,
       `${Y}${B}  └${'─'.repeat(52)}┘${R}`, '',
     ].join('\n') + '\n');
   }

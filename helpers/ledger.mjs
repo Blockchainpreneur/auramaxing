@@ -58,7 +58,11 @@ function writeJsonAtomic(file, o) {
 function save(o) { writeJsonAtomic(LP, o); }
 
 const [cmd, ...args] = argvRaw;
-let l = load() || { sessionId: null, ts: now(), items: [] };
+// Default sessionId to --session when creating a fresh ledger (and backfill a null one):
+// a ledger born via bare `add` used to carry sessionId:null, which silently failed migrate's
+// `src.sessionId === from` guard — open items then died on compact handoff (found 2026-07-03).
+let l = load() || { sessionId: SESSION || null, ts: now(), items: [] };
+if (!l.sessionId && SESSION) l.sessionId = SESSION;
 if (!Array.isArray(l.items)) l.items = [];
 const nextId = () => l.items.reduce((m, x) => Math.max(m, x.id || 0), 0) + 1;
 

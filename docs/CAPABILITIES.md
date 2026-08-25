@@ -57,6 +57,21 @@ Native: `/code-review` (incl. `ultra`), `/simplify`, `/verify`, `/security-revie
 - **Playwright CDP** (`browser-server.mjs` + `npx playwright test`) — automation, E2E, screenshots, visual regression.
 - **Vision-QA loop** — screenshot → vision critique vs Elite UI Checklist → fix.
 - **axe-core** (a11y), **Lighthouse CI** (perf/CWV), **Argos** (visual regression).
+- **cdp-lite** (`helpers/cdp-lite.mjs`) — raw CDP client, no deps. Use it (NOT playwright's
+  `connectOverCDP`, which hangs on the user's 30+-target Chrome) whenever a script must drive
+  the user's live browser; its `Input.*` path also produces TRUSTED events (user activation).
+
+## 6b. ChatGPT Council (second opinion, always-on)
+Fires automatically when **2+ Claude Code terminals are mid-task**: pushes the live project
+context (prompt, git, open ledger, peer terminals, steering doc — secret-scrubbed) to ChatGPT
+in a new tab, archives the answer, reads it aloud and opens the voice call on that thread.
+- `helpers/gpt-council.mjs` (UserPromptSubmit + `--stop`; `--status`/`--force`/`--dry`)
+- `helpers/council-brief.mjs` (brief + anti-generality contract) · `scripts/chatgpt-call.mjs` (driver)
+- **Exactly one dispatch per prompt.** The same prompt never opens a second tab, so a tab the
+  user closes stays closed until their NEXT prompt; a live call is never interrupted.
+- Knobs: `AURA_COUNCIL_OFF=1` · `AURA_COUNCIL_MODE=call|speak|text` · `AURA_COUNCIL_MIN_SESSIONS`
+  · `AURA_COUNCIL_COOLDOWN_MIN` (0 = per-prompt only) · `AURA_COUNCIL_FOCUS=1`.
+  State: `~/.auramaxing/council/`.
 
 ## 7. Design stack (free; per-project — see DESIGN-STACK-SETUP.md)
 Tailwind v4 + shadcn (Base UI backend) · **Geist/Inter via Fontsource** (`@fontsource-variable/*`) ·
