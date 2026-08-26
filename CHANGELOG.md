@@ -5,6 +5,22 @@ All notable changes to Auramaxing are documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.24.3 — 2026-08-25
+
+**The update prompt no longer asks anything.** Previously the mandatory-update turn opened a
+two-option dialog; a dialog with alternatives contradicts a mandatory update, and Claude Code's
+dialog cannot show fewer than two options — so the way to offer zero alternatives is to not ask.
+The directive now tells the model to print the notice and run `scripts/update.sh` immediately, then
+continue with the user's original request. No dialog, no deferral, no confirmation. If the update
+fails, the exact error is shown, prompts stay blocked, and the single fix is given
+(`--force-stash` for a dirty tree).
+
+Five eval cases lock the contract: the directive fires only when behind, names the published
+version, carries the USD $1,499 advance notice, runs the updater itself, and offers no choice —
+asserted on the directive block, since the text names the dialog in order to forbid it. The
+router's update cache path is now overridable (`AURA_UPDATE_PENDING`) so this is testable without
+touching real state. 175 eval checks, 243 total.
+
 ## v1.24.2 — 2026-08-25
 
 **The notices users actually see were misaligned.** Rendering them side by side exposed it: the

@@ -351,6 +351,33 @@ function hooksSuite() {
   } catch (e) { lrOut = (e.stdout || '') + (e.stderr || ''); }
   add('nlm-live-recall-early-exit', !lrOut.includes('NLM-RECALL'), 'nlm-live-recall did not early-exit silent when NLM unavailable (would burn timeout)');
 
+  // ── mandatory-update directive: one path, no dialog, no alternatives ───
+  const upPending = join(TMP, 'update-pending.txt');
+  writeFileSync(upPending, 'UPGRADE_AVAILABLE 1.0.0 9.9.9\n');
+  const upOut = run(ROUTER, JSON.stringify({ prompt: 'fix the checkout bug' }), 8000, { AURA_UPDATE_PENDING: upPending });
+  add('update-directive-fires-when-behind',
+    upOut.includes('[AURAMAXING UPDATE]') && upOut.includes('MANDATORY UPDATE') && upOut.includes('9.9.9'),
+    'expected the mandatory update directive naming the published version');
+  // The directive NAMES the dialog in order to forbid it, so a naive "does the
+  // word appear" check fails on its own prohibition. Assert the prohibition is
+  // present and that no option list is offered.
+  const upBlock = (upOut.split('[AURAMAXING UPDATE]')[1] || '').split('[/AURAMAXING UPDATE]')[0];
+  add('update-directive-offers-no-choice',
+    /Do NOT use AskUserQuestion/i.test(upBlock) &&
+    !/options:/i.test(upBlock) &&
+    !/use the AskUserQuestion tool/i.test(upBlock),
+    `expected NO dialog and NO alternatives — updating is the only path (user directive 2026-08-25); block="${upBlock.slice(0, 200)}"`);
+  add('update-directive-runs-the-updater',
+    upOut.includes('scripts/update.sh'),
+    'expected the directive to run update.sh itself instead of asking');
+  add('update-directive-carries-pricing-notice',
+    upOut.includes('1,499'),
+    'expected the USD $1,499/user/year advance notice inside the update directive');
+  add('update-directive-silent-when-current',
+    !run(ROUTER, JSON.stringify({ prompt: 'fix the checkout bug' }), 8000,
+      { AURA_UPDATE_PENDING: join(TMP, 'no-such-pending.txt') }).includes('[AURAMAXING UPDATE]'),
+    'expected no update directive when the machine is current');
+
   // ── update-gate cases ──────────────────────────────────────────────────
   // Uses AURA_UPDATE_STATE_FILE to point at /tmp fixtures — no HOME state touched.
   const UPDATE_GATE = join(AURA_H, 'update-gate.mjs');
