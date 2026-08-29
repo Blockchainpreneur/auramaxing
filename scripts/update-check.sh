@@ -45,6 +45,17 @@ write_state_file() {
 
 mkdir -p "$STATE_DIR"
 
+# ── Censo de instalaciones (fire-and-forget) ──────────────────
+# Este script corre en el SessionStart de CADA instalación viva. Es el ÚNICO
+# punto donde una instalación ya existente puede darse de alta sin reinstalar
+# nada: por eso el ping vive aquí y no solo en install.sh.
+# Contrato: background, salida descartada, nunca toca stdout (el contrato de
+# este script es una sola línea UPGRADE_AVAILABLE) y nunca falla el script.
+if [ -z "${AURA_NO_TELEMETRY:-}" ] && [ ! -f "$STATE_DIR/no-telemetry" ] \
+   && command -v node >/dev/null 2>&1 && [ -f "$AX_DIR/helpers/install-ping.mjs" ]; then
+  ( node "$AX_DIR/helpers/install-ping.mjs" >/dev/null 2>&1 & ) 2>/dev/null || true
+fi
+
 # ── Snooze check ──────────────────────────────────────────────
 # Snooze file format: <version> <level> <epoch>
 # Levels: 1=24h, 2=48h, 3+=7d. New version resets snooze.

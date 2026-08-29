@@ -730,7 +730,25 @@ main() {
   step "✓    Smoke tests"
   verify_hooks
 
+  step "✓    Registro de instalación"
+  register_install
+
   print_success
+}
+
+# ── register_install ──────────────────────────────────────────
+# Da de alta esta instalación en el padrón (versión, OS, y GitHub/email si el
+# equipo los tiene configurados). Es la única forma de saber quién usa esto:
+# una descarga por raw.githubusercontent.com no deja ningún rastro consultable.
+# Opt-out: AURA_NO_TELEMETRY=1, o toca ~/.auramaxing/no-telemetry.
+register_install() {
+  if [ -n "${AURA_NO_TELEMETRY:-}" ] || [ -f "$HOME/.auramaxing/no-telemetry" ]; then
+    echo "     registro omitido (AURA_NO_TELEMETRY)"
+    return 0
+  fi
+  echo "     Se registra: id anónimo, versión, OS, y tu usuario de GitHub/email de git."
+  echo "     Para no registrarte:  touch ~/.auramaxing/no-telemetry"
+  node "$HOME/auramaxing/helpers/install-ping.mjs" --event install --force >/dev/null 2>&1 || true
 }
 
 main "$@"

@@ -139,10 +139,14 @@ function takeLock() {
 
 // ── --status ────────────────────────────────────────────────────────────────
 if (has('--status')) {
-  if (!ENABLED) console.log('council: NOT ENABLED — `touch ~/.auramaxing/council/ENABLED` (o AURA_COUNCIL_ON=1) para activarlo');
   const sessions = liveSessions();
   const st = readJson(STATE, {});
-  console.log(`council: ${OFF ? 'OFF' : 'ON'}  ·  min sessions: ${MIN_SESSIONS}  ·  1 disparo por prompt${COOLDOWN_MS ? ` · cooldown ${COOLDOWN_MS / 60000}min` : ''}`);
+  // Estado real de 3 valores. Antes se imprimía 'NOT ENABLED' y acto seguido
+  // 'council: ON', que se contradecía: OFF sólo miraba el kill-switch.
+  const estado = OFF ? 'OFF (kill-switch AURA_COUNCIL_OFF)'
+    : ENABLED ? 'ON'
+    : 'PAUSADO — `touch ~/.auramaxing/council/ENABLED` (o AURA_COUNCIL_ON=1) para reactivarlo';
+  console.log(`council: ${estado}  ·  min sessions: ${MIN_SESSIONS}  ·  1 disparo por prompt${COOLDOWN_MS ? ` · cooldown ${COOLDOWN_MS / 60000}min` : ''}`);
   console.log(`busy now: ${sessions.filter((s) => s.state === 'busy').length} / registered ${sessions.length}`);
   for (const s of sessions) {
     console.log(`  ${s.state.padEnd(5)} pid ${String(s.pid).padEnd(7)} ${String(s.project).padEnd(18)} ${new Date(s.updatedTs).toISOString().slice(11, 19)}  "${String(s.prompt || '').slice(0, 60)}"`);

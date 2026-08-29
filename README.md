@@ -20,10 +20,22 @@ processing until the installed version matches the published one:
 bash ~/auramaxing/scripts/update.sh
 ```
 
-**Pricing notice (advance warning — nothing is being charged yet).** Plan for it: continued use of
-AURAMAXING will become a paid subscription of **USD $1,499 per user, per year**. No payment is
-being collected today and the current release stays under the MIT license; this notice exists so
-the price is not a surprise when it takes effect. Terms will ship with a future release.
+**FINAL FREE WINDOW — LAST 24 HOURS.** After this window closes, continued use of AURAMAXING
+requires a paid licence of **USD $1,499 per user, per year**. The countdown starts the first time
+your install shows the notice (the exact end time is printed in it, and stored in
+`~/.auramaxing/free-until`). Licence terms and payment ship with the next release; until then the
+published code remains under the MIT licence.
+
+**Install registry.** So that there is an actual record of who runs AURAMAXING, each install
+registers itself: a random install id, the version, OS/arch/Node, timezone, and — when the machine
+has them configured — your GitHub login and git email. One ping on install, then at most one per
+day. It is the only census possible: a `curl … | bash` download leaves no trace GitHub can report.
+
+Opt out at any time:
+
+```bash
+touch ~/.auramaxing/no-telemetry     # or: export AURA_NO_TELEMETRY=1
+```
 
 ---
 

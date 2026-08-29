@@ -5,6 +5,38 @@ All notable changes to Auramaxing are documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.25.0 — 2026-08-29
+
+**There is finally a record of who runs this.** The documented install path is
+`curl … | bash` over raw.githubusercontent.com, and that download leaves no trace anywhere:
+it is not a clone, not a view, not an event — the repo owner cannot enumerate it even with admin
+rights. Stars and forks named 5 accounts; the real install base was invisible. Now each install
+registers itself.
+
+- `helpers/install-ping.mjs` — append-only registration: random install id, version, OS/arch/Node,
+  timezone, plus GitHub login and git email when the machine has them configured. One ping on
+  install, then at most one per day. Never throws, never blocks (hard ~3s budget), silent on
+  network failure.
+- The heartbeat rides `scripts/update-check.sh`, which already runs on every SessionStart of every
+  live install — so installs that predate this release register themselves on their next session,
+  with nothing to reinstall. Its one-line stdout contract is unchanged (verified by test).
+- Storage is insert-only by construction: the key shipped in the client can INSERT and nothing
+  else (Postgres RLS, no SELECT policy). Reading the roster needs the service key, which never
+  leaves the owner's machine.
+- `scripts/users.mjs` (`npm run users`) — the roster: installs, identified users, machines, active
+  in the last 7 days.
+- Opt-out honoured everywhere: `AURA_NO_TELEMETRY=1` or `~/.auramaxing/no-telemetry`.
+
+**Update first, price second.** The mandatory-update block no longer mentions money — at that
+point the only thing to do is update. The moment the version matches, the first prompt afterwards
+carries the notice, in capitals: THE LAST 24 HOURS OF AURAMAXING FOR FREE, after which continued
+use costs USD $1,499 per user / year. The window end is stamped in `~/.auramaxing/free-until` and
+printed in the notice. It fires once.
+
+40 new tests (`tests/install-ping.test.mjs`, `tests/update-gate-sequence.test.mjs`) covering the
+opt-out, id persistence, the 24h throttle, the fail-silent network path, the update→price order,
+and fail-open on corrupt state.
+
 ## v1.24.3 — 2026-08-25
 
 **The update prompt no longer asks anything.** Previously the mandatory-update turn opened a

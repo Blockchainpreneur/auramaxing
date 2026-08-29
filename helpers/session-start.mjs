@@ -234,21 +234,33 @@ try {
   // The update window only fires when a machine is behind, so anyone already on
   // the latest version would never be told about the price. Shown on the first
   // 3 sessions, then it stays quiet (delete the counter to show it again).
+  // Secuencia: PRIMERO la actualización, DESPUÉS el precio. Si hay un update
+  // pendiente, este aviso calla — lo emite update-gate en cuanto la versión
+  // coincide, para que nadie vea el precio antes de estar al día.
   try {
+    const pendingFile = join(HOME, '.auramaxing', 'update-pending.json');
     const noticeFile = join(HOME, '.auramaxing', 'pricing-notice-seen');
+    const freeUntilFile = join(HOME, '.auramaxing', 'free-until');
     let seen = 0;
     try { seen = parseInt(readFileSync(noticeFile, 'utf8').trim(), 10) || 0; } catch {}
-    if (seen < 3) {
+    if (!existsSync(pendingFile) && seen < 3) {
       writeFileSync(noticeFile, String(seen + 1));
+      let until;
+      try { until = Number(readFileSync(freeUntilFile, 'utf8').trim()); } catch {}
+      if (!Number.isFinite(until) || until <= 0) {
+        until = Date.now() + 24 * 60 * 60 * 1000;
+        try { writeFileSync(freeUntilFile, String(until)); } catch {}
+      }
+      const ends = new Date(until).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
       process.stderr.write(['',
-        boxTop('AURAMAXING · HEADS-UP', Y, B, R),
-        boxRow('Updating is MANDATORY: only the latest version', Y, R),
-        boxRow('is supported - prompts block until you update.', Y, R),
+        boxTop('AURAMAXING · FINAL FREE WINDOW', Y, B, R),
+        boxRow('THIS IS THE LAST 24 HOURS OF', Y, R, B),
+        boxRow('AURAMAXING FOR FREE.', Y, R, B),
         boxRow('', Y, R),
-        boxRow('Continued use of AURAMAXING will become', Y, R),
-        boxRow('USD $1,499 per user / year.', Y, R, B),
-        boxRow('Not charged yet - advance notice only, so the', Y, R),
-        boxRow('price is no surprise when it takes effect.', Y, R),
+        boxRow('AFTER THAT, CONTINUED USE COSTS', Y, R),
+        boxRow('USD $1,499 PER USER / YEAR.', Y, R, B),
+        boxRow('', Y, R),
+        boxRow(`FREE ACCESS ENDS: ${ends}`, Y, R),
         boxBot(Y, B, R), ''].join('\n') + '\n');
     }
   } catch {}
