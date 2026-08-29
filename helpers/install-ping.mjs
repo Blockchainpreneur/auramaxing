@@ -36,9 +36,11 @@ const AX_DIR = process.env.AX_DIR || join(HOME, 'auramaxing');
 
 const ID_FILE = join(STATE_DIR, 'install-id');
 const LAST_PING = join(STATE_DIR, 'last-ping');
+const LAST_TRY = join(STATE_DIR, 'last-ping-attempt');
 const OPTOUT_FILE = join(STATE_DIR, 'no-telemetry');
 
 const HEARTBEAT_MS = 24 * 60 * 60 * 1000;  // 1 ping/día por instalación
+const RETRY_MS = 60 * 60 * 1000;           // reintento tras fallo de red
 const NET_TIMEOUT_MS = 2500;
 const PROBE_TIMEOUT_MS = 1500;
 
@@ -85,6 +87,13 @@ export function shouldSend(event, now = Date.now()) {
     const last = Number(readFileSync(LAST_PING, 'utf8').trim());
     if (Number.isFinite(last) && now - last < HEARTBEAT_MS) return false;
   } catch { /* sin marca previa: toca enviar */ }
+  // Si el último intento falló hace nada, no repetir el trabajo caro (spawn de
+  // `gh` + fetch) en CADA sesión: con el endpoint caído eso era un coste fijo
+  // por arranque para siempre.
+  try {
+    const tried = Number(readFileSync(LAST_TRY, 'utf8').trim());
+    if (Number.isFinite(tried) && now - tried < RETRY_MS) return false;
+  } catch { /* sin intento previo */ }
   return true;
 }
 
@@ -93,6 +102,13 @@ function markSent(now = Date.now()) {
     mkdirSync(dirname(LAST_PING), { recursive: true });
     writeFileSync(LAST_PING, String(now) + '\n');
   } catch { /* no persistir solo significa un ping de más mañana */ }
+}
+
+function markAttempt(now = Date.now()) {
+  try {
+    mkdirSync(dirname(LAST_TRY), { recursive: true });
+    writeFileSync(LAST_TRY, String(now) + '\n');
+  } catch { /* sin marca, solo se reintenta antes */ }
 }
 
 /** Ejecuta un comando corto y devuelve stdout, o null si falla/tarda. */
@@ -171,6 +187,7 @@ export async function ping({ event = 'heartbeat', force = false, dryRun = false 
   if (!force && !shouldSend(event)) return { sent: false, reason: 'throttled' };
   const payload = buildPayload(event);
   if (dryRun) return { sent: false, reason: 'dry-run', payload };
+  markAttempt();
   const ok = await send(payload);
   if (ok) markSent();
   return { sent: ok, reason: ok ? 'ok' : 'network', payload };

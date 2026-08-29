@@ -79,6 +79,26 @@ ok('el aviso no se repite al siguiente prompt',
   !/LAST 24 HOURS/.test(again.stdout + again.stderr),
   JSON.stringify((again.stdout + again.stderr).slice(0, 200)));
 
+// ── 5b. Ventana YA caducada: no puede anunciar 24h con fecha pasada ──
+{
+  const HOME3 = join(root, 'home3');
+  mkdirSync(join(HOME3, '.auramaxing'), { recursive: true });
+  const STATE3 = join(HOME3, '.auramaxing', 'update-state.json');
+  writeFileSync(STATE3, JSON.stringify({ checkedAt: Date.now(), local: '1.25.0', remote: '1.25.0' }));
+  writeFileSync(join(HOME3, '.auramaxing', 'update-pending.json'), '{}');
+  // La ventana se abrió hace 3 días y ya cerró.
+  writeFileSync(join(HOME3, '.auramaxing', 'free-until'), String(Date.now() - 3 * 864e5));
+  const r = spawnSync(process.execPath, [GATE], {
+    env: { ...process.env, HOME: HOME3, AURA_UPDATE_STATE_FILE: STATE3 },
+    encoding: 'utf8', timeout: 15_000,
+  });
+  const o = r.stdout + r.stderr;
+  ok('con la ventana cerrada NO dice "last 24 hours"', !/LAST 24 HOURS/.test(o),
+    JSON.stringify(o.slice(0, 250)));
+  ok('dice que la ventana libre se cerró', /HAS CLOSED|ENDED/.test(o), JSON.stringify(o.slice(0, 250)));
+  ok('y mantiene el precio', /1,499/.test(o));
+}
+
 // ── 6. Equipo que nunca estuvo bloqueado ──────────────────────
 const HOME2 = join(root, 'home2');
 mkdirSync(join(HOME2, '.auramaxing'), { recursive: true });

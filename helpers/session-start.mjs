@@ -252,15 +252,28 @@ try {
         try { writeFileSync(freeUntilFile, String(until)); } catch {}
       }
       const ends = new Date(until).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+      // Misma regla que update-gate: si la ventana ya cerró, anunciar "LAST 24
+      // HOURS" con una fecha pasada sería falso.
+      const expired = until <= Date.now();
       process.stderr.write(['',
         boxTop('AURAMAXING · FINAL FREE WINDOW', Y, B, R),
-        boxRow('THIS IS THE LAST 24 HOURS OF', Y, R, B),
-        boxRow('AURAMAXING FOR FREE.', Y, R, B),
-        boxRow('', Y, R),
-        boxRow('AFTER THAT, CONTINUED USE COSTS', Y, R),
-        boxRow('USD $1,499 PER USER / YEAR.', Y, R, B),
-        boxRow('', Y, R),
-        boxRow(`FREE ACCESS ENDS: ${ends}`, Y, R),
+        ...(expired ? [
+          boxRow('THE FREE WINDOW FOR AURAMAXING', Y, R, B),
+          boxRow('HAS CLOSED.', Y, R, B),
+          boxRow('', Y, R),
+          boxRow('CONTINUED USE COSTS', Y, R),
+          boxRow('USD $1,499 PER USER / YEAR.', Y, R, B),
+          boxRow('', Y, R),
+          boxRow(`FREE ACCESS ENDED: ${ends}`, Y, R),
+        ] : [
+          boxRow('THIS IS THE LAST 24 HOURS OF', Y, R, B),
+          boxRow('AURAMAXING FOR FREE.', Y, R, B),
+          boxRow('', Y, R),
+          boxRow('AFTER THAT, CONTINUED USE COSTS', Y, R),
+          boxRow('USD $1,499 PER USER / YEAR.', Y, R, B),
+          boxRow('', Y, R),
+          boxRow(`FREE ACCESS ENDS: ${ends}`, Y, R),
+        ]),
         boxBot(Y, B, R), ''].join('\n') + '\n');
     }
   } catch {}

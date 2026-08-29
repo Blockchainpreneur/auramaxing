@@ -18,7 +18,9 @@ import { homedir } from 'os';
 const STATE_DIR = process.env.AURA_STATE_DIR || join(homedir(), '.auramaxing');
 const ENV_FILE = join(STATE_DIR, 'registry.env');
 const PROJECT_REF = process.env.AURA_REGISTRY_REF || 'afftkllnqfkashsdzdvg';
-const BASE = `https://${PROJECT_REF}.supabase.co/rest/v1/auramaxing_installs`;
+const BASE = process.env.AURA_REGISTRY_REST
+  || `https://${PROJECT_REF}.supabase.co/rest/v1/auramaxing_installs`;
+const PAGE = 1000;   // tope duro de PostgREST por respuesta
 
 /** Lee KEY=value de ~/.auramaxing/registry.env (sin dependencias). */
 function fileEnv() {
@@ -50,25 +52,44 @@ const asEvents = args.includes('--events');
 const daysIdx = args.indexOf('--days');
 const days = daysIdx >= 0 ? Number(args[daysIdx + 1]) : null;
 
-const params = new URLSearchParams({
-  select: 'install_id,event,version,gh_login,git_email,os,arch,node_version,tz,host_hash,created_at',
-  order: 'created_at.asc',
-  limit: '10000',
-});
-if (Number.isFinite(days) && days > 0) {
-  params.set('created_at', `gte.${new Date(Date.now() - days * 864e5).toISOString()}`);
+/**
+ * Descarga TODAS las filas paginando por Range. Un `limit` fijo trunca sin
+ * avisar: el padrón parecería completo y estaría mintiendo. Se pagina hasta
+ * que una página vuelve incompleta.
+ */
+async function fetchAll() {
+  const out = [];
+  for (let from = 0; ; from += PAGE) {
+    const params = new URLSearchParams({
+      select: 'install_id,event,version,gh_login,git_email,os,arch,node_version,tz,host_hash,created_at',
+      order: 'created_at.asc',
+    });
+    if (Number.isFinite(days) && days > 0) {
+      params.set('created_at', `gte.${new Date(Date.now() - days * 864e5).toISOString()}`);
+    }
+    const res = await fetch(`${BASE}?${params}`, {
+      headers: {
+        apikey: KEY,
+        Authorization: `Bearer ${KEY}`,
+        Range: `${from}-${from + PAGE - 1}`,
+        'Range-Unit': 'items',
+      },
+    });
+    if (!res.ok && res.status !== 206) {
+      console.error(`Supabase ${res.status}: ${(await res.text()).slice(0, 300)}`);
+      process.exit(1);
+    }
+    const page = await res.json();
+    if (!Array.isArray(page)) {
+      console.error(`Respuesta inesperada: ${JSON.stringify(page).slice(0, 200)}`);
+      process.exit(1);
+    }
+    out.push(...page);
+    if (page.length < PAGE) return out;   // última página
+  }
 }
 
-const res = await fetch(`${BASE}?${params}`, {
-  headers: { apikey: KEY, Authorization: `Bearer ${KEY}` },
-});
-
-if (!res.ok) {
-  console.error(`Supabase ${res.status}: ${(await res.text()).slice(0, 300)}`);
-  process.exit(1);
-}
-
-const rows = await res.json();
+const rows = await fetchAll();
 
 if (asEvents) {
   console.log(asJson ? JSON.stringify(rows, null, 2)

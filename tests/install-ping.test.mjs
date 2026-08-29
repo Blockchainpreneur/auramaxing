@@ -95,6 +95,20 @@ await withState('throttle', async (m, dir) => {
   ok('--force salta el throttle', f.reason === 'dry-run', JSON.stringify(f));
 });
 
+// ── 3b. Backoff cuando el endpoint está caído ─────────────────
+await withState('backoff', async (m, dir) => {
+  process.env.AURA_REGISTRY_URL = 'http://127.0.0.1:1/nope';
+  const r = await m.ping({ event: 'heartbeat' });
+  ok('con el servidor caído el ping falla sin lanzar', r.sent === false && r.reason === 'network');
+  ok('el fallo deja marca de intento', existsSync(join(dir, 'last-ping-attempt')));
+  ok('no vuelve a intentarlo en la misma hora (ni spawnea gh)',
+    m.shouldSend('heartbeat') === false);
+  writeFileSync(join(dir, 'last-ping-attempt'), String(Date.now() - 61 * 60 * 1000));
+  ok('pasada 1h reintenta', m.shouldSend('heartbeat') === true);
+  ok('un fallo NUNCA marca como enviado', !existsSync(join(dir, 'last-ping')));
+  delete process.env.AURA_REGISTRY_URL;
+});
+
 // ── 4. Payload ────────────────────────────────────────────────
 await withState('payload', async (m) => {
   const p = m.buildPayload('install');

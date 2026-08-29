@@ -5,6 +5,31 @@ All notable changes to Auramaxing are documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.25.1 — 2026-08-29
+
+Three defects in v1.25.0, found by running the code instead of trusting it.
+
+- **The roster truncated in silence.** `scripts/users.mjs` asked for `limit=10000` in a single
+  request. PostgREST caps a response long before that, and the failure mode was the worst one
+  available: a smaller number of users, reported with total confidence. It now pages by `Range`
+  until a short page comes back. Proven against a stub serving 2,500 events across three
+  installs — all 2,500 arrive, aggregating to 3.
+- **The roster had never been executed.** Without the service key there was no way to run it, so
+  it shipped unproven. `tests/users-roster.test.mjs` runs the real script against a stub server
+  and checks the aggregation, the pagination, and that an install whose first ping was anonymous
+  still ends up identified once `gh` is configured. (The first version of that test deadlocked:
+  `spawnSync` freezes the event loop the stub server runs on.)
+- **An expired free window announced itself as "LAST 24 HOURS" with a date in the past.** Both
+  emitters — `update-gate.mjs` and `session-start.mjs` — now say the window has closed instead.
+- **A dead endpoint cost every session.** With the registry unreachable, each SessionStart re-ran
+  the full attempt (spawning `gh`, then a doomed fetch). Failures now back off for an hour.
+
+Adversarially verified against the live endpoint: the publishable key shipped in the client is
+refused on SELECT, UPDATE and DELETE (HTTP 401, `42501`) — it can only INSERT, so a key anyone can
+read out of the repo cannot read, forge, or wipe the roster.
+
+61 tests across the three files, all green.
+
 ## v1.25.0 — 2026-08-29
 
 **There is finally a record of who runs this.** The documented install path is
