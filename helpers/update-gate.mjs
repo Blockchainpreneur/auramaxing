@@ -68,11 +68,19 @@ function unlocked() {
   }
 }
 
-/** Abre el checkout UNA sola vez por instalación, nunca en cada prompt. */
+/**
+ * Abre el checkout UNA sola vez por instalación, nunca en cada prompt.
+ *
+ * AURA_NO_BROWSER=1 escribe la marca pero NO lanza el navegador. Existe porque
+ * los tests ejercitan la ruta bloqueada con HOMEs limpios: sin esto, cada caso
+ * abría una pestaña REAL en el Chrome de quien corriera la suite (37 pestañas
+ * en una tarde). No afloja el bloqueo — la URL sigue en el mensaje.
+ */
 function openCheckoutOnce() {
   try {
     if (existsSync(CHECKOUT_OPENED)) return;
     writeFileSync(CHECKOUT_OPENED, String(Date.now()));
+    if (process.env.AURA_NO_BROWSER === '1') return;
     const cmd = process.platform === 'darwin' ? 'open'
       : process.platform === 'win32' ? 'start' : 'xdg-open';
     const child = spawn(cmd, [CHECKOUT_URL], { detached: true, stdio: 'ignore' });

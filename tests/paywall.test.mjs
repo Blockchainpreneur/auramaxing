@@ -24,7 +24,7 @@
  *  6. El checkout se abre UNA vez, y sin navegador el bloqueo sigue en pie.
  *  7. activate.mjs rechaza lo inválido y desbloquea con lo válido.
  */
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from 'fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync, chmodSync } from 'fs';
 import { join } from 'path';
 import { tmpdir, homedir } from 'os';
 import { spawnSync } from 'child_process';
@@ -43,13 +43,36 @@ const root = mkdtempSync(join(tmpdir(), 'aura-paywall-'));
 let REAL_CODE = null;
 try { REAL_CODE = readFileSync(join(homedir(), '.auramaxing', 'unlocked'), 'utf8').trim() || null; } catch { /* sin desbloquear */ }
 
+/** Lectura segura: el fichero puede no existir todavía. */
+const readIf = (f) => { try { return readFileSync(f, 'utf8'); } catch { return ''; } };
+
+/**
+ * El gate lanza el navegador como hijo DETACHED y luego hace process.exit(2):
+ * la escritura del hijo aterriza DESPUÉS de que spawnSync haya devuelto. Sin
+ * esperarla, el test lee un fichero vacío y acusa al gate de no abrir nada.
+ */
+async function waitForCapture(f, needle, ms = 4000) {
+  const until = Date.now() + ms;
+  while (Date.now() < until) {
+    if (readIf(f).includes(needle)) return true;
+    await new Promise(r => setTimeout(r, 50));
+  }
+  return false;
+}
+
 function home(name) {
   const h = join(root, name);
   mkdirSync(join(h, '.auramaxing'), { recursive: true });
   return h;
 }
+// AURA_NO_BROWSER=1 en TODAS las corridas: sin él, cada HOME limpio abría una
+// pestaña real en el Chrome de quien corre la suite. La ruta de apertura se
+// prueba aparte, con un `open` falso (caso 6).
 const runGate = (h, env = {}) => spawnSync(process.execPath, [GATE], {
-  env: { ...process.env, HOME: h, AURA_UPDATE_STATE_FILE: join(h, '.auramaxing', 'update-state.json'), ...env },
+  env: {
+    ...process.env, HOME: h, AURA_NO_BROWSER: '1',
+    AURA_UPDATE_STATE_FILE: join(h, '.auramaxing', 'update-state.json'), ...env,
+  },
   encoding: 'utf8', timeout: 15_000,
 });
 
@@ -133,17 +156,45 @@ if (REAL_CODE) {
   ok('sigue bloqueando', runGate(h).status === 2);
 }
 
-// ── 6. Checkout: una vez, y nunca imprescindible ──────────────
+// ── 6. Checkout: se intenta abrir, una vez, sin ser imprescindible ──
 {
   const h = home('checkout');
-  runGate(h, { PATH: '/nonexistent' });   // sin `open` disponible
+  // `open` falso en el PATH: demuestra que el gate SÍ lanza el navegador, sin
+  // abrir nada. Probar esto con el `open` real es lo que llenó Chrome.
+  const bin = join(root, 'fakebin');
+  mkdirSync(bin, { recursive: true });
+  const capture = join(root, 'opened.log');
+  const fake = join(bin, process.platform === 'darwin' ? 'open' : 'xdg-open');
+  writeFileSync(fake, `#!/bin/sh\necho "$@" >> ${capture}\n`);
+  chmodSync(fake, 0o755);
+
+  runGate(h, { PATH: `${bin}:${process.env.PATH}`, AURA_NO_BROWSER: '' });
+  ok('el gate SÍ intenta abrir el checkout',
+    await waitForCapture(capture, 'whop.com/checkout/plan_XLV0jREwf4LGS'),
+    JSON.stringify(readIf(capture).slice(0, 120)));
   ok('marca el checkout como abierto', existsSync(join(h, '.auramaxing', 'checkout-opened')));
+
   const first = readFileSync(join(h, '.auramaxing', 'checkout-opened'), 'utf8');
-  runGate(h); runGate(h);
-  ok('no lo reabre en cada prompt',
-    readFileSync(join(h, '.auramaxing', 'checkout-opened'), 'utf8') === first);
-  ok('sin navegador el bloqueo sigue funcionando',
-    runGate(h, { PATH: '/nonexistent' }).status === 2);
+  runGate(h, { PATH: `${bin}:${process.env.PATH}`, AURA_NO_BROWSER: '' });
+  runGate(h, { PATH: `${bin}:${process.env.PATH}`, AURA_NO_BROWSER: '' });
+  await new Promise(r => setTimeout(r, 300));   // margen por si alguno intentara abrir
+  ok('no lo reabre en prompts siguientes',
+    (readIf(capture).match(/whop/g) || []).length === 1 &&
+    readFileSync(join(h, '.auramaxing', 'checkout-opened'), 'utf8') === first,
+    `aperturas=${(readIf(capture).match(/whop/g) || []).length}`);
+
+  // Con el guard puesto no debe lanzarse NADA, ni con el open falso delante.
+  const h2 = home('checkout-guard');
+  runGate(h2, { PATH: `${bin}:${process.env.PATH}` });
+  await new Promise(r => setTimeout(r, 300));
+  ok('con AURA_NO_BROWSER=1 no lanza el navegador',
+    (readIf(capture).match(/whop/g) || []).length === 1,
+    `aperturas=${(readIf(capture).match(/whop/g) || []).length}`);
+  ok('pero sigue marcando y bloqueando',
+    existsSync(join(h2, '.auramaxing', 'checkout-opened')) && runGate(h2).status === 2);
+
+  ok('sin navegador disponible el bloqueo sigue funcionando',
+    runGate(home('sin-navegador'), { PATH: '/nonexistent' }).status === 2);
 }
 
 // ── 7. activate.mjs ───────────────────────────────────────────
