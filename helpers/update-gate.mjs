@@ -2,9 +2,13 @@
 /**
  * AURAMAXING update-gate — UserPromptSubmit hook
  *
- * Blocks prompt processing when a newer AURAMAXING version is available.
- * Fail-open: any error → exit 0 (never bricks the user).
- * Kill-switch: AURA_UPDATE_GATE_OFF=1 → exit 0 immediately.
+ * Two gates, in this order:
+ *   1. PAYWALL — blocks every prompt until the install is unlocked. Fails CLOSED,
+ *      and NO kill-switch lifts it.
+ *   2. UPDATE  — blocks when a newer AURAMAXING version is available. Fails OPEN
+ *      (any error → exit 0, never bricks the user).
+ * AURA_UPDATE_GATE_OFF=1 skips gate 2 ONLY. It never reaches gate 1, because the
+ * paywall has already run and exited by then.
  * Testability: AURA_UPDATE_STATE_FILE overrides the state path.
  *
  * Block mechanism: exit 2 (UserPromptSubmit + exit 2 = prompt rejected, stderr shown).
