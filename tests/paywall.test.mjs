@@ -52,9 +52,20 @@ const readIf = (f) => { try { return readFileSync(f, 'utf8'); } catch { return '
  * esperarla, el test lee un fichero vacío y acusa al gate de no abrir nada.
  */
 async function waitForCapture(f, needle, ms = 4000) {
+  return waitForCount(f, needle, 1, ms);
+}
+
+/**
+ * Espera a que el fichero contenga EXACTAMENTE n apariciones. Esperar solo la
+ * "presencia" es inútil en cuanto hay más de una apertura en la corrida: vuelve
+ * al instante con la del caso anterior y la aserción lee antes de que el hijo
+ * haya escrito.
+ */
+async function waitForCount(f, needle, n, ms = 4000) {
   const until = Date.now() + ms;
+  const count = () => (readIf(f).match(new RegExp(needle, 'g')) || []).length;
   while (Date.now() < until) {
-    if (readIf(f).includes(needle)) return true;
+    if (count() >= n) return true;
     await new Promise(r => setTimeout(r, 50));
   }
   return false;
@@ -193,8 +204,21 @@ if (REAL_CODE) {
   ok('pero sigue marcando y bloqueando',
     existsSync(join(h2, '.auramaxing', 'checkout-opened')) && runGate(h2).status === 2);
 
+  // Sin opener en el PATH: bloquea igual, pero NO quema la marca — si no, un
+  // contenedor o un servidor sin escritorio no abriría el checkout NUNCA, ni el
+  // día que sí tuviera navegador.
+  const h3 = home('sin-navegador');
   ok('sin navegador disponible el bloqueo sigue funcionando',
-    runGate(home('sin-navegador'), { PATH: '/nonexistent' }).status === 2);
+    runGate(h3, { PATH: '/nonexistent', AURA_NO_BROWSER: '' }).status === 2);
+  ok('y NO marca el checkout como abierto (podrá reintentar)',
+    !existsSync(join(h3, '.auramaxing', 'checkout-opened')));
+
+  // Y cuando aparece un opener, ese mismo install sí abre.
+  runGate(h3, { PATH: `${bin}:${process.env.PATH}`, AURA_NO_BROWSER: '' });
+  ok('cuando aparece un navegador, ese install SÍ abre el checkout',
+    await waitForCount(capture, 'whop', 2) &&
+    (readIf(capture).match(/whop/g) || []).length === 2,
+    `aperturas=${(readIf(capture).match(/whop/g) || []).length}`);
 }
 
 // ── 7. activate.mjs ───────────────────────────────────────────

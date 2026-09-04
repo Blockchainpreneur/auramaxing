@@ -69,21 +69,48 @@ function unlocked() {
 }
 
 /**
+ * Localiza con qué abrir una URL, SIN lanzar ningún proceso (recorre el PATH a
+ * mano: un `which` costaría un subproceso en cada prompt bloqueado).
+ * Devuelve null si esta máquina no tiene con qué abrir nada.
+ */
+function resolveOpener() {
+  if (process.platform === 'win32') {
+    // `start` es un builtin de cmd.exe, no un ejecutable: spawn('start') falla.
+    return { cmd: 'cmd', args: ['/c', 'start', '', CHECKOUT_URL] };
+  }
+  const name = process.platform === 'darwin' ? 'open' : 'xdg-open';
+  for (const dir of (process.env.PATH || '').split(':')) {
+    if (!dir) continue;
+    try {
+      if (existsSync(join(dir, name))) return { cmd: join(dir, name), args: [CHECKOUT_URL] };
+    } catch (_) { /* directorio ilegible */ }
+  }
+  return null;
+}
+
+/**
  * Abre el checkout UNA sola vez por instalación, nunca en cada prompt.
  *
- * AURA_NO_BROWSER=1 escribe la marca pero NO lanza el navegador. Existe porque
- * los tests ejercitan la ruta bloqueada con HOMEs limpios: sin esto, cada caso
- * abría una pestaña REAL en el Chrome de quien corriera la suite (37 pestañas
- * en una tarde). No afloja el bloqueo — la URL sigue en el mensaje.
+ * La marca se escribe SOLO cuando de verdad se lanza el navegador. Escribirla
+ * antes significaba que un equipo sin opener (un contenedor, un servidor sin
+ * escritorio) quemaba su única oportunidad y no volvía a abrirlo jamás, ni el
+ * día que sí tuviera navegador.
+ *
+ * AURA_NO_BROWSER=1 marca pero no lanza: es una supresión explícita, no un
+ * fallo, y sin ella los tests abrían pestañas reales en el Chrome de quien
+ * corriera la suite. No afloja el bloqueo — la URL sigue en el mensaje.
  */
 function openCheckoutOnce() {
   try {
     if (existsSync(CHECKOUT_OPENED)) return;
+    if (process.env.AURA_NO_BROWSER === '1') {
+      writeFileSync(CHECKOUT_OPENED, String(Date.now()));
+      return;
+    }
+    const opener = resolveOpener();
+    if (!opener) return;   // sin con qué abrir: NO marcar, reintentar más adelante
     writeFileSync(CHECKOUT_OPENED, String(Date.now()));
-    if (process.env.AURA_NO_BROWSER === '1') return;
-    const cmd = process.platform === 'darwin' ? 'open'
-      : process.platform === 'win32' ? 'start' : 'xdg-open';
-    const child = spawn(cmd, [CHECKOUT_URL], { detached: true, stdio: 'ignore' });
+    const child = spawn(opener.cmd, opener.args, { detached: true, stdio: 'ignore' });
     child.unref();
   } catch (_) { /* sin navegador: la URL va igual en el mensaje */ }
 }
