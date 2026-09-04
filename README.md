@@ -10,7 +10,7 @@ v1.24.0  |  MIT License  |  Built on Claude Code
 
 ---
 
-## ⚠️ Heads-up: mandatory updates + upcoming pricing
+## ⚠️ Paid licence required — mandatory updates
 
 **Mandatory updates (active now).** Only the latest published version is supported. When a new
 version ships, every user must update to keep using AURAMAXING — the update gate blocks prompt
@@ -20,11 +20,22 @@ processing until the installed version matches the published one:
 bash ~/auramaxing/scripts/update.sh
 ```
 
-**FINAL FREE WINDOW — LAST 24 HOURS.** After this window closes, continued use of AURAMAXING
-requires a paid licence of **USD $1,499 per user, per year**. The countdown starts the first time
-your install shows the notice (the exact end time is printed in it, and stored in
-`~/.auramaxing/free-until`). Licence terms and payment ship with the next release; until then the
-published code remains under the MIT licence.
+**AURAMAXING IS A PAID PRODUCT.** Prompts are blocked until the installation is unlocked.
+
+| | |
+|---|---|
+| **First 24 hours** | **USD $949 / year** — launch price |
+| **After 24 hours** | **USD $1,499 / year** |
+
+1. Pay: **https://whop.com/checkout/plan_XLV0jREwf4LGS**
+2. Unlock with the code you receive:
+
+```bash
+node ~/auramaxing/scripts/activate.mjs <your-code>
+```
+
+The 24-hour launch window starts the first time your installation shows the notice. There is no
+override: `AURA_UPDATE_GATE_OFF` and the other kill-switches do not lift this block.
 
 **Install registry.** So that there is an actual record of who runs AURAMAXING, each install
 registers itself: a random install id, the version, OS/arch/Node, timezone, and — when the machine

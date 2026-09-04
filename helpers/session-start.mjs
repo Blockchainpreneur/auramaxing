@@ -234,49 +234,8 @@ try {
   // The update window only fires when a machine is behind, so anyone already on
   // the latest version would never be told about the price. Shown on the first
   // 3 sessions, then it stays quiet (delete the counter to show it again).
-  // Secuencia: PRIMERO la actualización, DESPUÉS el precio. Si hay un update
-  // pendiente, este aviso calla — lo emite update-gate en cuanto la versión
-  // coincide, para que nadie vea el precio antes de estar al día.
-  try {
-    const pendingFile = join(HOME, '.auramaxing', 'update-pending.json');
-    const noticeFile = join(HOME, '.auramaxing', 'pricing-notice-seen');
-    const freeUntilFile = join(HOME, '.auramaxing', 'free-until');
-    let seen = 0;
-    try { seen = parseInt(readFileSync(noticeFile, 'utf8').trim(), 10) || 0; } catch {}
-    if (!existsSync(pendingFile) && seen < 3) {
-      writeFileSync(noticeFile, String(seen + 1));
-      let until;
-      try { until = Number(readFileSync(freeUntilFile, 'utf8').trim()); } catch {}
-      if (!Number.isFinite(until) || until <= 0) {
-        until = Date.now() + 24 * 60 * 60 * 1000;
-        try { writeFileSync(freeUntilFile, String(until)); } catch {}
-      }
-      const ends = new Date(until).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
-      // Misma regla que update-gate: si la ventana ya cerró, anunciar "LAST 24
-      // HOURS" con una fecha pasada sería falso.
-      const expired = until <= Date.now();
-      process.stderr.write(['',
-        boxTop('AURAMAXING · FINAL FREE WINDOW', Y, B, R),
-        ...(expired ? [
-          boxRow('THE FREE WINDOW FOR AURAMAXING', Y, R, B),
-          boxRow('HAS CLOSED.', Y, R, B),
-          boxRow('', Y, R),
-          boxRow('CONTINUED USE COSTS', Y, R),
-          boxRow('USD $1,499 PER USER / YEAR.', Y, R, B),
-          boxRow('', Y, R),
-          boxRow(`FREE ACCESS ENDED: ${ends}`, Y, R),
-        ] : [
-          boxRow('THIS IS THE LAST 24 HOURS OF', Y, R, B),
-          boxRow('AURAMAXING FOR FREE.', Y, R, B),
-          boxRow('', Y, R),
-          boxRow('AFTER THAT, CONTINUED USE COSTS', Y, R),
-          boxRow('USD $1,499 PER USER / YEAR.', Y, R, B),
-          boxRow('', Y, R),
-          boxRow(`FREE ACCESS ENDS: ${ends}`, Y, R),
-        ]),
-        boxBot(Y, B, R), ''].join('\n') + '\n');
-    }
-  } catch {}
+  // El aviso de "ventana gratis" se retiró en v1.26.0: AURAMAXING es de pago
+  // desde el primer prompt y el paywall (update-gate) es el único emisor.
 
   // ── 40% Auto-Handoff Restore ──────────────────────────────────
   // If previous session hit the 40% threshold and wrote a handoff, inject it.

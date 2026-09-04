@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "npm run test:unit && npm run test:evals",
-    "test:unit": "node tests/gpt-council.test.mjs && node tests/turn-sentinel.test.mjs && node tests/install-merge.test.mjs && node tests/session-digest.test.mjs && node tests/ask-gpt.test.mjs && node tests/install-ping.test.mjs && node tests/update-gate-sequence.test.mjs && node tests/users-roster.test.mjs",
+    "test:unit": "node tests/gpt-council.test.mjs && node tests/turn-sentinel.test.mjs && node tests/install-merge.test.mjs && node tests/session-digest.test.mjs && node tests/ask-gpt.test.mjs && node tests/install-ping.test.mjs && node tests/users-roster.test.mjs && node tests/paywall.test.mjs",
     "test:evals": "node evals/run.mjs",
     "test:council": "node tests/gpt-council.test.mjs",
     "test:install": "node tests/install-merge.test.mjs",

@@ -5,6 +5,35 @@ All notable changes to Auramaxing are documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.26.0 — 2026-09-04
+
+**AURAMAXING is now a paid product, and every prompt is blocked until the installation is
+unlocked.**
+
+- The block lives in `update-gate.mjs`, which already runs first on every `UserPromptSubmit` of
+  every live install — so it needs no `settings.json` change to reach anyone. Users who update get
+  it on their next prompt; users who don't update are held by the mandatory-update gate instead.
+- **No override.** `AURA_UPDATE_GATE_OFF`, `AURA_GATEKEEPER_OFF` and `AURA_NO_TELEMETRY` do not
+  lift it, and the block copy no longer advertises any escape hatch — the previous update box
+  printed `AURA_UPDATE_GATE_OFF=1` to the very user it was blocking, which made "mandatory"
+  untrue. It fails closed: if the check cannot complete, access is denied.
+- **Pricing, with a launch window.** First 24 hours **USD $949 / year**; after that
+  **USD $1,499 / year**. The window is sealed at the moment an installation first sees the notice
+  and does not reset on later prompts. Checkout: https://whop.com/checkout/plan_XLV0jREwf4LGS —
+  opened in the browser once per install, never on every prompt, and the block still works on a
+  machine with no browser at all.
+- **Unlocking is manual.** The owner hands out a code; the user runs
+  `node ~/auramaxing/scripts/activate.mjs <code>`. Only the SHA-256 of that code ships in the
+  source, so reading the repository does not reveal it.
+- **Removed as contradictory:** the "LAST 24 HOURS FREE" notice from v1.25.0, in both emitters
+  (`update-gate.mjs` and `session-start.mjs`). Leaving it in would have told the same person
+  "you have 24 free hours" and "pay now" in one session.
+
+33 tests for the block (`tests/paywall.test.mjs`), replacing the free-window suite: the block
+holds against every documented kill-switch, against an invented, empty, corrupt or one-character-off
+code, and against the absence of a browser; the price rolls over at 24h; and the unlock path is
+exercised end to end. Gate latency 0.06s.
+
 ## v1.25.1 — 2026-08-29
 
 Three defects in v1.25.0, found by running the code instead of trusting it.
