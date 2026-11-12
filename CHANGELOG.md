@@ -8,7 +8,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## v1.27.0 — 2026-11-11
 
 ### Changed — Lean Mode (normal Claude Code by default)
-- Router (`rational-router-apex`), `ultramax-guard`, `gpt-council` and `nlm-live-recall` are off by default; they no longer inject ~2.7k tokens of directives per prompt or force Opus/Fable agent fleets. Opt back in with `AURA_ROUTER_ON=1`, `AURA_ULTRAMAX_GUARD_ON=1`, `AURA_COUNCIL_ON=1`, `AURA_LIVE_RECALL_ON=1`.
+- Router (`rational-router-apex`), `ultramax-guard`, `gpt-council` and `nlm-live-recall` are off by default; they no longer inject ~2.7k tokens of directives per prompt or force Opus/Fable agent fleets. Permanently disabled (no opt-in switch).
 - `install.sh` no longer forces `effortLevel: ultracode` or `model: opus[1m]`; on update it migrates them to defaults (`opus`, no effort override), strips the hooks above, removes `AURA_CTX_*` / agent-teams env vars and deletes `~/.auramaxing/opus-window.json` + `ultramax.json`.
 - Global CLAUDE.md: subagents/fleets only when the user explicitly asks.
 
