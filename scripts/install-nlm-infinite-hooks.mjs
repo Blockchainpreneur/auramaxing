@@ -33,7 +33,6 @@ function hookCmd(relativeHelper, timeout = 1500) {
 }
 
 const FINGERPRINTS = {
-  'nlm-live-recall.mjs': 'nlm-live-recall.mjs',
   'diff-capturer.mjs': 'diff-capturer.mjs',
   'aura-session-flush.mjs': 'aura-session-flush.mjs',
 };
@@ -83,16 +82,6 @@ function main() {
       }
     }
   } else {
-    // 1. UserPromptSubmit: nlm-live-recall (registered AFTER existing prompt-engine/rational-router — so runs last)
-    if (!hasHookFor(settings.hooks?.UserPromptSubmit, FINGERPRINTS['nlm-live-recall.mjs'])) {
-      addHook(settings, 'UserPromptSubmit', {
-        hooks: [hookCmd('nlm-live-recall.mjs', 1500)],
-      });
-      console.log('✓ Added UserPromptSubmit: nlm-live-recall.mjs (1500ms budget)');
-      changes++;
-    } else {
-      console.log('- UserPromptSubmit: nlm-live-recall.mjs already present');
-    }
 
     // 2. PostToolUse[Edit|Write|MultiEdit|NotebookEdit]: diff-capturer
     if (!hasHookFor(settings.hooks?.PostToolUse, FINGERPRINTS['diff-capturer.mjs'])) {

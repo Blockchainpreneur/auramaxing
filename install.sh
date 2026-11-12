@@ -229,8 +229,6 @@ path  = os.environ["_CM_SETTINGS"]
 home  = os.environ.get("HOME", "")
 ug_cmd = f"export PATH=\"$HOME/.nvm/versions/node/v$(cat $HOME/.nvm/alias/default 2>/dev/null | tr -d '[:space:]' | sed 's/^v//')/bin:/usr/local/bin:/usr/bin:/bin:$PATH\" && node ~/.claude/helpers/update-gate.mjs 2>/dev/null || true"
 _pfx = f"export PATH=\"$HOME/.nvm/versions/node/v$(cat $HOME/.nvm/alias/default 2>/dev/null | tr -d '[:space:]' | sed 's/^v//')/bin:/usr/local/bin:/usr/bin:/bin:$PATH\" && "
-council_cmd      = _pfx + "node ~/auramaxing/helpers/gpt-council.mjs 2>/dev/null || true"
-council_stop_cmd = _pfx + "node ~/auramaxing/helpers/gpt-council.mjs --stop 2>/dev/null || true"
 
 with open(path) as f:
     settings = json.load(f)
@@ -238,6 +236,7 @@ with open(path) as f:
 hooks = settings.setdefault("hooks", {})
 settings.setdefault("permissions", {})["defaultMode"] = "bypassPermissions"
 settings["skipDangerousModePermissionPrompt"] = True
+settings["fastMode"] = False
 # LEAN MODE (1.27.0): normal Claude Code behaviour. No forced max effort, no 1M window,
 # no default fleets. Undo the old max-capability defaults this installer used to force.
 if settings.get("effortLevel") == "ultracode":
@@ -352,6 +351,10 @@ apply_settings() {
     ok "settings.json valid"
     # LEAN MODE: drop the state files that forced Opus/Fable max fleets
     rm -f "$HOME/.auramaxing/opus-window.json" "$HOME/.auramaxing/ultramax.json" 2>/dev/null || true
+    # LEAN MODE: delete the removed token-burning helpers/skills from earlier installs
+    rm -f "$HOME/.claude/helpers/rational-router-apex.mjs" "$HOME/.claude/helpers/ultramax-guard.mjs" \
+          "$HOME/.claude/helpers/gpt-council.mjs" "$HOME/.claude/helpers/nlm-live-recall.mjs" 2>/dev/null || true
+    rm -rf "$HOME/.claude/skills/aura-delegate" "$HOME/.claude/skills/billion-engine" 2>/dev/null || true
   else
     rm -f "$TMP" "$RENDERED_TEMPLATE"
     if [ -f "$BAK" ]; then
@@ -553,16 +556,6 @@ verify_hooks() {
     failed=$((failed+1))
   fi
 
-  # Test rational-router-apex — should exit 0 on trivial prompt
-  echo '{"prompt":"hello","cwd":"/tmp","hook_event_name":"UserPromptSubmit"}' \
-    | node "$HELPERS_DIR/rational-router-apex.mjs" >/dev/null 2>&1
-  if [ $? -eq 0 ]; then
-    ok "rational-router-apex ✓ exits cleanly"
-    passed=$((passed+1))
-  else
-    warn "rational-router-apex: non-zero exit on trivial prompt"
-    failed=$((failed+1))
-  fi
 
   # Test task-complete — should exit 0
   echo '{}' | node "$HELPERS_DIR/task-complete.mjs" >/dev/null 2>&1

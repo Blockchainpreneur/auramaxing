@@ -12,6 +12,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `install.sh` no longer forces `effortLevel: ultracode` or `model: opus[1m]`; on update it migrates them to defaults (`opus`, no effort override), strips the hooks above, removes `AURA_CTX_*` / agent-teams env vars and deletes `~/.auramaxing/opus-window.json` + `ultramax.json`.
 - Global CLAUDE.md: subagents/fleets only when the user explicitly asks.
 
+### Removed
+- Token-burning code deleted outright: `rational-router-apex`, `ultramax-guard`, `gpt-council`, `nlm-live-recall` helpers; `aura-delegate` and `billion-engine` skills; Ruflo swarm config; cloud fleet/swarm/orchestra/nightly scripts; `setup/project-settings.json` (claude-flow daemon with scheduled workers). `install.sh` deletes the installed copies from `~/.claude` on update.
+
 ## v1.26.0 — 2026-09-04
 
 **AURAMAXING is now a paid product, and every prompt is blocked until the installation is

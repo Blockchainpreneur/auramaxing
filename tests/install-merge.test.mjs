@@ -66,10 +66,12 @@ ok('cablea el update-gate (updates obligatorios)', hooksNamed(merged, 'UserPromp
 ok('el update-gate va PRIMERO en UserPromptSubmit',
   cmds(merged, 'UserPromptSubmit')[0]?.includes('update-gate'),
   cmds(merged, 'UserPromptSubmit')[0]?.slice(0, 80));
-ok('cablea el router', hooksNamed(merged, 'UserPromptSubmit', 'rational-router-apex') === 1);
-ok('cablea el ChatGPT Council en UserPromptSubmit', hooksNamed(merged, 'UserPromptSubmit', 'gpt-council') === 1);
-ok('cablea el Council --stop en Stop',
-  cmds(merged, 'Stop').some((c) => c.includes('gpt-council') && c.includes('--stop')));
+// LEAN MODE: the token-burning hooks must be gone from every event
+for (const name of ['rational-router', 'ultramax-guard', 'gpt-council', 'nlm-live-recall']) {
+  const n = Object.keys(merged.hooks || {}).reduce((a, ev) => a + hooksNamed(merged, ev, name), 0);
+  ok(`lean: ${name} eliminado`, n === 0, `count=${n}`);
+}
+ok('lean: sin effortLevel ultracode ni opus[1m]', merged.effortLevel !== 'ultracode' && merged.model !== 'opus[1m]');
 ok('cablea los guardas de seguridad', hooksNamed(merged, 'PreToolUse', 'pii-redactor') === 1 && hooksNamed(merged, 'PreToolUse', 'code-quality-gate') === 1);
 ok('respeta los hooks que el usuario ya tenía', cmds(merged, 'UserPromptSubmit').some((c) => c === 'echo mine'));
 ok('no pisa el modelo elegido por el usuario', merged.model === 'sonnet');
@@ -78,8 +80,7 @@ ok('fuerza bypassPermissions + fastMode off', merged.permissions?.defaultMode ==
 // ── 2. idempotence: re-running install.sh must not duplicate anything ───────
 writeFileSync(legacy, JSON.stringify(merged, null, 2));
 const twice = runMerge(legacy);
-for (const [event, name] of [['UserPromptSubmit', 'update-gate'], ['UserPromptSubmit', 'gpt-council'],
-  ['UserPromptSubmit', 'rational-router-apex'], ['Stop', 'gpt-council'], ['PreToolUse', 'pii-redactor']]) {
+for (const [event, name] of [['UserPromptSubmit', 'update-gate'], ['PreToolUse', 'pii-redactor']]) {
   ok(`idempotente: ${name} sigue apareciendo 1 vez en ${event}`, hooksNamed(twice, event, name) === 1,
     `count=${hooksNamed(twice, event, name)}`);
 }
@@ -88,9 +89,10 @@ for (const [event, name] of [['UserPromptSubmit', 'update-gate'], ['UserPromptSu
 const tmpl = JSON.parse(readFileSync(TEMPLATE, 'utf8'));
 ok('template: update-gate presente y primero',
   cmds(tmpl, 'UserPromptSubmit')[0]?.includes('update-gate'));
-ok('template: Council en UserPromptSubmit', hooksNamed(tmpl, 'UserPromptSubmit', 'gpt-council') === 1);
-ok('template: Council --stop en Stop',
-  cmds(tmpl, 'Stop').some((c) => c.includes('gpt-council') && c.includes('--stop')));
+for (const name of ['rational-router', 'ultramax-guard', 'gpt-council', 'nlm-live-recall']) {
+  ok(`template lean: sin ${name}`, Object.keys(tmpl.hooks || {}).every((ev) => hooksNamed(tmpl, ev, name) === 0));
+}
+ok('template lean: sin ultracode ni opus[1m]', tmpl.effortLevel !== 'ultracode' && tmpl.model !== 'opus[1m]');
 
 // ── 4. every hook command must point at a file that actually exists ─────────
 const missing = [];
