@@ -185,8 +185,6 @@ stop  = os.environ["_CM_STOP_CMD"]
 settings = {
   "fastMode": False,
   "skipDangerousModePermissionPrompt": True,
-  "effortLevel": "ultracode",
-  "model": "opus[1m]",
   "permissions": {"defaultMode": "bypassPermissions"},
   "hooks": {
     "PreToolUse": [
@@ -194,9 +192,6 @@ settings = {
        "hooks": [{"type": "command", "command": pii, "timeout": 2000}]},
       {"matcher": "Write|Edit|MultiEdit",
        "hooks": [{"type": "command", "command": qg,  "timeout": 1500}]}
-    ],
-    "UserPromptSubmit": [
-      {"hooks": [{"type": "command", "command": rr, "timeout": 3000}]}
     ],
     "PostToolUse": [
       {"hooks": [{"type": "command", "command": ptu, "timeout": 2000}]}
@@ -243,10 +238,17 @@ with open(path) as f:
 hooks = settings.setdefault("hooks", {})
 settings.setdefault("permissions", {})["defaultMode"] = "bypassPermissions"
 settings["skipDangerousModePermissionPrompt"] = True
-# AURAMAXING defaults: max-capability config. ultracode + Opus 4.8 (opus[1m]), fastMode OFF (ultracode needs it off).
-settings["fastMode"] = False
-settings["effortLevel"] = "ultracode"
-settings.setdefault("model", "opus[1m]")  # Opus 4.8 (1M); respect a model the user deliberately set
+# LEAN MODE (1.27.0): normal Claude Code behaviour. No forced max effort, no 1M window,
+# no default fleets. Undo the old max-capability defaults this installer used to force.
+if settings.get("effortLevel") == "ultracode":
+    del settings["effortLevel"]
+if settings.get("model") == "opus[1m]":
+    settings["model"] = "opus"
+_env = settings.get("env", {})
+for _k in ["AURA_CTX_THRESHOLD_PCT", "AURA_CTX_SOFT_THRESHOLD_PCT", "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS"]:
+    _env.pop(_k, None)
+if "env" in settings and not settings["env"]:
+    del settings["env"]
 
 def has_hook(hook_list, marker):
     for block in hook_list:
@@ -266,18 +268,11 @@ if not has_hook(pre, "code-quality-gate"):
 
 # UserPromptSubmit — upgrade old router to apex (replace, don't skip)
 usp = hooks.setdefault("UserPromptSubmit", [])
-if not has_hook(usp, "rational-router-apex"):
-    hooks["UserPromptSubmit"] = [b for b in usp if not any(
-        "rational-router" in h.get("command", "") for h in b.get("hooks", []))]
-    hooks["UserPromptSubmit"].insert(0, {"hooks": [{"type": "command", "command": rr, "timeout": 3000}]})
 # update-gate — always first in UserPromptSubmit
 usp2 = hooks["UserPromptSubmit"]
 if not has_hook(usp2, "update-gate"):
     hooks["UserPromptSubmit"].insert(0, {"hooks": [{"type": "command", "command": ug_cmd, "timeout": 2000}]})
 
-# ChatGPT Council — second opinion when 2+ terminals work in parallel
-if not has_hook(usp2, "gpt-council"):
-    hooks["UserPromptSubmit"].append({"hooks": [{"type": "command", "command": council_cmd, "timeout": 3000}]})
 
 # PostToolUse
 ptu_hooks = hooks.setdefault("PostToolUse", [])
@@ -292,8 +287,6 @@ if not has_hook(stop_hooks, "task-complete"):
     stop_hooks.insert(0, {"hooks": [{"type": "command", "command": tc, "timeout": 2000}]})
 if not has_hook(stop_hooks, "session-stop"):
     stop_hooks.append({"hooks": [{"type": "command", "command": stop, "timeout": 2000}]})
-if not has_hook(stop_hooks, "gpt-council"):
-    stop_hooks.append({"hooks": [{"type": "command", "command": council_stop_cmd, "timeout": 2000}]})
 
 # SessionStart — welcome + daemon ping + ruflo
 ss = hooks.setdefault("SessionStart", [])
@@ -306,6 +299,16 @@ if not has_hook(ss, "session-start-daemon"):
 # session. Backbone is native Claude Code + ReasoningBank. To re-enable, restore the two lines below.
 # if not has_hook(ss, "ruflo") and not has_hook(ss, "daemon start"):
 #     ss.append({"hooks": [{"type": "command", "command": ruflo, "timeout": 5000}]})
+
+# LEAN MODE: strip hooks that inject directives every prompt or force agent fleets.
+_LEAN_STRIP = ["rational-router", "ultramax-guard", "gpt-council", "nlm-live-recall"]
+for event in list(hooks.keys()):
+    hooks[event] = [
+        b for b in hooks[event]
+        if not any(x in h.get("command", "") for h in b.get("hooks", []) for x in _LEAN_STRIP)
+    ]
+    if not hooks[event]:
+        del hooks[event]
 
 # Remove old noisy hooks
 for event in ["PostToolUse", "Stop"]:
@@ -347,6 +350,8 @@ apply_settings() {
     mv "$TMP" "$SETTINGS"
     rm -f "$RENDERED_TEMPLATE"
     ok "settings.json valid"
+    # LEAN MODE: drop the state files that forced Opus/Fable max fleets
+    rm -f "$HOME/.auramaxing/opus-window.json" "$HOME/.auramaxing/ultramax.json" 2>/dev/null || true
   else
     rm -f "$TMP" "$RENDERED_TEMPLATE"
     if [ -f "$BAK" ]; then
@@ -700,7 +705,7 @@ main() {
   install_helpers
   install_aura_skills
 
-  step "6/14 settings.json (ultracode + Opus 4.8)"
+  step "6/14 settings.json (lean mode — normal Claude Code)"
   apply_settings
 
   step "7/14 Global CLAUDE.md"

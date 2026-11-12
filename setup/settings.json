@@ -1,8 +1,4 @@
 {
-  "env": {
-    "AURA_CTX_THRESHOLD_PCT": "50",
-    "AURA_CTX_SOFT_THRESHOLD_PCT": "40"
-  },
   "permissions": {
     "defaultMode": "bypassPermissions",
     "additionalDirectories": [
@@ -34,16 +30,6 @@
             "timeout": 1500
           }
         ]
-      },
-      {
-        "matcher": "Agent|Task",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "export PATH=\"$HOME/.nvm/versions/node/v$(cat $HOME/.nvm/alias/default 2>/dev/null | tr -d '[:space:]' | sed 's/^v//')/bin:/usr/local/bin:/usr/bin:/bin:$PATH\" && node ~/.claude/helpers/ultramax-guard.mjs",
-            "timeout": 2000
-          }
-        ]
       }
     ],
     "UserPromptSubmit": [
@@ -60,35 +46,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "export PATH=\"$HOME/.nvm/versions/node/v$(cat $HOME/.nvm/alias/default 2>/dev/null | tr -d '[:space:]' | sed 's/^v//')/bin:/usr/local/bin:/usr/bin:/bin:$PATH\" && node ~/.claude/helpers/rational-router-apex.mjs 2>/dev/null || true",
-            "timeout": 3000
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
             "command": "export PATH=\"$HOME/.nvm/versions/node/v$(cat $HOME/.nvm/alias/default 2>/dev/null | tr -d '[:space:]' | sed 's/^v//')/bin:/usr/local/bin:/usr/bin:/bin:$PATH\" && node ~/.claude/helpers/context-threshold-monitor.mjs 2>/dev/null || true",
             "timeout": 2500
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "export PATH=\"$HOME/.nvm/versions/node/v$(cat $HOME/.nvm/alias/default 2>/dev/null | tr -d '[:space:]' | sed 's/^v//')/bin:/usr/local/bin:/usr/bin:/bin:$PATH\" && node ~/auramaxing/helpers/nlm-live-recall.mjs 2>/dev/null || true",
-            "timeout": 1500
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "export PATH=\"$HOME/.nvm/versions/node/v$(cat $HOME/.nvm/alias/default 2>/dev/null | tr -d '[:space:]' | sed 's/^v//')/bin:/usr/local/bin:/usr/bin:/bin:$PATH\" && node ~/auramaxing/helpers/gpt-council.mjs 2>/dev/null || true",
-            "timeout": 3000
           }
         ]
       }
@@ -148,15 +107,6 @@
           {
             "type": "command",
             "command": "export PATH=\"$HOME/.nvm/versions/node/v$(cat $HOME/.nvm/alias/default 2>/dev/null | tr -d '[:space:]' | sed 's/^v//')/bin:/usr/local/bin:/usr/bin:/bin:$PATH\" && node ~/auramaxing/helpers/aura-session-flush.mjs 2>/dev/null || true",
-            "timeout": 2000
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "export PATH=\"$HOME/.nvm/versions/node/v$(cat $HOME/.nvm/alias/default 2>/dev/null | tr -d '[:space:]' | sed 's/^v//')/bin:/usr/local/bin:/usr/bin:/bin:$PATH\" && node ~/auramaxing/helpers/gpt-council.mjs --stop 2>/dev/null || true",
             "timeout": 2000
           }
         ]
@@ -250,6 +200,5 @@
   },
   "fastMode": false,
   "skipDangerousModePermissionPrompt": true,
-  "effortLevel": "ultracode",
-  "model": "opus[1m]"
+  "model": "opus"
 }

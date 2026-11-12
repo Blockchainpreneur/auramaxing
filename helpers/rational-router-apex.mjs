@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// LEAN MODE (1.27.0): off by default — normal Claude Code behaviour, agents only when asked. Opt in with AURA_ROUTER_ON=1.
+if (process.env.AURA_ROUTER_ON !== '1') process.exit(0);
 /**
  * Aura — AURAMAXING Autopilot Engine
  * For visionaries, entrepreneurs, and builders shipping real products.

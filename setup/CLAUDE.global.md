@@ -115,34 +115,15 @@ The PII redactor hook is the safety net — it blocks secrets before they hit di
 - Always validate user input at system boundaries
 - Always sanitize file paths to prevent directory traversal
 
-## Aura — Autopilot Engine (Always On)
+## Lean Mode — normal Claude Code (default since 1.27.0)
 
-Aura is the AURAMAXING autopilot. It runs on every prompt, routes through gstack,
-and enriches requests with production context the user didn't explicitly ask for.
+Work like stock Claude Code: answer and build in the main session.
+- Do NOT spawn Agent/Task subagents, fleets, swarms or parallel workers unless the user explicitly asks for agents (or invokes a skill/command that requires them).
+- No forced "ultrathink", no forced maximum effort, no adversarial multi-agent verification by default. Verify with tests/builds in the main session.
+- Use the model and effort level the user has set; never override them.
 
-**OPUS 4.8 — MAXIMUM SPEC, EVERYWHERE (standing default):** EVERYTHING runs on **Opus 4.8 at the
-highest settings** — the main session AND every parallel/delegated agent — with maximum thinking,
-maximum work, and visible goals at every step. Main model `opus[1m]` + `effortLevel: ultracode` +
-`fastMode: off`. Every Agent/Task spawn omits `model:` (inherits `claude-opus-4-8` + ultracode) or
-sets `model:"opus"`, every spawned prompt includes **"ultrathink"**, no Sonnet/Haiku/Fable workers.
-Enforced by `~/.auramaxing/opus-window.json` (router + `ultramax-guard` read it). Revert: delete that
-file; guard kill-switch `AURA_ULTRAMAX_OFF=1`.
-
-**ULTRAMAX mode (keyword override):** if the user types **`ultramax`** anywhere in a prompt, that
-task runs on **Opus 4.8 EXCLUSIVELY** at max presets — delegation ONLY to an Opus-4.8 fleet (no
-Sonnet/Haiku/Fable workers, no box fleet): every Agent/Task spawn omits `model:` (inherits
-`claude-opus-4-8`) or sets `model:"opus"`, every spawned prompt includes **"ultrathink"**. Full
-structure stays (visible goal-loop, phased-excellence, anti-laziness, evidence gates). The router
-emits a dominant ULTRAMAX directive; the `ultramax-guard` PreToolUse hook hard-blocks any non-Opus
-spawn. Per-task (a plain prompt clears it); kill-switch `AURA_ULTRAMAX_OFF=1`.
-
-- **Aura router** — UserPromptSubmit: auto-detects task, enriches prompt, outputs IMPERATIVE directive
-  - Trivial (<3%): silent (greetings only)
-  - Medium (3-49%): `[AURAMAXING] task:X model:Y → /skill` + `ENRICH:` context
-  - Complex (50%+): `[AURAMAXING AURA] EXECUTE: ... SPAWN: ... ENRICH: ...` — full pipeline
 - **pii-redactor** — PreToolUse on Write/Edit/Bash: blocks secrets, API keys, credentials
 - **code-quality-gate** — PreToolUse on Write/Edit: blocks hardcoded secrets (HIGH), warns on debug/any/empty-catch (WARN)
-- **Ruflo daemon** — SessionStart: auto-starts swarm engine (60+ specialized agents, vector memory)
 
 ### ENRICH Protocol
 
@@ -203,10 +184,7 @@ there is no CLI equivalent or the MCP provides a unique capability.
 
 ## Agent Teams & Swarm
 
-- CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 is active globally
-- Default topology: hierarchical-mesh with max 15 agents
-- AURAMAXING coordinates all multi-agent tasks
-- Use specialized strategy for clear role boundaries
+- Off by default. Only use multi-agent teams when the user explicitly asks for them.
 
 ## Browser Automation — Native AURAMAXING Skill (CDP)
 

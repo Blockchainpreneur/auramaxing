@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// LEAN MODE (1.27.0): off by default — normal Claude Code behaviour, agents only when asked. Opt in with AURA_LIVE_RECALL_ON=1.
+if (process.env.AURA_LIVE_RECALL_ON !== '1') process.exit(0);
 /**
  * AURAMAXING NLM Live-Recall — UserPromptSubmit hook
  *
